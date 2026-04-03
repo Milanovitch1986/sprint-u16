@@ -1,0 +1,2981 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint U16 — Atletiek</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --surface2:  #181c24;
+    --border:    #242830;
+    --accent:    #f5a623;
+    --accent2:   #e8383d;
+    --text:      #edf0f5;
+    --muted:     #6b7280;
+    --success:   #22c55e;
+    --radius:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--text); }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  nav button:hover, nav button.active {
+    background: var(--accent);
+    color: #000;
+  }
+  .sync-btn {
+    margin-left: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 18px;
+    width: 38px; height: 38px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sync-btn.spinning svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Layout ── */
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all .25s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.ok   { border-color: var(--success); }
+  #toast.err  { border-color: var(--accent2); }
+
+  /* ── Cards grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+    position: relative;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card.selected { border-color: var(--accent); background: var(--surface2); }
+  .card-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+  .card-meta { font-size: 13px; color: var(--muted); }
+  .card-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .card-badge.m { color: #60a5fa; border-color: #60a5fa30; }
+  .card-badge.v { color: #f472b6; border-color: #f472b630; }
+
+  /* ── Page header ── */
+  .page-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .page-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .count-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .ml-auto { margin-left: auto; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #f0b84a; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn-danger:hover { background: #c0272b; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  /* ── Search ── */
+  .search-bar {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .search-bar input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+  .search-bar select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%; max-width: 480px;
+    transform: scale(.96) translateY(8px);
+    transition: transform .2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+  .modal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .modal-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 22px;
+  }
+
+  /* ── Atleet detail panel ── */
+  .detail-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .detail-header {
+    padding: 20px 24px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .detail-avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    color: #000;
+    flex-shrink: 0;
+  }
+  .detail-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+  }
+  .detail-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Prestaties tabel ── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border)44;
+    vertical-align: middle;
+  }
+  .pr-badge {
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+    font-size: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+  }
+  .result-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+
+  /* ── Divider ── */
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 16px 24px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Loading ── */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 60px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+
+  /* ── Confirm dialoog ── */
+  .confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .confirm-overlay.open { opacity: 1; pointer-events: all; }
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%; max-width: 400px;
+    transform: scale(.96) translateY(8px);
+    transition: transform .2s;
+  }
+  .confirm-overlay.open .confirm-box { transform: scale(1) translateY(0); }
+  .confirm-box p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    white-space: pre-line;
+  }
+  .confirm-box .confirm-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  /* ── Selectie toolbar ── */
+  .selectie-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .selectie-toolbar span {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  /* ── Checkbox op kaart ── */
+  .card-checkbox {
+    position: absolute; top: 12px; left: 12px;
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .card.selecteerbaar { padding-left: 38px; }
+  .card.geselecteerd  { border-color: var(--accent); background: var(--surface2); }
+
+  /* ── Ploeg opstelling ── */
+  .ploeg-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .ploeg-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ploeg-naam {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 18px; text-transform: uppercase;
+  }
+  .ploeg-punten {
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 13px;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .onderdeel-rij {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border)44;
+    transition: background .15s;
+  }
+  .onderdeel-rij:hover { background: var(--surface2); }
+  .onderdeel-naam {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 14px;
+    color: var(--text);
+  }
+  .onderdeel-tijd {
+    font-size: 12px; color: var(--muted);
+  }
+  .atleet-slot {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    min-height: 36px;
+    display: flex; align-items: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .atleet-slot:hover { border-color: var(--accent); }
+  .atleet-slot.bezet { border-style: solid; border-color: var(--border); background: var(--surface); }
+  .atleet-slot.conflict { border-color: var(--accent2); background: var(--accent2)11; }
+  .atleet-slot .slot-naam { flex: 1; }
+  .atleet-slot .slot-punten {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 13px;
+    color: var(--accent); margin-left: 8px;
+  }
+  .atleet-slot .slot-remove {
+    margin-left: 6px; color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .atleet-slot .slot-remove:hover { color: var(--accent2); background: var(--accent2)22; }
+  .conflict-badge {
+    font-size: 10px; color: var(--accent2);
+    margin-left: 6px;
+  }
+
+  /* ── Atleet keuze dropdown in slot ── */
+  .slot-select {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    max-height: 200px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .slot-select-item {
+    padding: 9px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background .15s;
+  }
+  .slot-select-item:hover { background: var(--surface2); }
+  .slot-select-item.dimmed { color: var(--muted); }
+  .slot-select-item .si-punten { color: var(--accent); font-weight: 700; font-size: 12px; }
+  .slot-select-search {
+    width: 100%; background: var(--surface2);
+    border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); padding: 9px 14px; font-size: 13px;
+    outline: none; font-family: 'Barlow', sans-serif;
+  }
+
+  /* ── Programma modal rijen ── */
+  .programma-rij {
+    display: grid;
+    grid-template-columns: 1fr 100px 80px 80px 36px;
+    gap: 8px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .programma-rij select, .programma-rij input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 8px 10px;
+    font-family: 'Barlow', sans-serif; font-size: 13px; outline: none;
+    width: 100%;
+  }
+  .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
+
+  /* ── Wedstrijd kaart ── */
+  .wedstrijd-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+  }
+  .wedstrijd-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .wedstrijd-datum { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .wedstrijd-naam { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 4px; }
+  .wedstrijd-locatie { font-size: 13px; color: var(--muted); }
+
+  /* ── Print styles ── */
+  @media print {
+    header, nav, .btn, #opstelling-stap1, .page-header,
+    #opstelling-tab-M, #opstelling-tab-V,
+    .atleet-slot .slot-remove { display: none !important; }
+    body { background: white; color: black; }
+    .ploeg-container { break-inside: avoid; border: 1px solid #ccc; }
+    .onderdeel-rij { border-bottom: 1px solid #eee; }
+    .atleet-slot { border: 1px solid #ccc; }
+  }
+
+  .profiel-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .profiel-input:focus { border-color: var(--accent); }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    header { padding: 0 16px; }
+    main   { padding: 16px; }
+    .page-header { gap: 8px; }
+    nav button { padding: 7px 10px; font-size: 13px; }
+    .modal { padding: 20px; }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡ Sprint <span>U16</span></div>
+  <nav>
+    <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
+    <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
+    <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
+    <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
+    <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">👤 Profiel</button>
+    <button id="tab-admin" onclick="showTab('admin')" style="display:none;">⚙️ Admin</button>
+  </nav>
+  <button class="sync-btn" id="syncBtn" onclick="syncAll()" title="Vernieuwen">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+    </svg>
+  </button>
+  <button class="sync-btn" onclick="showTab('profiel')" title="Profiel" id="profiel-btn" style="font-size:16px;">👤</button>
+  <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
+</header>
+
+<main>
+  <!-- ATLETEN TAB -->
+  <div id="view-atleten">
+    <div class="page-header">
+      <div class="page-title">Atleten</div>
+      <span class="count-badge" id="atleten-count">0</span>
+      <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">☑️ Selecteren</button>
+        <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
+          📥 Excel importeren
+          <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
+        </label>
+        <button class="btn btn-primary" onclick="openAtleetModal()">+ Atleet toevoegen</button>
+      </div>
+    </div>
+
+    <!-- Selectie toolbar (verborgen tot selectiemodus aan is) -->
+    <div class="selectie-toolbar" id="selectieToolbar" style="display:none;">
+      <span id="selectieAantal">0 geselecteerd</span>
+      <button class="btn btn-ghost btn-sm" onclick="selecteerAlle()">Alles selecteren</button>
+      <button class="btn btn-ghost btn-sm" onclick="deselecteerAlle()">Niets selecteren</button>
+      <button class="btn btn-danger btn-sm" id="verwijderGeselecteerdeBtn" onclick="verwijderGeselecteerde()" style="display:none;">🗑️ Verwijder geselecteerde</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="atleten-search" placeholder="Zoek op naam of club…" oninput="renderAtleten()">
+      <select id="atleten-filter-geslacht" onchange="renderAtleten()">
+        <option value="">Alle</option>
+        <option value="M">Jongens</option>
+        <option value="V">Meisjes</option>
+      </select>
+    </div>
+    <div id="atleten-grid" class="grid"></div>
+  </div>
+
+  <!-- PRESTATIES TAB -->
+  <div id="view-prestaties" style="display:none;">
+    <div class="page-header">
+      <div class="page-title">Prestaties</div>
+      <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openPrestatieModal()">+ Prestatie invoeren</button>
+      </div>
+    </div>
+
+    <!-- Atleet selectie -->
+    <div class="search-bar">
+      <select id="prestatie-atleet-filter" onchange="renderPrestaties()" style="flex:1;">
+        <option value="">— Kies een atleet —</option>
+      </select>
+      <select id="prestatie-disc-filter" onchange="renderPrestaties()">
+        <option value="">Alle disciplines</option>
+      </select>
+    </div>
+
+    <div id="prestaties-content"></div>
+  </div>
+</main>
+
+<!-- ── ATLEET MODAL ── -->
+<div class="modal-overlay" id="atleetModal">
+  <div class="modal">
+    <div class="modal-title" id="atleetModalTitle">Atleet toevoegen</div>
+    <div class="field">
+      <label>Naam</label>
+      <input type="text" id="f-naam" placeholder="Voornaam Achternaam">
+    </div>
+    <div class="field">
+      <label>Geboortedatum</label>
+      <input type="date" id="f-geboortedatum">
+    </div>
+    <div class="field">
+      <label>Geslacht</label>
+      <select id="f-geslacht">
+        <option value="M">Jongen (M)</option>
+        <option value="V">Meisje (V)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Club</label>
+      <input type="text" id="f-club" placeholder="Naam van de atletiekclub">
+    </div>
+    <div class="field">
+      <label>Bondsnummer</label>
+      <input type="text" id="f-bondsnr" placeholder="bijv. 1031577">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('atleetModal')">Annuleren</button>
+      <button class="btn btn-danger btn-sm" id="atleetDeleteBtn" onclick="deleteAtleet()" style="display:none;">Verwijderen</button>
+      <button class="btn btn-primary" onclick="saveAtleet()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRESTATIE MODAL ── -->
+<div class="modal-overlay" id="prestatieModal">
+  <div class="modal">
+    <div class="modal-title" id="prestatieModalTitle">Prestatie invoeren</div>
+    <div class="field">
+      <label>Atleet</label>
+      <select id="f-atleetId"></select>
+    </div>
+    <div class="field">
+      <label>Discipline</label>
+      <select id="f-discipline" onchange="updateEenheidField()">
+        <option value="60m">60m sprint</option>
+        <option value="80m">80m sprint</option>
+        <option value="100m">100m sprint</option>
+        <option value="200m">200m sprint</option>
+        <option value="verspringen">Verspringen</option>
+        <option value="hoogspringen">Hoogspringen</option>
+        <option value="kogelstoten">Kogelstoten</option>
+        <option value="speerwerpen">Speerwerpen</option>
+        <option value="4x100m">4×100m estafette</option>
+        <option value="overig">Overig</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="f-resultaat-label">Resultaat</label>
+      <input type="text" id="f-resultaat" placeholder="bijv. 7.45">
+    </div>
+    <div class="field" id="f-eenheid-field" style="display:none;">
+      <label>Eenheid</label>
+      <input type="text" id="f-eenheid" placeholder="sec / m / cm">
+    </div>
+    <div class="field">
+      <label>Datum</label>
+      <input type="date" id="f-datum">
+    </div>
+    <div class="field">
+      <label>Locatie / wedstrijd</label>
+      <input type="text" id="f-locatie" placeholder="bijv. NK Atletiek Apeldoorn">
+    </div>
+    <div class="field">
+      <label>Notities</label>
+      <input type="text" id="f-notities" placeholder="optioneel">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('prestatieModal')">Annuleren</button>
+      <button class="btn btn-danger btn-sm" id="prestatieDeleteBtn" onclick="deletePrestatie()" style="display:none;">Verwijderen</button>
+      <button class="btn btn-primary" onclick="savePrestatie()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+  <!-- WEDSTRIJDEN TAB -->
+  <div id="view-wedstrijden" style="display:none;">
+    <div class="page-header">
+      <div class="page-title">Wedstrijden</div>
+      <span class="count-badge" id="wedstrijden-count">0</span>
+      <div class="ml-auto">
+        <button class="btn btn-primary" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
+      </div>
+    </div>
+    <div id="wedstrijden-grid" class="grid"></div>
+  </div>
+
+  <!-- PROGRAMMA MODAL (tijdschema per wedstrijd) -->
+  <div id="view-opstelling" style="display:none;">
+    <div class="page-header">
+      <div class="page-title">Opstelling</div>
+    </div>
+
+    <!-- Stap 1: Kies wedstrijd -->
+    <div id="opstelling-stap1">
+      <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om een opstelling te maken:</div>
+      <div id="opstelling-wedstrijd-lijst" class="grid"></div>
+    </div>
+
+    <!-- Stap 2: Opstelling voor gekozen wedstrijd -->
+    <div id="opstelling-stap2" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">← Terug</button>
+        <div id="opstelling-wedstrijd-naam" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
+      </div>
+
+      <!-- Geslacht tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button id="opstelling-tab-M" class="btn btn-primary" onclick="setOpstellingGeslacht('M')">👦 Jongens</button>
+        <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
+      </div>
+
+      <!-- Beschikbaarheid sectie -->
+      <div class="detail-panel" style="margin-bottom:24px;">
+        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>✅ Beschikbare atleten</span>
+          <div style="display:flex;gap:8px;margin:8px 16px;">
+            <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(true)">Alles aan</button>
+            <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(false)">Alles uit</button>
+          </div>
+        </div>
+        <div id="beschikbaarheid-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
+      </div>
+
+      <!-- Programma sectie -->
+      <div class="detail-panel" style="margin-bottom:24px;">
+        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>📋 Wedstrijdprogramma</span>
+          <button class="btn btn-ghost btn-sm" style="margin:8px 16px;" onclick="openProgrammaModal()">✏️ Bewerken</button>
+        </div>
+        <div id="programma-overzicht" style="padding:16px;">
+          <div class="empty-state"><div class="icon">📋</div>Nog geen programma ingevoerd.</div>
+        </div>
+      </div>
+
+      <!-- Ploegen sectie -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
+        <select id="aantal-ploegen-select" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+          <option value="1">1 ploeg</option>
+          <option value="2" selected>2 ploegen</option>
+          <option value="3">3 ploegen</option>
+        </select>
+        <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
+        <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
+        <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
+      </div>
+
+      <div id="ploegen-container"></div>
+    </div>
+  </div>
+
+  <!-- PROFIEL TAB -->
+  <div id="view-profiel" style="display:none;">
+    <div class="page-header"><div class="page-title">Mijn profiel</div></div>
+    <div class="detail-panel" style="max-width:480px;">
+      <div class="section-label">Accountgegevens</div>
+      <div style="padding:20px;">
+        <div class="field">
+          <label>Gebruikersnaam</label>
+          <input type="text" id="profiel-naam" class="profiel-input">
+        </div>
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" id="profiel-email" class="profiel-input" readonly style="opacity:.6;">
+        </div>
+        <button class="btn btn-primary" onclick="slaProfielOp()">Opslaan</button>
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Wachtwoord wijzigen</div>
+          <div class="field"><label>Nieuw wachtwoord (min. 8 tekens)</label>
+            <input type="password" id="profiel-ww" placeholder="••••••••" class="profiel-input"></div>
+          <button class="btn btn-ghost" onclick="wijzigWachtwoord()">Wachtwoord wijzigen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN TAB -->
+  <div id="view-admin" style="display:none;">
+    <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
+    <div class="detail-panel" style="margin-bottom:24px;">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📨 Uitnodigingen</span>
+        <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="maakUitnodiging()">+ Nieuwe uitnodiging</button>
+      </div>
+      <div id="uitnodigingen-lijst" style="padding:16px;"></div>
+    </div>
+    <div class="detail-panel">
+      <div class="section-label">👥 Geregistreerde gebruikers</div>
+      <div id="gebruikers-lijst" style="padding:16px;"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ── WEDSTRIJD MODAL ── -->
+<div class="modal-overlay" id="wedstrijdModal">
+  <div class="modal">
+    <div class="modal-title" id="wedstrijdModalTitle">Wedstrijd toevoegen</div>
+    <div class="field">
+      <label>Naam</label>
+      <input type="text" id="w-naam" placeholder="bijv. Competitieronde 1">
+    </div>
+    <div class="field">
+      <label>Datum</label>
+      <input type="date" id="w-datum">
+    </div>
+    <div class="field">
+      <label>Locatie</label>
+      <input type="text" id="w-locatie" placeholder="bijv. Atletiekbaan Breda">
+    </div>
+    <div class="field">
+      <label>Notities</label>
+      <input type="text" id="w-notities" placeholder="optioneel">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('wedstrijdModal')">Annuleren</button>
+      <button class="btn btn-danger btn-sm" id="wedstrijdDeleteBtn" onclick="deleteWedstrijd()" style="display:none;">Verwijderen</button>
+      <button class="btn btn-primary" onclick="saveWedstrijd()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROGRAMMA MODAL ── -->
+<div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
+  <div class="modal" style="max-width:640px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-title">Wedstrijdprogramma</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="programma-modal-sub"></div>
+
+    <div id="programma-items-list"></div>
+
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="addProgrammaRij()">+ Onderdeel toevoegen</button>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('programmaModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveProgrammaModal()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRINT VIEW ── -->
+<div id="print-view" style="display:none;">
+</div>
+<!-- ── ATLETIEK.NU MODAL ── -->
+<div class="modal-overlay" id="atlNuModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">🔍 Zoek op Atletiek.nu</div>
+
+    <!-- Tabbladen -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button id="atlnu-tab-atleet" class="btn btn-primary btn-sm" onclick="setAtlNuTab('atleet')">Atleet</button>
+      <button id="atlnu-tab-wedstrijd" class="btn btn-ghost btn-sm" onclick="setAtlNuTab('wedstrijd')">Wedstrijd</button>
+    </div>
+
+    <!-- Atleet zoeken -->
+    <div id="atlnu-view-atleet">
+      <div class="field">
+        <label>Naam atleet</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="atlnu-zoek-input" placeholder="bijv. Jente Jongmans"
+            onkeydown="if(event.key==='Enter') zoekAtlNuAtleet()">
+          <button class="btn btn-primary" onclick="zoekAtlNuAtleet()">Zoeken</button>
+        </div>
+      </div>
+      <div id="atlnu-atleet-resultaten"></div>
+      <div id="atlnu-prs-sectie" style="display:none;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;margin:16px 0 10px;" id="atlnu-prs-naam"></div>
+        <div id="atlnu-prs-lijst"></div>
+        <div class="modal-actions" style="margin-top:12px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('atlnu-prs-sectie').style.display='none';document.getElementById('atlnu-atleet-resultaten').style.display=''">← Terug</button>
+          <button class="btn btn-primary" onclick="importeerAtlNuPrs()">⬇️ PRs importeren</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wedstrijd zoeken -->
+    <div id="atlnu-view-wedstrijd" style="display:none;">
+      <div class="field">
+        <label>Wedstrijdnaam</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="atlnu-wedstrijd-input" placeholder="bijv. NK Atletiek"
+            onkeydown="if(event.key==='Enter') zoekAtlNuWedstrijd()">
+          <button class="btn btn-primary" onclick="zoekAtlNuWedstrijd()">Zoeken</button>
+        </div>
+      </div>
+      <div id="atlnu-wedstrijd-resultaten"></div>
+      <div id="atlnu-uitslagen-sectie" style="display:none;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;margin:16px 0 10px;" id="atlnu-uitslagen-naam"></div>
+        <div id="atlnu-uitslagen-lijst"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="btn btn-ghost" onclick="closeModal('atlNuModal')">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Bevestigen</div>
+    <p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirmNee">Annuleren</button>
+      <button class="btn btn-primary" id="confirmJa">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const SUPA_URL = "https://wntxmxvjvnishwkwvkux.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndudHhteHZqdm5pc2h3a3d2a3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTU4MTUsImV4cCI6MjA5MDc5MTgxNX0.0udcgomCHH_Tyg_uXzuXfr99eE2aHP9UVYF50MppcLw";
+const ATL_API  = "https://atletiek-nu-api-milan.milande-maat.workers.dev";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let huidigeProfiel = null; // ingelogde gebruiker profiel
+
+// ── State ─────────────────────────────────────────────────────
+let atleten    = [];
+let prestaties = [];
+let editAtleetId     = null;
+let editPrestatieId  = null;
+let selecteerModus   = false;
+let geselecteerd     = new Set();
+
+// ── Auth guard ────────────────────────────────────────────────
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = "index.html"; return false; }
+  const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+    window.location.href = "index.html"; return false;
+  }
+  const { data: profiel } = await sb.from("profielen").select("*").eq("id", session.user.id).single();
+  huidigeProfiel = profiel;
+  if (profiel?.rol === "admin") {
+    document.getElementById("tab-admin").style.display = "";
+  }
+  document.getElementById("profiel-naam").value  = profiel?.gebruikersnaam || "";
+  document.getElementById("profiel-email").value = session.user.email || "";
+  await sb.from("profielen").update({ laatste_login: new Date().toISOString() }).eq("id", session.user.id);
+  return true;
+}
+
+async function uitloggen() {
+  await sb.auth.signOut();
+  window.location.href = "index.html";
+}
+
+async function getUid() {
+  return (await sb.auth.getUser()).data.user?.id;
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ""; }, 3000);
+}
+
+// ── Sync ──────────────────────────────────────────────────────
+async function syncAll() {
+  const btn = document.getElementById("syncBtn");
+  btn.classList.add("spinning");
+  try {
+    const uid = await getUid();
+    if (!uid) return;
+    const [aRes, pRes, wRes] = await Promise.all([
+      sb.from("atleten").select("*").eq("eigenaar_id", uid).order("naam"),
+      sb.from("prestaties").select("*").eq("eigenaar_id", uid),
+      sb.from("wedstrijden").select("*").eq("eigenaar_id", uid).order("datum", { ascending: false })
+    ]);
+    if (aRes.error) throw aRes.error;
+    if (pRes.error) throw pRes.error;
+    if (wRes.error) throw wRes.error;
+    atleten     = (aRes.data || []);
+    prestaties  = (pRes.data || []).map(r => ({ ...r, atleetId: r.atleet_id }));
+    wedstrijden = wRes.data || [];
+    renderAtleten();
+    renderPrestaties();
+    renderWedstrijden();
+    populateAtleetSelects();
+    toast("Gegevens bijgewerkt ✓");
+  } catch (e) {
+    toast("Fout: " + e.message, "err");
+  } finally {
+    btn.classList.remove("spinning");
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function showTab(tab) {
+  ["atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
+    const el = document.getElementById("view-" + t);
+    if (el) el.style.display = t === tab ? "" : "none";
+    const tb = document.getElementById("tab-" + t);
+    if (tb) tb.classList.toggle("active", t === tab);
+  });
+  if (tab === "prestaties")   populateAtleetSelects();
+  if (tab === "wedstrijden")  renderWedstrijden();
+  if (tab === "opstelling")   renderOpstellingWedstrijden();
+  if (tab === "admin")        laadAdmin();
+}
+
+// ── Selectiemodus ─────────────────────────────────────────────
+function toggleSelecteerModus() {
+  selecteerModus = !selecteerModus;
+  geselecteerd.clear();
+  const btn = document.getElementById("selecteerModeBtn");
+  const toolbar = document.getElementById("selectieToolbar");
+  btn.textContent = selecteerModus ? "✖️ Stoppen" : "☑️ Selecteren";
+  btn.classList.toggle("btn-ghost",   !selecteerModus);
+  btn.classList.toggle("btn-primary",  selecteerModus);
+  toolbar.style.display = selecteerModus ? "flex" : "none";
+  renderAtleten();
+}
+
+function toggleSelectie(id, event) {
+  event.stopPropagation();
+  if (geselecteerd.has(id)) geselecteerd.delete(id);
+  else geselecteerd.add(id);
+  updateSelectieTeller();
+  // Update kaart visueel
+  document.querySelectorAll(".card[data-id]").forEach(el => {
+    el.classList.toggle("geselecteerd", geselecteerd.has(el.dataset.id));
+    const cb = el.querySelector(".card-checkbox");
+    if (cb) cb.checked = geselecteerd.has(el.dataset.id);
+  });
+}
+
+function selecteerAlle() {
+  atleten.forEach(a => geselecteerd.add(String(a.id)));
+  updateSelectieTeller();
+  renderAtleten();
+}
+
+function deselecteerAlle() {
+  geselecteerd.clear();
+  updateSelectieTeller();
+  renderAtleten();
+}
+
+function updateSelectieTeller() {
+  const n = geselecteerd.size;
+  document.getElementById("selectieAantal").textContent = `${n} geselecteerd`;
+  document.getElementById("verwijderGeselecteerdeBtn").style.display = n > 0 ? "" : "none";
+}
+
+async function verwijderGeselecteerde() {
+  const n = geselecteerd.size;
+  if (!n) return;
+  const ok = await bevestig(
+    "Atleten verwijderen",
+    `Weet je zeker dat je ${n} atleet(en) wilt verwijderen?\nDit kan niet ongedaan worden gemaakt.`
+  );
+  if (!ok) return;
+
+  const uid = await getUid();
+  const ids = [...geselecteerd];
+  try {
+    const { error } = await sb.from("atleten").delete().eq("eigenaar_id", uid).in("id", ids);
+    if (error) throw error;
+    atleten    = atleten.filter(a => !ids.includes(String(a.id)));
+    prestaties = prestaties.filter(p => !ids.includes(String(p.atleet_id || p.atleetId)));
+    geselecteerd.clear();
+    updateSelectieTeller();
+    renderAtleten();
+    populateAtleetSelects();
+    toast(`✓ ${ids.length} atleet(en) verwijderd`);
+  } catch (e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Atleten render ────────────────────────────────────────────
+function renderAtleten() {
+  const q  = (document.getElementById("atleten-search").value || "").toLowerCase();
+  const gf = document.getElementById("atleten-filter-geslacht").value;
+  let list = atleten.filter(a => {
+    const naam = String(a.naam || "").toLowerCase();
+    const club = String(a.club || "").toLowerCase();
+    if (q && !naam.includes(q) && !club.includes(q)) return false;
+    if (gf && a.geslacht !== gf) return false;
+    return true;
+  });
+
+  document.getElementById("atleten-count").textContent = list.length;
+  const grid = document.getElementById("atleten-grid");
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏃</div>Geen atleten gevonden.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(a => {
+    const initials = (a.naam || "?").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
+    const gBadge   = a.geslacht === "V" ? "v" : "m";
+    const gLabel   = a.geslacht === "V" ? "Meisje" : "Jongen";
+    const club     = a.club ? `<span>${a.club}</span>` : "";
+    const bondsnr  = a.bondsnr ? `<span style="color:var(--muted);font-size:12px;">🪪 ${esc(a.bondsnr)}</span>` : "";
+    const cnt      = prestaties.filter(p => String(p.atleetId) === String(a.id)).length;
+    const isSel    = geselecteerd.has(String(a.id));
+    const cbHtml   = selecteerModus
+      ? `<input type="checkbox" class="card-checkbox" ${isSel ? "checked" : ""} onclick="toggleSelectie('${a.id}', event)">`
+      : "";
+    return `
+      <div class="card ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""}" data-id="${a.id}"
+           onclick="${selecteerModus ? `toggleSelectie('${a.id}', event)` : `openAtleetModal('${a.id}')`}">
+        ${cbHtml}
+        <div class="card-badge ${gBadge}">${gLabel}</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="detail-avatar" style="width:40px;height:40px;font-size:16px;">${initials}</div>
+          <div>
+            <div class="card-name">${esc(a.naam || "")}</div>
+            <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="card-meta">${cnt} prestatie${cnt !== 1 ? "s" : ""}</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── Prestaties render ─────────────────────────────────────────
+function renderPrestaties() {
+  const atleetId = document.getElementById("prestatie-atleet-filter").value;
+  const disc     = document.getElementById("prestatie-disc-filter").value;
+
+  let list = prestaties;
+  if (atleetId) list = list.filter(p => String(p.atleetId) === atleetId);
+  if (disc)     list = list.filter(p => p.discipline === disc);
+
+  // Update disc dropdown
+  const allDiscs = [...new Set(prestaties.map(p => p.discipline).filter(Boolean))].sort();
+  const discSel  = document.getElementById("prestatie-disc-filter");
+  const curDisc  = discSel.value;
+  discSel.innerHTML = `<option value="">Alle disciplines</option>` +
+    allDiscs.map(d => `<option value="${d}" ${d===curDisc?"selected":""}>${d}</option>`).join("");
+
+  const cont = document.getElementById("prestaties-content");
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${atleetId ? "Geen prestaties voor deze atleet." : "Selecteer een atleet of voeg prestaties toe."}</div>`;
+    return;
+  }
+
+  // Groepeer op atleet als geen filter
+  if (!atleetId) {
+    const byAtleet = {};
+    list.forEach(p => {
+      const aid = String(p.atleetId);
+      if (!byAtleet[aid]) byAtleet[aid] = [];
+      byAtleet[aid].push(p);
+    });
+    cont.innerHTML = Object.entries(byAtleet).map(([aid, rows]) => {
+      const atl = atleten.find(a => String(a.id) === aid);
+      const naam = atl ? esc(atl.naam) : "Onbekend";
+      return `<div class="detail-panel">
+        <div class="section-label">${naam}</div>
+        ${renderPrestatieTable(rows)}
+      </div>`;
+    }).join("");
+  } else {
+    const atl  = atleten.find(a => String(a.id) === atleetId);
+    const naam = atl ? esc(atl.naam) : "";
+    cont.innerHTML = `<div class="detail-panel">
+      ${naam ? `<div class="detail-header">
+        <div class="detail-avatar">${naam.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div>
+        <div><div class="detail-name">${naam}</div><div class="detail-sub">${atl.club||""}</div></div>
+        <button class="btn btn-ghost btn-sm ml-auto" onclick="openAtleetModal('${atleetId}')">✏️ Bewerken</button>
+      </div>` : ""}
+      ${renderPrestatieTable(list, true)}
+    </div>`;
+  }
+}
+
+function renderPrestatieTable(rows, showPR = false) {
+  // Bepaal PR per discipline
+  const prMap = {};
+  if (showPR) {
+    rows.forEach(p => {
+      const val = parseFloat(String(p.resultaat).replace(",", "."));
+      if (!isNaN(val)) {
+        const isSneller = ["60m","80m","100m","200m","4x100m"].includes(p.discipline);
+        if (!(p.discipline in prMap)) {
+          prMap[p.discipline] = { val, id: p.id };
+        } else if (isSneller ? val < prMap[p.discipline].val : val > prMap[p.discipline].val) {
+          prMap[p.discipline] = { val, id: p.id };
+        }
+      }
+    });
+  }
+
+  const sorted = [...rows].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  return `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Discipline</th><th>Resultaat</th><th>Datum</th><th>Locatie</th><th>Notities</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${sorted.map(p => {
+        const isPR = prMap[p.discipline]?.id === p.id;
+        return `<tr>
+          <td><strong>${esc(p.discipline||"")}</strong></td>
+          <td><span class="result-val">${esc(p.resultaat||"")} ${esc(p.eenheid||"")}</span>${isPR ? '<span class="pr-badge">PR</span>' : ""}</td>
+          <td>${formatDate(p.datum)}</td>
+          <td style="color:var(--muted)">${esc(p.locatie||"")}</td>
+          <td style="color:var(--muted);font-size:13px;">${esc(p.notities||"")}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal('${p.id}')">✏️</button></td>
+        </tr>`;
+      }).join("")}
+    </tbody>
+  </table></div>`;
+}
+
+// ── Atleet Modal ──────────────────────────────────────────────
+function openAtleetModal(id = null) {
+  editAtleetId = id;
+  const isEdit = !!id;
+  document.getElementById("atleetModalTitle").textContent = isEdit ? "Atleet bewerken" : "Atleet toevoegen";
+  document.getElementById("atleetDeleteBtn").style.display = isEdit ? "" : "none";
+
+  if (isEdit) {
+    const a = atleten.find(x => String(x.id) === String(id));
+    if (a) {
+      document.getElementById("f-naam").value          = a.naam || "";
+      document.getElementById("f-geboortedatum").value = a.geboortedatum || "";
+      document.getElementById("f-geslacht").value      = a.geslacht || "M";
+      document.getElementById("f-club").value          = a.club || "";
+      document.getElementById("f-bondsnr").value       = a.bondsnr || "";
+    }
+  } else {
+    document.getElementById("f-naam").value          = "";
+    document.getElementById("f-geboortedatum").value = "";
+    document.getElementById("f-geslacht").value      = "M";
+    document.getElementById("f-club").value          = "";
+    document.getElementById("f-bondsnr").value       = "";
+  }
+  openModal("atleetModal");
+}
+
+async function saveAtleet() {
+  const naam = document.getElementById("f-naam").value.trim();
+  if (!naam) { toast("Vul een naam in", "err"); return; }
+  const uid = await getUid();
+  const body = {
+    naam,
+    geboortedatum: document.getElementById("f-geboortedatum").value || null,
+    geslacht:      document.getElementById("f-geslacht").value,
+    club:          document.getElementById("f-club").value.trim(),
+    bondsnr:       document.getElementById("f-bondsnr").value.trim()
+  };
+  try {
+    if (editAtleetId) {
+      const { error } = await sb.from("atleten").update(body).eq("id", editAtleetId).eq("eigenaar_id", uid);
+      if (error) throw error;
+      const i = atleten.findIndex(a => String(a.id) === String(editAtleetId));
+      if (i >= 0) atleten[i] = { ...atleten[i], ...body };
+      toast("Atleet bijgewerkt ✓");
+    } else {
+      const { data, error } = await sb.from("atleten").insert({ ...body, eigenaar_id: uid }).select().single();
+      if (error) throw error;
+      atleten.push({ ...data, atleetId: data.id });
+    }
+    closeModal("atleetModal");
+    renderAtleten();
+    populateAtleetSelects();
+  } catch (e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function deleteAtleet() {
+  if (!await bevestig("Atleet verwijderen", "Weet je het zeker? Dit kan niet ongedaan worden.")) return;
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("atleten").delete().eq("id", editAtleetId).eq("eigenaar_id", uid);
+    if (error) throw error;
+    atleten = atleten.filter(a => String(a.id) !== String(editAtleetId));
+    prestaties = prestaties.filter(p => String(p.atleet_id || p.atleetId) !== String(editAtleetId));
+    closeModal("atleetModal");
+    renderAtleten();
+    populateAtleetSelects();
+    toast("Atleet verwijderd");
+  } catch (e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Prestatie Modal ───────────────────────────────────────────
+function openPrestatieModal(id = null, defaultAtleetId = null) {
+  editPrestatieId = id;
+  const isEdit = !!id;
+  document.getElementById("prestatieModalTitle").textContent = isEdit ? "Prestatie bewerken" : "Prestatie invoeren";
+  document.getElementById("prestatieDeleteBtn").style.display = isEdit ? "" : "none";
+
+  // Vul atleet select
+  const sel = document.getElementById("f-atleetId");
+  sel.innerHTML = atleten.map(a =>
+    `<option value="${a.id}">${esc(a.naam||"")} (${a.geslacht||""})</option>`
+  ).join("");
+
+  if (isEdit) {
+    const p = prestaties.find(x => String(x.id) === String(id));
+    if (p) {
+      sel.value = p.atleetId;
+      document.getElementById("f-discipline").value = p.discipline || "100m";
+      document.getElementById("f-resultaat").value  = p.resultaat  || "";
+      document.getElementById("f-eenheid").value    = p.eenheid    || "";
+      document.getElementById("f-datum").value      = p.datum      || "";
+      document.getElementById("f-locatie").value    = p.locatie    || "";
+      document.getElementById("f-notities").value   = p.notities   || "";
+    }
+  } else {
+    if (defaultAtleetId) sel.value = defaultAtleetId;
+    document.getElementById("f-discipline").value = "100m";
+    document.getElementById("f-resultaat").value  = "";
+    document.getElementById("f-datum").value      = new Date().toISOString().split("T")[0];
+    document.getElementById("f-locatie").value    = "";
+    document.getElementById("f-notities").value   = "";
+  }
+  updateEenheidField();
+  openModal("prestatieModal");
+}
+
+function updateEenheidField() {
+  const disc = document.getElementById("f-discipline").value;
+  const sprints = ["60m","80m","100m","200m","4x100m"];
+  const veld = document.getElementById("f-eenheid-field");
+  const label = document.getElementById("f-resultaat-label");
+  if (sprints.includes(disc)) {
+    label.textContent = "Tijd (seconden)";
+    document.getElementById("f-eenheid").value = "sec";
+    veld.style.display = "none";
+  } else if (["verspringen","hoogspringen"].includes(disc)) {
+    label.textContent = "Afstand / hoogte";
+    document.getElementById("f-eenheid").value = "m";
+    veld.style.display = "";
+  } else if (["kogelstoten","speerwerpen"].includes(disc)) {
+    label.textContent = "Afstand";
+    document.getElementById("f-eenheid").value = "m";
+    veld.style.display = "";
+  } else {
+    label.textContent = "Resultaat";
+    veld.style.display = "";
+  }
+}
+
+async function savePrestatie() {
+  const resultaat = document.getElementById("f-resultaat").value.trim();
+  if (!resultaat) { toast("Vul een resultaat in", "err"); return; }
+  const uid = await getUid();
+  const atleetId = document.getElementById("f-atleetId").value;
+  const body = {
+    atleet_id:  atleetId,
+    discipline: document.getElementById("f-discipline").value,
+    resultaat,
+    eenheid:  document.getElementById("f-eenheid").value.trim(),
+    datum:    document.getElementById("f-datum").value || null,
+    locatie:  document.getElementById("f-locatie").value.trim(),
+    notities: document.getElementById("f-notities").value.trim()
+  };
+  try {
+    if (editPrestatieId) {
+      const { error } = await sb.from("prestaties").update(body).eq("id", editPrestatieId).eq("eigenaar_id", uid);
+      if (error) throw error;
+      const i = prestaties.findIndex(p => String(p.id) === String(editPrestatieId));
+      if (i >= 0) prestaties[i] = { ...prestaties[i], ...body, atleetId };
+      toast("Prestatie bijgewerkt ✓");
+    } else {
+      const { data, error } = await sb.from("prestaties").insert({ ...body, eigenaar_id: uid }).select().single();
+      if (error) throw error;
+      prestaties.push({ ...data, atleetId: data.atleet_id });
+    }
+    closeModal("prestatieModal");
+    renderPrestaties();
+    renderAtleten();
+  } catch (e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function deletePrestatie() {
+  if (!await bevestig("Prestatie verwijderen", "Weet je het zeker?")) return;
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("prestaties").delete().eq("id", editPrestatieId).eq("eigenaar_id", uid);
+    if (error) throw error;
+    prestaties = prestaties.filter(p => String(p.id) !== String(editPrestatieId));
+    closeModal("prestatieModal");
+    renderPrestaties();
+    renderAtleten();
+    toast("Prestatie verwijderd");
+  } catch (e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function populateAtleetSelects() {
+  const sel = document.getElementById("prestatie-atleet-filter");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">— Alle atleten —</option>` +
+    atleten.map(a => `<option value="${a.id}" ${String(a.id)===cur?"selected":""}>${esc(a.naam||"")} (${a.geslacht||""})</option>`).join("");
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+// Sluit modal bij klik op overlay
+document.querySelectorAll(".modal-overlay").forEach(el => {
+  el.addEventListener("click", e => { if (e.target === el) el.classList.remove("open"); });
+});
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function formatDate(d) {
+  if (!d) return "";
+  try {
+    const dt = new Date(d);
+    return dt.toLocaleDateString("nl-NL", { day:"2-digit", month:"short", year:"numeric" });
+  } catch { return d; }
+}
+
+// ── Bevestigingsdialoog (vervangt confirm()) ──────────────────
+function bevestig(titel, bericht) {
+  return new Promise(res => {
+    document.getElementById("confirmTitle").textContent = titel;
+    document.getElementById("confirmMsg").textContent   = bericht;
+    document.getElementById("confirmOverlay").classList.add("open");
+    const ja  = document.getElementById("confirmJa");
+    const nee = document.getElementById("confirmNee");
+    function sluit(ok) {
+      document.getElementById("confirmOverlay").classList.remove("open");
+      ja.removeEventListener("click", opJa);
+      nee.removeEventListener("click", opNee);
+      res(ok);
+    }
+    function opJa()  { sluit(true);  }
+    function opNee() { sluit(false); }
+    ja.addEventListener("click",  opJa);
+    nee.addEventListener("click", opNee);
+  });
+}
+
+// ── Excel Import ──────────────────────────────────────────────
+
+// Disciplines die als "sneller = beter" gelden (tijd), rest is "verder/hoger = beter"
+const TIJD_DISCIPLINES = ["60m","80m","100m","150m","200m","300m","400m","600m","800m","1000m","1500m","3000m","horden","80m horden","300m horden","4x100m"];
+
+async function importExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = "";
+
+  // Laad SheetJS dynamisch
+  if (!window.XLSX) {
+    toast("SheetJS laden…", "ok");
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const buf = await file.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: "array", cellDates: true });
+
+  // ── Detecteer bestandstype op basis van kolomnamen ────────
+  // Type A: atletenlijst  → heeft kolom "search" / "geslacht" / "bondsnr"
+  // Type B: PR-sheet      → eerste kolom = naam, rest = disciplines
+  let resultaat = null;
+  for (const sheetName of wb.SheetNames) {
+    const ws   = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    if (rows.length < 2) continue;
+    const header = rows[0].map(h => String(h).toLowerCase().trim());
+
+    const isAtletenlijst = header.some(h => h.includes("search") || h.includes("bondsnr") || h.includes("bondsnummer"));
+    const isPRSheet      = header[0].toLowerCase().includes("atleet") || header[0].toLowerCase().includes("naam");
+
+    if (isAtletenlijst) {
+      resultaat = await verwerkAtletenlijst(rows);
+      break;
+    } else if (isPRSheet) {
+      resultaat = await verwerkPRSheet(rows);
+      break;
+    }
+  }
+
+  if (!resultaat) {
+    toast("Bestandsformaat niet herkend", "err");
+    return;
+  }
+
+  renderAtleten();
+  renderPrestaties();
+  populateAtleetSelects();
+  toast(resultaat, "ok");
+}
+
+// ── Verwerk atletenlijst (zoals atletenlijst_tbv_competitietool.xlsx) ──
+async function verwerkAtletenlijst(rows) {
+  const header = rows[0].map(h => String(h).toLowerCase().trim());
+  const colIdx = (candidates) => {
+    for (const c of candidates) {
+      const i = header.findIndex(h => h.includes(c));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const iNaam     = colIdx(["search","naam"]);
+  const iGeslacht = colIdx(["geslacht"]);
+  const iGebDat   = colIdx(["geboortedatum","geboorte"]);
+  const iGroep    = colIdx(["au groep","groep","categorie"]);
+  const iBondsnr  = colIdx(["bondsnr","bondsnummer","licentie"]);
+
+  if (iNaam < 0) { toast("Kolom 'naam' niet gevonden", "err"); return null; }
+
+  const nieuw = [];
+  for (const row of rows.slice(1)) {
+    const naam = parseerNaam(row[iNaam]);
+    if (!naam) continue;
+    const bestaat = atleten.some(a => a.naam.toLowerCase() === naam.toLowerCase());
+    if (bestaat) continue; // Nooit overschrijven
+
+    const gRaw = iGeslacht >= 0 ? String(row[iGeslacht]).trim().toUpperCase() : "";
+    nieuw.push({
+      naam,
+      geslacht:      gRaw === "F" ? "V" : gRaw === "M" ? "M" : gRaw,
+      geboortedatum: iGebDat  >= 0 ? formatDatum(row[iGebDat])          : "",
+      club:          iGroep   >= 0 ? String(row[iGroep]).trim()          : "",
+      bondsnr:       iBondsnr >= 0 ? String(row[iBondsnr]).trim()        : ""
+    });
+  }
+
+  if (!nieuw.length) return "Alle atleten staan al in de app — niets toegevoegd";
+
+  const ok1 = await bevestig("Atleten importeren", `${nieuw.length} nieuwe atleet(en) gevonden.\nToevoegen aan de app?`);
+  if (!ok1) return "Geannuleerd";
+
+  let n = 0;
+  const uid = await getUid();
+  for (const a of nieuw) {
+    try {
+      const { data, error } = await sb.from("atleten").insert({ ...a, eigenaar_id: uid }).select().single();
+      if (error) throw error;
+      atleten.push({ ...data, atleetId: data.id });
+      n++;
+      if (n % 5 === 0) toast(`Atleten uploaden… (${n}/${nieuw.length})`, "ok");
+    } catch (e) { console.warn("Fout bij", a.naam, e.message); }
+  }
+  return `✓ ${n} atleet(en) geïmporteerd!`;
+}
+
+// ── Verwerk PR-sheet (zoals persoonlijke_records.xlsx) ────────
+async function verwerkPRSheet(rows) {
+  const header      = rows[0];
+  const disciplines = header.slice(1).map(h => String(h).trim());
+  const vandaag     = new Date().toISOString().split("T")[0];
+
+  const nieuwePrestaties = []; // nieuw toe te voegen
+  const teVervangenIds   = []; // bestaande ID's die vervangen worden door beter PR
+  let nieuweAtleten = 0;
+
+  for (const row of rows.slice(1)) {
+    const naamRaw = String(row[0]).trim();
+    if (!naamRaw) continue;
+
+    // Zoek of maak atleet — NOOIT bestaande gegevens overschrijven
+    let atleet = atleten.find(a => a.naam.toLowerCase() === naamRaw.toLowerCase());
+    if (!atleet) {
+      try {
+        const uid2 = await getUid();
+        const { data, error } = await sb.from("atleten").insert({ naam: naamRaw, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid2 }).select().single();
+        if (error) throw error;
+        atleet = { ...data, atleetId: data.id };
+        atleten.push(atleet);
+        nieuweAtleten++;
+      } catch (e) { console.warn("Fout bij atleet", naamRaw, e.message); continue; }
+    }
+
+    for (let i = 0; i < disciplines.length; i++) {
+      const disc = disciplines[i];
+      const val  = row[i + 1];
+      if (val === "" || val === null || val === undefined) continue;
+
+      const resultaatStr = String(val).trim().replace(",", ".");
+      if (!resultaatStr) continue;
+
+      const nieuweWaarde = parseResultaat(resultaatStr);
+      if (nieuweWaarde === null) continue;
+
+      const isTijd  = TIJD_DISCIPLINES.includes(disc);
+      const eenheid = isTijd ? "sec" : "m";
+
+      // Zoek bestaande PRs voor deze atleet + discipline
+      const bestaande = prestaties.filter(p =>
+        String(p.atleetId) === String(atleet.id) &&
+        p.discipline.trim().toLowerCase() === disc.toLowerCase()
+      );
+
+      if (bestaande.length === 0) {
+        // Nog geen PR → toevoegen
+        nieuwePrestaties.push({
+          atleetId: atleet.id, discipline: disc, resultaat: resultaatStr,
+          eenheid, datum: vandaag, locatie: "Import", notities: "Geïmporteerd uit Excel"
+        });
+      } else {
+        // Vergelijk met beste bestaande
+        const beste = bestaande.reduce((best, p) => {
+          const vB = parseResultaat(String(best.resultaat).replace(",","."));
+          const vP = parseResultaat(String(p.resultaat).replace(",","."));
+          if (vP === null) return best;
+          if (vB === null) return p;
+          return isTijd ? (vP < vB ? p : best) : (vP > vB ? p : best);
+        });
+        const besteWaarde = parseResultaat(String(beste.resultaat).replace(",","."));
+        const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+
+        if (isVerbetering) {
+          teVervangenIds.push(String(beste.id));
+          nieuwePrestaties.push({
+            atleetId: atleet.id, discipline: disc, resultaat: resultaatStr,
+            eenheid, datum: vandaag, locatie: "Import",
+            notities: `PR verbeterd (was: ${beste.resultaat})`
+          });
+        }
+        // Niet beter → overslaan
+      }
+    }
+  }
+
+  if (!nieuwePrestaties.length && !nieuweAtleten) {
+    return "Geen verbeteringen gevonden — alles is al up-to-date";
+  }
+
+  const verbeterd = teVervangenIds.length;
+  const nieuw     = nieuwePrestaties.length - verbeterd;
+  const msgDelen  = [];
+  if (nieuweAtleten) msgDelen.push(`${nieuweAtleten} nieuwe atleet(en)`);
+  if (verbeterd)     msgDelen.push(`${verbeterd} PR('s) verbeterd`);
+  if (nieuw > 0)     msgDelen.push(`${nieuw} nieuwe prestatie(s)`);
+
+  const ok2 = await bevestig("Prestaties importeren", `Gevonden:\n${msgDelen.join("\n")}\n\nDoorgaan?`);
+  if (!ok2) return "Geannuleerd";
+
+  const uid = await getUid();
+
+  // Verwijder oude PRs
+  if (teVervangenIds.length) {
+    const { error: delErr } = await sb.from("prestaties")
+      .delete().eq("eigenaar_id", uid).in("id", teVervangenIds);
+    if (delErr) console.warn("Fout bij verwijderen oude PRs", delErr.message);
+    teVervangenIds.forEach(id => { prestaties = prestaties.filter(p => String(p.id) !== id); });
+  }
+
+  // Voeg nieuwe/verbeterde prestaties toe
+  let n = 0;
+  const batchSize = 20;
+  for (let i = 0; i < nieuwePrestaties.length; i += batchSize) {
+    const batch = nieuwePrestaties.slice(i, i + batchSize).map(p => ({
+      eigenaar_id: uid,
+      atleet_id:   p.atleetId,
+      discipline:  p.discipline,
+      resultaat:   p.resultaat,
+      eenheid:     p.eenheid,
+      datum:       p.datum || null,
+      locatie:     p.locatie,
+      notities:    p.notities
+    }));
+    try {
+      const { data, error } = await sb.from("prestaties").insert(batch).select();
+      if (error) throw error;
+      (data || []).forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
+      n += batch.length;
+      toast(`Prestaties uploaden… (${n}/${nieuwePrestaties.length})`, "ok");
+    } catch (e) { console.warn("Fout bij batch prestaties", e.message); }
+  }
+
+  return `✓ ${nieuweAtleten} atleet(en) · ${verbeterd} PR('s) vervangen · ${nieuw} nieuw toegevoegd`;
+}
+
+// ── Gedeelde hulpfuncties voor import ─────────────────────────
+
+// Zet "Achternaam, X.Y. (Voornaam)" of "Zimmeren, L.E.C. van (Léoni)" → "Léoni van Zimmeren"
+function parseerNaam(raw) {
+  const s = String(raw).trim();
+  if (!s) return "";
+
+  // Voornaam uit haakjes: "(Léoni)"
+  const mVoornaam = s.match(/\(([^)]+)\)/);
+  const voornaam  = mVoornaam ? mVoornaam[1].trim() : "";
+
+  // Splits op komma: ["Zimmeren", " L.E.C. van (Léoni)"]
+  const kommaPos      = s.indexOf(",");
+  const deelVoorKomma = kommaPos >= 0 ? s.slice(0, kommaPos).trim() : s;
+  const deelNaKomma   = kommaPos >= 0 ? s.slice(kommaPos + 1).replace(/\([^)]*\)/g, "").trim() : "";
+
+  // Tussenvoegsels — langste eerst zodat "van der" voor "van" matched
+  const tussenvoegsels = [
+    "van der","van den","van de","van het","van 't",
+    "van","de","den","der","het","'t",
+    "op de","op den","op het","te","ter","ten",
+    "in de","in den","in het","aan de","aan den",
+    "uit de","uit den","bij de","voor de"
+  ];
+
+  let tussenvoegsel = "";
+  const deelNaKommaLower = deelNaKomma.toLowerCase();
+  for (const tv of tussenvoegsels) {
+    // Zoek tussenvoegsel als los woord (niet als deel van een initiaal)
+    const regex = new RegExp("(^|\\s)" + tv.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(\\s|$)", "i");
+    if (regex.test(deelNaKommaLower)) {
+      tussenvoegsel = tv;
+      break;
+    }
+  }
+
+  // Achternaam = deel vóór komma
+  const achternaam = deelVoorKomma;
+
+  const delen = [voornaam, tussenvoegsel, achternaam].filter(Boolean);
+  return delen.join(" ") || achternaam;
+}
+
+function formatDatum(val) {
+  if (!val) return "";
+  if (val instanceof Date) return val.toISOString().split("T")[0];
+  const s = String(val);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+}
+
+// ── Wedstrijden state ─────────────────────────────────────────
+let wedstrijden   = [];
+let programma     = [];
+let editWedstrijdId   = null;
+let actiefWedstrijdId = null;
+let actiefGeslacht    = "M";
+let aantalPloegen     = 2;
+let opstellingData    = {};
+let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
+
+// ── U16 Disciplines definitie ─────────────────────────────────
+const U16_DISCIPLINES = [
+  // Loop
+  { naam:"60m",         type:"loop",      duur:15 },
+  { naam:"80m",         type:"loop",      duur:15 },
+  { naam:"100m",        type:"loop",      duur:20 },
+  { naam:"150m",        type:"loop",      duur:20 },
+  { naam:"200m",        type:"loop",      duur:25 },
+  { naam:"300m",        type:"loop",      duur:30 },
+  { naam:"600m",        type:"loop",      duur:40 },
+  { naam:"800m",        type:"loop",      duur:45 },
+  { naam:"1000m",       type:"loop",      duur:50 },
+  { naam:"1500m",       type:"loop",      duur:60 },
+  { naam:"80m horden",  type:"loop",      duur:20 },
+  { naam:"100m horden", type:"loop",      duur:20 },
+  { naam:"300m horden", type:"loop",      duur:35 },
+  { naam:"4x100m",      type:"estafette", duur:20 },
+  { naam:"4x80m",       type:"estafette", duur:20 },
+  // Technisch - springen
+  { naam:"Hoogspringen",  type:"technisch", duur:90 },
+  { naam:"Verspringen",   type:"technisch", duur:60 },
+  // Technisch - werpen
+  { naam:"Kogelstoten",   type:"technisch", duur:60 },
+  { naam:"Discuswerpen",  type:"technisch", duur:60 },
+  { naam:"Speerwerpen",   type:"technisch", duur:60 },
+];
+
+// ── U16 Puntentelling (Atletiekunie formule, pag 10-11 doc) ───
+function berekenPunten(discipline, resultaat, geslacht) {
+  const r = parseResultaat(resultaat);
+  if (r === null || r <= 0) return 0;
+
+  // Loop: INT(A / tijd - B)   — zelfde constanten voor M én V bij U16
+  const loopConst = {
+    "60m":         { A:15365.0,  B:1158.0  },
+    "80m":         { A:19933.0,  B:1193.0  },
+    "100m":        { A:24450.0,  B:1212.0  },
+    "150m":        { A:36380.0,  B:1200.0  },
+    "200m":        { A:0,        B:0       }, // niet in tabel, schat
+    "300m":        { A:78286.0,  B:1204.0  },
+    "600m":        { A:160470.5, B:911.35  },
+    "800m":        { A:216604.8, B:884.5   },
+    "1000m":       { A:276912.0, B:838.5   },
+    "1500m":       { A:425682.0, B:788.5   },
+    "80m horden":  { A:18100.0,  B:804.5   },
+    "100m horden": { A:21800.0,  B:727.0   },
+    "300m horden": { A:70800.0,  B:872.5   },
+    "4x100m":      { A:95150.0,  B:1189.5  },
+    "4x80m":       { A:77325.0,  B:1168.0  },
+  };
+  // Spring/werp: INT(A * SQRT(afstand) - B)
+  const veldConst = {
+    "Kogelstoten":  { A:303.73, B:437.5 },
+    "Discuswerpen": { A:166.79, B:438.5 },
+    "Speerwerpen":  { A:170.39, B:437.5 },
+    "Verspringen":  { A:887.99, B:1364.5, drempel:4.41, drempelA:200, drempelB:1.91 },
+    "Hoogspringen": { A:1977.53,B:1798.5, drempel:1.35, drempelA:733.33333, drempelB:0.67 },
+  };
+
+  const disc = discipline.trim();
+  if (loopConst[disc]) {
+    const {A, B} = loopConst[disc];
+    if (A === 0) return 0;
+    return Math.max(0, Math.floor(A / r - B));
+  }
+  if (veldConst[disc]) {
+    const c = veldConst[disc];
+    if (c.drempel && r <= c.drempel) {
+      // Speciale formule voor lage waarden
+      return Math.max(0, Math.floor((r - c.drempelB) * c.drempelA + 0.5));
+    }
+    return Math.max(0, Math.floor(c.A * Math.sqrt(r) - c.B));
+  }
+  return 0;
+}
+
+// Zet "7,45", "1:02,3", "1.02.3" om naar seconden of meters als getal
+function parseResultaat(val) {
+  if (!val) return null;
+  const s = String(val).replace(",", ".").trim();
+  // Formaat m:ss.f of m.ss.f
+  const minSec = s.match(/^(\d+)[:.]([\d.]+)$/);
+  if (minSec) {
+    return parseFloat(minSec[1]) * 60 + parseFloat(minSec[2]);
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Beste prestatie van atleet voor een discipline
+function bestePrestatie(atleetId, discipline) {
+  const prs = prestaties.filter(p =>
+    String(p.atleetId) === String(atleetId) &&
+    p.discipline.trim().toLowerCase() === discipline.trim().toLowerCase()
+  );
+  if (!prs.length) return null;
+  // Tijdonderdelen: lager = beter; veld: hoger = beter
+  const isLoop = ["loop","estafette"].includes(getDisciplineType(discipline));
+  return prs.reduce((best, p) => {
+    const v = parseResultaat(p.resultaat);
+    const b = parseResultaat(best.resultaat);
+    if (v === null) return best;
+    if (b === null) return p;
+    return isLoop ? (v < b ? p : best) : (v > b ? p : best);
+  });
+}
+
+function getDisciplineType(naam) {
+  const d = U16_DISCIPLINES.find(d => d.naam.toLowerCase() === naam.trim().toLowerCase());
+  return d ? d.type : "loop";
+}
+
+// ── Wedstrijden render ────────────────────────────────────────
+function renderWedstrijden() {
+  document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
+  const grid = document.getElementById("wedstrijden-grid");
+  if (!wedstrijden.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
+    return;
+  }
+  grid.innerHTML = wedstrijden.map(w => `
+    <div class="wedstrijd-card" onclick="openWedstrijdModal('${w.id}')">
+      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+      <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
+      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
+      ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
+    </div>`).join("");
+}
+
+// ── Wedstrijd Modal ───────────────────────────────────────────
+function openWedstrijdModal(id = null) {
+  editWedstrijdId = id;
+  document.getElementById("wedstrijdModalTitle").textContent = id ? "Wedstrijd bewerken" : "Wedstrijd toevoegen";
+  document.getElementById("wedstrijdDeleteBtn").style.display = id ? "" : "none";
+  if (id) {
+    const w = wedstrijden.find(x => String(x.id) === String(id));
+    if (w) {
+      document.getElementById("w-naam").value     = w.naam     || "";
+      document.getElementById("w-datum").value    = w.datum    || "";
+      document.getElementById("w-locatie").value  = w.locatie  || "";
+      document.getElementById("w-notities").value = w.notities || "";
+    }
+  } else {
+    document.getElementById("w-naam").value     = "";
+    document.getElementById("w-datum").value    = "";
+    document.getElementById("w-locatie").value  = "";
+    document.getElementById("w-notities").value = "";
+  }
+  openModal("wedstrijdModal");
+}
+
+async function saveWedstrijd() {
+  const naam = document.getElementById("w-naam").value.trim();
+  if (!naam) { toast("Vul een naam in", "err"); return; }
+  const uid = await getUid();
+  const body = {
+    naam, datum: document.getElementById("w-datum").value || null,
+    locatie: document.getElementById("w-locatie").value.trim(),
+    notities: document.getElementById("w-notities").value.trim()
+  };
+  try {
+    if (editWedstrijdId) {
+      const { error } = await sb.from("wedstrijden").update(body).eq("id", editWedstrijdId).eq("eigenaar_id", uid);
+      if (error) throw error;
+      const i = wedstrijden.findIndex(w => String(w.id) === String(editWedstrijdId));
+      if (i >= 0) wedstrijden[i] = { ...wedstrijden[i], ...body };
+      toast("Wedstrijd bijgewerkt ✓");
+    } else {
+      const { data, error } = await sb.from("wedstrijden").insert({ ...body, eigenaar_id: uid }).select().single();
+      if (error) throw error;
+      wedstrijden.unshift(data);
+      toast("Wedstrijd toegevoegd ✓");
+    }
+    closeModal("wedstrijdModal");
+    renderWedstrijden();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function deleteWedstrijd() {
+  if (!await bevestig("Wedstrijd verwijderen", "Weet je het zeker?")) return;
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("wedstrijden").delete().eq("id", editWedstrijdId).eq("eigenaar_id", uid);
+    if (error) throw error;
+    wedstrijden = wedstrijden.filter(w => String(w.id) !== String(editWedstrijdId));
+    closeModal("wedstrijdModal");
+    renderWedstrijden();
+    toast("Wedstrijd verwijderd");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Opstelling scherm ─────────────────────────────────────────
+function renderOpstellingWedstrijden() {
+  const lijst = document.getElementById("opstelling-wedstrijd-lijst");
+  if (!wedstrijden.length) {
+    lijst.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Voeg eerst een wedstrijd toe via het tabblad Wedstrijden.</div>`;
+    return;
+  }
+  lijst.innerHTML = wedstrijden.map(w => `
+    <div class="wedstrijd-card" onclick="openOpstelling('${w.id}')">
+      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+      <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
+      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")} &nbsp;→ Opstelling maken</div>
+    </div>`).join("");
+}
+
+async function openOpstelling(wedstrijdId) {
+  actiefWedstrijdId = wedstrijdId;
+  const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
+  document.getElementById("opstelling-wedstrijd-naam").textContent = w ? w.naam : "";
+  document.getElementById("opstelling-stap1").style.display = "none";
+  document.getElementById("opstelling-stap2").style.display = "";
+  await laadProgrammaEnOpstelling();
+}
+
+function terug_naar_wedstrijden() {
+  document.getElementById("opstelling-stap1").style.display = "";
+  document.getElementById("opstelling-stap2").style.display = "none";
+  actiefWedstrijdId = null;
+}
+
+function setOpstellingGeslacht(g) {
+  actiefGeslacht = g;
+  document.getElementById("opstelling-tab-M").className = g === "M" ? "btn btn-primary" : "btn btn-ghost";
+  document.getElementById("opstelling-tab-V").className = g === "V" ? "btn btn-primary" : "btn btn-ghost";
+  laadProgrammaEnOpstelling();
+}
+
+async function laadProgrammaEnOpstelling() {
+  const uid = await getUid();
+  try {
+    const [pRes, oRes, bRes] = await Promise.all([
+      sb.from("programma").select("*")
+        .eq("eigenaar_id", uid)
+        .eq("wedstrijd_id", actiefWedstrijdId)
+        .eq("geslacht", actiefGeslacht)
+        .order("starttijd"),
+      sb.from("opstelling").select("*")
+        .eq("eigenaar_id", uid)
+        .eq("wedstrijd_id", actiefWedstrijdId)
+        .eq("geslacht", actiefGeslacht),
+      sb.from("beschikbaarheid").select("*")
+        .eq("eigenaar_id", uid)
+        .eq("wedstrijd_id", actiefWedstrijdId)
+    ]);
+    if (pRes.error) throw pRes.error;
+    if (oRes.error) throw oRes.error;
+    if (bRes.error) throw bRes.error;
+
+    programma = (pRes.data || []);
+
+    opstellingData = {};
+    (oRes.data || []).forEach(o => { opstellingData[o.ploeg] = o.data || {}; });
+
+    beschikbaarData = {};
+    (bRes.data || []).forEach(b => {
+      beschikbaarData[String(b.atleet_id)] = b.beschikbaar !== false;
+    });
+
+    renderProgrammaOverzicht();
+    renderBeschikbaarheid();
+    renderPloegen();
+  } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
+}
+
+// ── Programma overzicht ───────────────────────────────────────
+function renderProgrammaOverzicht() {
+  const el = document.getElementById("programma-overzicht");
+  if (!programma.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Nog geen programma. Klik op ✏️ Bewerken.</div>`;
+    return;
+  }
+  el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;">
+    <thead><tr>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Onderdeel</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Type</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Starttijd</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Duur</th>
+    </tr></thead>
+    <tbody>
+      ${programma.map(p => `<tr>
+        <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.type}</td>
+        <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
+      </tr>`).join("")}
+    </tbody>
+  </table></div>`;
+}
+
+// ── Programma Modal ───────────────────────────────────────────
+function openProgrammaModal() {
+  const g = actiefGeslacht === "M" ? "Jongens" : "Meisjes";
+  const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
+  document.getElementById("programma-modal-sub").textContent =
+    `${w ? w.naam : ""} — ${g}`;
+
+  const lijst = document.getElementById("programma-items-list");
+  lijst.innerHTML = "";
+  if (programma.length) {
+    programma.forEach(p => addProgrammaRijMet(p));
+  } else {
+    addProgrammaRij();
+  }
+  openModal("programmaModal");
+}
+
+function addProgrammaRij() {
+  addProgrammaRijMet({});
+}
+
+function addProgrammaRijMet(p) {
+  const lijst = document.getElementById("programma-items-list");
+  const div = document.createElement("div");
+  div.className = "programma-rij";
+  const discOpties = U16_DISCIPLINES.map(d =>
+    `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
+  ).join("");
+  div.innerHTML = `
+    <select class="pr-disc" onchange="updateProgrammaType(this)">
+      ${discOpties}
+    </select>
+    <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
+    <input type="number" class="pr-duur" value="${p.duur||30}" min="5" max="180" placeholder="min">
+    <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
+    <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+  `;
+  lijst.appendChild(div);
+}
+
+function updateProgrammaType(sel) {
+  const rij = sel.parentElement;
+  const disc = U16_DISCIPLINES.find(d => d.naam === sel.value);
+  rij.querySelector(".pr-type").textContent = disc ? disc.type : "";
+}
+
+async function saveProgrammaModal() {
+  const uid = await getUid();
+  const rijen = document.querySelectorAll(".programma-rij");
+  const items = [];
+  rijen.forEach(rij => {
+    const disc = rij.querySelector(".pr-disc").value;
+    const tijd = rij.querySelector(".pr-tijd").value;
+    const duur = rij.querySelector(".pr-duur").value;
+    const d = U16_DISCIPLINES.find(x => x.naam === disc);
+    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd || null, duur: parseInt(duur)||30 });
+  });
+  try {
+    // Verwijder bestaande programmarijen voor deze wedstrijd/geslacht combo
+    const { error: delErr } = await sb.from("programma")
+      .delete()
+      .eq("eigenaar_id", uid)
+      .eq("wedstrijd_id", actiefWedstrijdId)
+      .eq("geslacht", actiefGeslacht);
+    if (delErr) throw delErr;
+
+    if (items.length) {
+      const rows = items.map(item => ({
+        eigenaar_id:  uid,
+        wedstrijd_id: actiefWedstrijdId,
+        geslacht:     actiefGeslacht,
+        discipline:   item.discipline,
+        type:         item.type,
+        starttijd:    item.starttijd,
+        duur:         item.duur
+      }));
+      const { error: insErr } = await sb.from("programma").insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    programma = items;
+    programma.sort((a,b) => (a.starttijd||"").localeCompare(b.starttijd||""));
+    closeModal("programmaModal");
+    renderProgrammaOverzicht();
+    renderPloegen();
+    toast("Programma opgeslagen ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Ploegen render ────────────────────────────────────────────
+function setAantalPloegen(n) {
+  aantalPloegen = parseInt(n);
+  renderPloegen();
+}
+
+function renderPloegen() {
+  const cont = document.getElementById("ploegen-container");
+  if (!programma.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
+    return;
+  }
+
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  cont.innerHTML = ploegNamen.map(ploeg => renderPloeg(ploeg)).join("");
+}
+
+function renderPloeg(ploeg) {
+  const opst = opstellingData[ploeg] || {};
+  let totalePunten = 0;
+
+  const rijen = programma.map((item, idx) => {
+    const isLoop      = item.type === "loop";
+    const isEstafette = item.type === "estafette";
+    const isTechnisch = item.type === "technisch";
+    const maxSlots = isTechnisch ? 2 : 3;
+    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
+    const slots = isEstafette ? 1 : maxSlots;
+
+    let slotsHtml = "";
+    for (let s = 0; s < slots; s++) {
+      const slotKey = `${ploeg}_${idx}_${s}`;
+      const atleetId = opst[slotKey] || null;
+      const atleet   = atleetId ? atleten.find(a => String(a.id) === String(atleetId)) : null;
+      let punten = 0;
+      let conflictWaarschuwing = "";
+
+      if (atleet) {
+        const pr = bestePrestatie(atleet.id, item.discipline);
+        if (pr) punten = berekenPunten(item.discipline, pr.resultaat, actiefGeslacht);
+        totalePunten += punten;
+        conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "⚠️" : "";
+      }
+
+      const prVal = atleet ? bestePrestatie(atleet.id, item.discipline) : null;
+      const prTekst = prVal ? `PR: ${prVal.resultaat}` : "";
+
+      slotsHtml += `
+        <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
+             onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
+          <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
+          ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
+          ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
+          ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
+        </div>`;
+    }
+
+    return `
+      <div class="onderdeel-rij">
+        <div>
+          <div class="onderdeel-naam">${esc(item.discipline)}</div>
+          <div class="onderdeel-tijd">${item.starttijd || "—"} · ${item.duur||30}min</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
+        <div style="grid-column:3;"></div>
+        <div></div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="ploeg-container">
+      <div class="ploeg-header">
+        <div class="ploeg-naam">Ploeg ${ploeg}</div>
+        <div class="ploeg-punten">~${totalePunten} pts</div>
+      </div>
+      ${rijen}
+    </div>`;
+}
+
+// Controleer tijdconflict: zelfde atleet al ingepland binnen 15 min
+function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
+  if (!huidigItem.starttijd || !atleetId) return false;
+  const huidigMin = tijdNaarMinuten(huidigItem.starttijd);
+
+  return programma.some((item, idx) => {
+    if (idx === huidigIdx || !item.starttijd) return false;
+    const itemMin = tijdNaarMinuten(item.starttijd);
+    if (Math.abs(itemMin - huidigMin) > 15) return false;
+    // Kijk of atleet in dit onderdeel zit
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    for (let s = 0; s < maxSlots; s++) {
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
+    }
+    return false;
+  });
+}
+
+function tijdNaarMinuten(tijdStr) {
+  if (!tijdStr) return 0;
+  const [h, m] = tijdStr.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Tel hoeveel onderdelen atleet al heeft in deze ploeg
+function telOnderdelenAtleet(ploeg, opst, atleetId) {
+  let tel = 0;
+  programma.forEach((item, idx) => {
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    for (let s = 0; s < maxSlots; s++) {
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
+    }
+  });
+  return tel;
+}
+
+// ── Atleet slot keuze ─────────────────────────────────────────
+let actiefSlot = null;
+
+function openSlotKeuze(ploeg, idx, slotNr, el) {
+  // Sluit bestaande dropdown
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  const opst = opstellingData[ploeg] || {};
+  const item = programma[idx];
+
+  const div = document.createElement("div");
+  div.className = "slot-select";
+
+  // Filter: geslacht, beschikbaar
+  const kandidaten = atleten
+    .filter(a => (!actiefGeslacht || a.geslacht === actiefGeslacht) && isBeschikbaar(a.id))
+    .map(a => {
+      const pr  = bestePrestatie(a.id, item.discipline);
+      const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+      const aantalOnderdelen = telOnderdelenAtleet(ploeg, opst, a.id);
+      const conflict = checkConflict(ploeg, opst, idx, a.id, item);
+      return { atleet: a, pr, pts, aantalOnderdelen: aantalOnderdelen, conflict };
+    })
+    .sort((a, b) => b.pts - a.pts);
+
+  div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
+    kandidaten.map(k => {
+      const dimmed = k.aantalOnderdelen >= 3 || k.conflict;
+      const waarsch = k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
+        data-naam="${esc(k.atleet.naam).toLowerCase()}"
+        onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
+        <span>${esc(k.atleet.naam)} ${waarsch ? `<small style="color:var(--accent2)">(${waarsch})</small>` : ""}</span>
+        <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${k.pr.resultaat}` : "geen PR"}</span>
+      </div>`;
+    }).join("") +
+    `<div class="slot-select-item" onclick="kiesAtleet('${ploeg}',${idx},${slotNr},null)">
+      <span style="color:var(--muted)">— Leeg maken —</span>
+    </div>`;
+
+  el.style.position = "relative";
+  el.appendChild(div);
+  div.querySelector(".slot-select-search").focus();
+
+  // Sluit bij klik buiten
+  setTimeout(() => {
+    document.addEventListener("click", function sluiter(e) {
+      if (!div.contains(e.target) && e.target !== el) {
+        div.remove();
+        document.removeEventListener("click", sluiter);
+      }
+    });
+  }, 100);
+}
+
+function filterSlotKeuze(input) {
+  const q = input.value.toLowerCase();
+  input.parentElement.querySelectorAll(".slot-select-item[data-naam]").forEach(item => {
+    item.style.display = item.dataset.naam.includes(q) ? "" : "none";
+  });
+}
+
+function kiesAtleet(ploeg, idx, slotNr, atleetId) {
+  if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+  const slotKey = `${ploeg}_${idx}_${slotNr}`;
+  opstellingData[ploeg][slotKey] = atleetId;
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  renderPloegen();
+}
+
+function clearSlot(ploeg, idx, slotNr) {
+  if (!opstellingData[ploeg]) return;
+  delete opstellingData[ploeg][`${ploeg}_${idx}_${slotNr}`];
+  renderPloegen();
+}
+
+// ── Beschikbaarheid ───────────────────────────────────────────
+function isBeschikbaar(atleetId) {
+  const v = beschikbaarData[String(atleetId)];
+  return v === undefined ? true : v; // standaard beschikbaar
+}
+
+function renderBeschikbaarheid() {
+  const grid = document.getElementById("beschikbaarheid-grid");
+  const lijst = atleten.filter(a => a.geslacht === actiefGeslacht);
+  if (!lijst.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen atleten gevonden voor dit geslacht.</div>`;
+    return;
+  }
+  grid.innerHTML = lijst.map(a => {
+    const beschikbaar = isBeschikbaar(a.id);
+    return `
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;
+        background:var(--surface2);border:1px solid ${beschikbaar ? "var(--success)" : "var(--border)"};
+        border-radius:8px;padding:8px 12px;transition:all .2s;">
+        <input type="checkbox" ${beschikbaar ? "checked" : ""}
+          onchange="toggleBeschikbaar('${a.id}', this.checked)"
+          style="accent-color:var(--success);width:16px;height:16px;">
+        <span style="font-size:13px;font-weight:600;">${esc(a.naam)}</span>
+      </label>`;
+  }).join("");
+}
+
+async function toggleBeschikbaar(atleetId, beschikbaar) {
+  beschikbaarData[String(atleetId)] = beschikbaar;
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("beschikbaarheid").upsert({
+      eigenaar_id:  uid,
+      wedstrijd_id: actiefWedstrijdId,
+      atleet_id:    atleetId,
+      beschikbaar
+    }, { onConflict: "eigenaar_id,wedstrijd_id,atleet_id" });
+    if (error) throw error;
+  } catch(e) { console.warn("Fout bij opslaan beschikbaarheid", e.message); }
+  renderBeschikbaarheid();
+}
+
+async function alleenBeschikbaar(aan) {
+  const uid = await getUid();
+  const lijst = atleten.filter(a => a.geslacht === actiefGeslacht);
+  for (const a of lijst) beschikbaarData[String(a.id)] = aan;
+  renderBeschikbaarheid();
+  try {
+    const rows = lijst.map(a => ({
+      eigenaar_id:  uid,
+      wedstrijd_id: actiefWedstrijdId,
+      atleet_id:    a.id,
+      beschikbaar:  aan
+    }));
+    if (rows.length) {
+      const { error } = await sb.from("beschikbaarheid").upsert(rows, { onConflict: "eigenaar_id,wedstrijd_id,atleet_id" });
+      if (error) throw error;
+    }
+    toast(aan ? "Alle atleten beschikbaar" : "Alle atleten uitgeschakeld");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+function genereerOpstelling() {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  opstellingData = {};
+
+  ploegNamen.forEach(ploeg => {
+    opstellingData[ploeg] = {};
+    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen
+    const atleetIngepland = {};       // atleetId → [{idx, starttijd}]
+
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette = item.type === "estafette";
+      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+
+      // Rangschik kandidaten op punten — alleen beschikbare atleten
+      const kandidaten = atleten
+        .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
+        .map(a => {
+          const pr  = bestePrestatie(a.id, item.discipline);
+          const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+          return { atleet: a, pts };
+        })
+        .filter(k => k.pts > 0)
+        .sort((a, b) => b.pts - a.pts);
+
+      let gevuld = 0;
+      for (const k of kandidaten) {
+        if (gevuld >= maxSlots) break;
+        const aid = String(k.atleet.id);
+
+        // Regel: max 3 onderdelen
+        if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
+
+        // Regel: geen tijdconflict binnen 15 min
+        if (item.starttijd) {
+          const hMin = tijdNaarMinuten(item.starttijd);
+          const conflict = (atleetIngepland[aid] || []).some(ingepland => {
+            if (!ingepland.starttijd) return false;
+            return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
+          });
+          if (conflict) continue;
+        }
+
+        // Wijs toe
+        opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
+        atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
+        if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
+        atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+        gevuld++;
+      }
+    });
+  });
+
+  renderPloegen();
+  toast("Opstelling gegenereerd ✓");
+}
+
+// ── Opslaan ───────────────────────────────────────────────────
+async function opslaanOpstelling() {
+  const uid = await getUid();
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  try {
+    const rows = ploegNamen.map(ploeg => ({
+      eigenaar_id:  uid,
+      wedstrijd_id: actiefWedstrijdId,
+      geslacht:     actiefGeslacht,
+      ploeg,
+      data: opstellingData[ploeg] || {}
+    }));
+    const { error } = await sb.from("opstelling").upsert(rows, {
+      onConflict: "eigenaar_id,wedstrijd_id,geslacht,ploeg"
+    });
+    if (error) throw error;
+    toast("Opstelling opgeslagen ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Afdrukken ─────────────────────────────────────────────────
+function printOpstelling() {
+  window.print();
+}
+
+// ── Atletiek.nu integratie ────────────────────────────────────
+let atlNuGeselecteerdeAtleet = null; // { id, name }
+let atlNuPrs                 = [];   // gevonden PRs
+
+function openAtlNuModal() {
+  atlNuGeselecteerdeAtleet = null;
+  atlNuPrs = [];
+  document.getElementById("atlnu-zoek-input").value      = "";
+  document.getElementById("atlnu-atleet-resultaten").innerHTML = "";
+  document.getElementById("atlnu-prs-sectie").style.display   = "none";
+  document.getElementById("atlnu-wedstrijd-resultaten").innerHTML = "";
+  document.getElementById("atlnu-uitslagen-sectie").style.display = "none";
+  setAtlNuTab("atleet");
+  openModal("atlNuModal");
+}
+
+function setAtlNuTab(tab) {
+  document.getElementById("atlnu-view-atleet").style.display    = tab === "atleet"    ? "" : "none";
+  document.getElementById("atlnu-view-wedstrijd").style.display = tab === "wedstrijd" ? "" : "none";
+  document.getElementById("atlnu-tab-atleet").className    = tab === "atleet"    ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+  document.getElementById("atlnu-tab-wedstrijd").className  = tab === "wedstrijd" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+}
+
+async function zoekAtlNuAtleet() {
+  const q = document.getElementById("atlnu-zoek-input").value.trim();
+  if (!q) return;
+  const el = document.getElementById("atlnu-atleet-resultaten");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Zoeken…</div>`;
+  document.getElementById("atlnu-prs-sectie").style.display = "none";
+
+  try {
+    const res  = await fetch(`${ATL_API}/athlete?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>Geen atleten gevonden.</div>`;
+      return;
+    }
+
+    el.innerHTML = data.map(a => `
+      <div class="slot-select-item" style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;"
+           onclick="laadAtlNuPrs('${a.id}', '${esc(a.name)}')">
+        <span>${esc(a.name)}</span>
+        <span style="color:var(--muted);font-size:12px;">ID: ${a.id} →</span>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function laadAtlNuPrs(id, naam) {
+  atlNuGeselecteerdeAtleet = { id, name: naam };
+  document.getElementById("atlnu-atleet-resultaten").style.display = "none";
+  const sectie = document.getElementById("atlnu-prs-sectie");
+  sectie.style.display = "";
+  document.getElementById("atlnu-prs-naam").textContent = naam;
+  const lijst = document.getElementById("atlnu-prs-lijst");
+  lijst.innerHTML = `<div class="loading"><div class="spinner"></div> PRs laden…</div>`;
+
+  try {
+    const res  = await fetch(`${ATL_API}/athlete/prs?id=${id}`);
+    atlNuPrs   = await res.json();
+
+    if (!atlNuPrs.length) {
+      lijst.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen PRs gevonden.</div>`;
+      return;
+    }
+
+    lijst.innerHTML = `<div style="overflow-x:auto;max-height:260px;overflow-y:auto;">
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <thead><tr>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Onderdeel</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">PR</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Datum</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Locatie</th>
+        </tr></thead>
+        <tbody>
+          ${atlNuPrs.map(p => `<tr>
+            <td style="padding:6px 10px;font-weight:700;">${esc(p.onderdeel)}</td>
+            <td style="padding:6px 10px;color:var(--accent);font-weight:700;">${esc(p.prestatie)}</td>
+            <td style="padding:6px 10px;color:var(--muted);">${esc(p.datum)}</td>
+            <td style="padding:6px 10px;color:var(--muted);">${esc(p.locatie)}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function importeerAtlNuPrs() {
+  if (!atlNuGeselecteerdeAtleet || !atlNuPrs.length) return;
+
+  const uid  = await getUid();
+  const naam = atlNuGeselecteerdeAtleet.name;
+
+  // Zoek atleet in app (op naam) of maak nieuw aan
+  let atleet = atleten.find(a => a.naam.toLowerCase() === naam.toLowerCase());
+  if (!atleet) {
+    const ok = await bevestig("Nieuwe atleet",
+      `"${naam}" staat nog niet in de app.\nToevoegen en PRs importeren?`);
+    if (!ok) return;
+    try {
+      const { data, error } = await sb.from("atleten")
+        .insert({ naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid })
+        .select().single();
+      if (error) throw error;
+      atleet = { ...data, atleetId: data.id };
+      atleten.push(atleet);
+    } catch(e) { toast("Fout bij aanmaken atleet: " + e.message, "err"); return; }
+  }
+
+  const vandaag    = new Date().toISOString().split("T")[0];
+  const isTijdDisc = (disc) => TIJD_DISCIPLINES.some(t => disc.toLowerCase().includes(t.toLowerCase()));
+
+  let toegevoegd = 0, verbeterd = 0, overgeslagen = 0;
+  const teVerwijderen = [];
+  const teInserteren  = [];
+
+  for (const pr of atlNuPrs) {
+    const disc         = pr.onderdeel;
+    const resultaatStr = pr.prestatie.replace(",", ".");
+    const nieuweWaarde = parseResultaat(resultaatStr);
+    if (!nieuweWaarde) { overgeslagen++; continue; }
+
+    const isTijd  = isTijdDisc(disc);
+    const eenheid = isTijd ? "sec" : "m";
+
+    const bestaande = prestaties.filter(p =>
+      String(p.atleetId) === String(atleet.id) &&
+      p.discipline.toLowerCase() === disc.toLowerCase()
+    );
+
+    if (!bestaande.length) {
+      teInserteren.push({ eigenaar_id: uid, atleet_id: atleet.id, discipline: disc,
+        resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag,
+        locatie: pr.locatie || "atletiek.nu", notities: "Geïmporteerd van atletiek.nu" });
+      toegevoegd++;
+    } else {
+      const beste = bestaande.reduce((b, p) => {
+        const vB = parseResultaat(String(b.resultaat).replace(",","."));
+        const vP = parseResultaat(String(p.resultaat).replace(",","."));
+        if (vP === null) return b;
+        return isTijd ? (vP < vB ? p : b) : (vP > vB ? p : b);
+      });
+      const besteWaarde   = parseResultaat(String(beste.resultaat).replace(",","."));
+      const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+
+      if (isVerbetering) {
+        teVerwijderen.push(String(beste.id));
+        teInserteren.push({ eigenaar_id: uid, atleet_id: atleet.id, discipline: disc,
+          resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag,
+          locatie: pr.locatie || "atletiek.nu",
+          notities: `PR verbeterd via atletiek.nu (was: ${beste.resultaat})` });
+        verbeterd++;
+      } else { overgeslagen++; }
+    }
+  }
+
+  // Verwijder oude PRs in één call
+  if (teVerwijderen.length) {
+    await sb.from("prestaties").delete().eq("eigenaar_id", uid).in("id", teVerwijderen);
+    teVerwijderen.forEach(id => { prestaties = prestaties.filter(p => String(p.id) !== id); });
+  }
+
+  // Voeg nieuwe toe in één call
+  if (teInserteren.length) {
+    const { data, error } = await sb.from("prestaties").insert(teInserteren).select();
+    if (!error && data) data.forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
+  }
+
+  closeModal("atlNuModal");
+  renderAtleten();
+  renderPrestaties();
+  toast(`✓ ${toegevoegd} nieuw · ${verbeterd} verbeterd · ${overgeslagen} overgeslagen`);
+}
+
+async function zoekAtlNuWedstrijd() {
+  const q = document.getElementById("atlnu-wedstrijd-input").value.trim();
+  if (!q) return;
+  const el = document.getElementById("atlnu-wedstrijd-resultaten");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Zoeken…</div>`;
+  document.getElementById("atlnu-uitslagen-sectie").style.display = "none";
+
+  try {
+    const res  = await fetch(`${ATL_API}/competitions?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🏟️</div>Geen wedstrijden gevonden.</div>`;
+      return;
+    }
+
+    el.innerHTML = data.map(w => {
+      // Haal ID op uit link
+      const id = w.link ? w.link.split("/").filter(Boolean).pop() : "";
+      return `<div class="slot-select-item" style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;"
+        onclick="laadAtlNuUitslagen('${id}', '${esc(w.title)}')">
+        <span>${esc(w.title)}</span>
+        <span style="color:var(--muted);font-size:12px;">Uitslagen →</span>
+      </div>`;
+    }).join("");
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function laadAtlNuUitslagen(id, naam) {
+  document.getElementById("atlnu-wedstrijd-resultaten").style.display = "none";
+  const sectie = document.getElementById("atlnu-uitslagen-sectie");
+  sectie.style.display = "";
+  document.getElementById("atlnu-uitslagen-naam").textContent = naam;
+  const lijst = document.getElementById("atlnu-uitslagen-lijst");
+  lijst.innerHTML = `<div class="loading"><div class="spinner"></div> Uitslagen laden…</div>`;
+
+  try {
+    const res  = await fetch(`${ATL_API}/results?id=${id}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      lijst.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen uitslagen gevonden.</div>`;
+      return;
+    }
+
+    lijst.innerHTML = `
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px;"
+        onclick="document.getElementById('atlnu-uitslagen-sectie').style.display='none';document.getElementById('atlnu-wedstrijd-resultaten').style.display=''">← Terug</button>
+      <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <thead><tr>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">#</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Naam</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Prestatie</th>
+          </tr></thead>
+          <tbody>
+            ${data.map(r => `<tr>
+              <td style="padding:6px 10px;color:var(--muted);">${esc(r.positie)}</td>
+              <td style="padding:6px 10px;font-weight:700;">${esc(r.naam)}</td>
+              <td style="padding:6px 10px;color:var(--accent);font-weight:700;">${esc(r.performance)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+// ── Profiel opslaan ───────────────────────────────────────────
+async function slaProfielOp() {
+  const naam = document.getElementById("profiel-naam").value.trim();
+  if (!naam) { toast("Gebruikersnaam mag niet leeg zijn", "err"); return; }
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("profielen")
+      .update({ gebruikersnaam: naam })
+      .eq("id", uid);
+    if (error) throw error;
+    if (huidigeProfiel) huidigeProfiel.gebruikersnaam = naam;
+    toast("Profiel opgeslagen ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function wijzigWachtwoord() {
+  const ww = document.getElementById("profiel-ww").value;
+  if (!ww || ww.length < 8) { toast("Wachtwoord moet minimaal 8 tekens zijn", "err"); return; }
+  try {
+    const { error } = await sb.auth.updateUser({ password: ww });
+    if (error) throw error;
+    document.getElementById("profiel-ww").value = "";
+    toast("Wachtwoord gewijzigd ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Admin panel ───────────────────────────────────────────────
+async function laadAdmin() {
+  if (!huidigeProfiel || huidigeProfiel.rol !== "admin") return;
+
+  // Laad uitnodigingen
+  const uitnEl = document.getElementById("uitnodigingen-lijst");
+  uitnEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  try {
+    const { data: uitn, error: uitnErr } = await sb.from("uitnodigingen")
+      .select("*").order("aangemaakt", { ascending: false });
+    if (uitnErr) throw uitnErr;
+
+    if (!uitn.length) {
+      uitnEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nog geen uitnodigingen aangemaakt.</div>`;
+    } else {
+      uitnEl.innerHTML = uitn.map(u => {
+        const verlopen = new Date(u.vervalt) < new Date();
+        const statusKleur = u.gebruikt ? "var(--success)" : verlopen ? "var(--accent2)" : "var(--accent)";
+        const statusTekst = u.gebruikt ? "Gebruikt" : verlopen ? "Verlopen" : "Actief";
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+              </div>
+            </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+              color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
+              padding:3px 10px;border-radius:20px;">${statusTekst}</span>
+            ${!u.gebruikt && !verlopen ? `
+              <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Link kopiëren</button>
+            ` : ""}
+          </div>`;
+      }).join("");
+    }
+  } catch(e) { uitnEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
+
+  // Laad gebruikers
+  const gebruEl = document.getElementById("gebruikers-lijst");
+  gebruEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  try {
+    const { data: gebruikers, error: gebruErr } = await sb.from("profielen")
+      .select("*").order("aangemaakt");
+    if (gebruErr) throw gebruErr;
+
+    if (!gebruikers.length) {
+      gebruEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen gebruikers gevonden.</div>`;
+    } else {
+      gebruEl.innerHTML = gebruikers.map(g => {
+        const isZelf = g.id === huidigeProfiel?.id;
+        const rolKleur = g.rol === "admin" ? "var(--accent)" : "var(--muted)";
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:13px;font-weight:600;">${esc(g.gebruikersnaam)} ${isZelf ? '<span style="color:var(--muted);font-size:11px;">(jij)</span>' : ""}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(g.email)}</div>
+            </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+              color:${rolKleur};text-transform:uppercase;">${g.rol}</span>
+            <span style="font-size:11px;color:var(--muted);">
+              ${g.actief ? "✅ Actief" : "❌ Inactief"} · 
+              Laatste login: ${g.laatste_login ? formatDate(g.laatste_login) : "nooit"}
+            </span>
+            ${!isZelf ? `
+              <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
+                ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
+              </button>
+            ` : ""}
+          </div>`;
+      }).join("");
+    }
+  } catch(e) { gebruEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
+}
+
+async function maakUitnodiging() {
+  const email = prompt("E-mailadres van de uitgenodigde trainer:");
+  if (!email || !email.includes("@")) { toast("Ongeldig e-mailadres", "err"); return; }
+  const uid = await getUid();
+  try {
+    const { error } = await sb.from("uitnodigingen").insert({
+      email: email.toLowerCase().trim(),
+      aangemaakt_door: uid
+    });
+    if (error) {
+      if (error.code === "23505") { toast("Dit e-mailadres heeft al een uitnodiging", "err"); }
+      else throw error;
+      return;
+    }
+    toast(`Uitnodiging aangemaakt voor ${email} ✓`);
+    laadAdmin();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+function kopieerUitnodigingslink(token) {
+  const basis = window.location.origin + window.location.pathname.replace("app.html","");
+  const link  = `${basis}index.html?uitnodiging=${token}`;
+  navigator.clipboard.writeText(link).then(() => {
+    toast("Link gekopieerd naar klembord ✓");
+  }).catch(() => {
+    prompt("Kopieer deze link handmatig:", link);
+  });
+}
+
+async function wisselRol(gebruikerId, huidigeRol) {
+  const nieuweRol = huidigeRol === "admin" ? "trainer" : "admin";
+  const ok = await bevestig("Rol wijzigen", `Gebruiker wijzigen naar ${nieuweRol}?`);
+  if (!ok) return;
+  try {
+    const { error } = await sb.from("profielen").update({ rol: nieuweRol }).eq("id", gebruikerId);
+    if (error) throw error;
+    toast(`Rol gewijzigd naar ${nieuweRol} ✓`);
+    laadAdmin();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+async function init() {
+  document.getElementById("atleten-grid").innerHTML =
+    `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
+  const ok = await checkAuth();
+  if (ok) {
+    document.getElementById("tab-profiel").style.display = "";
+    await syncAll();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
