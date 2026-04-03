@@ -638,7 +638,6 @@
       <span class="count-badge" id="atleten-count">0</span>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">☑️ Selecteren</button>
-        <button class="btn btn-ghost" onclick="openAtlNuModal()">🔍 Atletiek.nu</button>
         <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
           📥 Excel importeren
           <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
@@ -1151,7 +1150,13 @@ function renderAtleten() {
             <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr}</div>
           </div>
         </div>
-        <div class="card-meta">${cnt} prestatie${cnt !== 1 ? "s" : ""}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="card-meta">${cnt} prestatie${cnt !== 1 ? "s" : ""}</div>
+          ${a.bondsnr ? `<a href="https://www.atletiek.nu/atleet/main/${esc(a.bondsnr)}/" target="_blank"
+            onclick="event.stopPropagation()"
+            style="font-size:12px;color:var(--accent);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;"
+            title="Bekijk profiel op atletiek.nu">atletiek.nu →</a>` : ""}
+        </div>
       </div>`;
   }).join("");
 }
