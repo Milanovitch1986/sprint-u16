@@ -1519,23 +1519,21 @@ async function verwerkAtletenlijst(rows) {
 
 // ── Verwerk PR-sheet (zoals persoonlijke_records.xlsx) ────────
 async function verwerkPRSheet(rows) {
-  const header     = rows[0]; // ["Atleet","60m","80m",...]
+  const header      = rows[0];
   const disciplines = header.slice(1).map(h => String(h).trim());
-  const vandaag    = new Date().toISOString().split("T")[0];
+  const vandaag     = new Date().toISOString().split("T")[0];
 
-  // Verzamel alle nieuwe prestaties
-  const nieuwePrestaties = [];
+  const nieuwePrestaties = []; // nieuw toe te voegen
+  const teVervangenIds   = []; // bestaande ID's die vervangen worden door beter PR
   let nieuweAtleten = 0;
 
   for (const row of rows.slice(1)) {
     const naamRaw = String(row[0]).trim();
     if (!naamRaw) continue;
 
-    // Zoek of maak atleet (op naam, case-insensitive)
+    // Zoek of maak atleet — NOOIT bestaande gegevens overschrijven
     let atleet = atleten.find(a => a.naam.toLowerCase() === naamRaw.toLowerCase());
-
     if (!atleet) {
-      // Nieuwe atleet zonder verdere info — voeg toe met naam alleen
       try {
         const res = await api("addAtleet", { naam: naamRaw, geslacht: "", geboortedatum: "", club: "", bondsnr: "" });
         atleet = { id: res.id, naam: naamRaw, geslacht: "", geboortedatum: "", club: "", bondsnr: "" };
@@ -1543,52 +1541,82 @@ async function verwerkPRSheet(rows) {
         nieuweAtleten++;
       } catch (e) { console.warn("Fout bij atleet", naamRaw, e.message); continue; }
     }
-    // Atleet gevonden of aangemaakt — NOOIT naam/geslacht/bondsnr/geboortedatum overschrijven
 
     for (let i = 0; i < disciplines.length; i++) {
       const disc = disciplines[i];
       const val  = row[i + 1];
       if (val === "" || val === null || val === undefined) continue;
 
-      const resultaat = String(val).trim().replace(",", ".");
-      if (!resultaat) continue;
+      const resultaatStr = String(val).trim().replace(",", ".");
+      if (!resultaatStr) continue;
 
-      // Bepaal eenheid
-      const isTijd = TIJD_DISCIPLINES.includes(disc);
+      const nieuweWaarde = parseResultaat(resultaatStr);
+      if (nieuweWaarde === null) continue;
+
+      const isTijd  = TIJD_DISCIPLINES.includes(disc);
       const eenheid = isTijd ? "sec" : "m";
 
-      // Controleer of deze prestatie al bestaat (zelfde atleet + discipline + resultaat)
-      const bestaatAl = prestaties.some(p =>
+      // Zoek bestaande PRs voor deze atleet + discipline
+      const bestaande = prestaties.filter(p =>
         String(p.atleetId) === String(atleet.id) &&
-        p.discipline === disc &&
-        String(p.resultaat).replace(",",".") === resultaat
+        p.discipline.trim().toLowerCase() === disc.toLowerCase()
       );
-      if (bestaatAl) continue;
 
-      nieuwePrestaties.push({
-        atleetId:   atleet.id,
-        discipline: disc,
-        resultaat,
-        eenheid,
-        datum:      vandaag,
-        locatie:    "Import",
-        notities:   "Geïmporteerd uit Excel"
-      });
+      if (bestaande.length === 0) {
+        // Nog geen PR → toevoegen
+        nieuwePrestaties.push({
+          atleetId: atleet.id, discipline: disc, resultaat: resultaatStr,
+          eenheid, datum: vandaag, locatie: "Import", notities: "Geïmporteerd uit Excel"
+        });
+      } else {
+        // Vergelijk met beste bestaande
+        const beste = bestaande.reduce((best, p) => {
+          const vB = parseResultaat(String(best.resultaat).replace(",","."));
+          const vP = parseResultaat(String(p.resultaat).replace(",","."));
+          if (vP === null) return best;
+          if (vB === null) return p;
+          return isTijd ? (vP < vB ? p : best) : (vP > vB ? p : best);
+        });
+        const besteWaarde = parseResultaat(String(beste.resultaat).replace(",","."));
+        const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+
+        if (isVerbetering) {
+          teVervangenIds.push(String(beste.id));
+          nieuwePrestaties.push({
+            atleetId: atleet.id, discipline: disc, resultaat: resultaatStr,
+            eenheid, datum: vandaag, locatie: "Import",
+            notities: `PR verbeterd (was: ${beste.resultaat})`
+          });
+        }
+        // Niet beter → overslaan
+      }
     }
   }
 
   if (!nieuwePrestaties.length && !nieuweAtleten) {
-    return "Alle prestaties staan al in de app — niets toegevoegd";
+    return "Geen verbeteringen gevonden — alles is al up-to-date";
   }
 
-  const msg = [
-    nieuweAtleten   ? `${nieuweAtleten} nieuwe atleet(en)` : "",
-    nieuwePrestaties.length ? `${nieuwePrestaties.length} prestatie(s)` : ""
-  ].filter(Boolean).join(" en ");
+  const verbeterd = teVervangenIds.length;
+  const nieuw     = nieuwePrestaties.length - verbeterd;
+  const msgDelen  = [];
+  if (nieuweAtleten) msgDelen.push(`${nieuweAtleten} nieuwe atleet(en)`);
+  if (verbeterd)     msgDelen.push(`${verbeterd} PR('s) verbeterd`);
+  if (nieuw > 0)     msgDelen.push(`${nieuw} nieuwe prestatie(s)`);
 
-  const ok2 = await bevestig("Prestaties importeren", `Gevonden: ${msg}.\nToevoegen aan de app?`);
+  const ok2 = await bevestig("Prestaties importeren", `Gevonden:\n${msgDelen.join("\n")}\n\nDoorgaan?`);
   if (!ok2) return "Geannuleerd";
 
+  // Verwijder oude PRs
+  for (const id of teVervangenIds) {
+    try {
+      await api("deletePrestatie", { id });
+      prestaties = prestaties.filter(p => String(p.id) !== id);
+    } catch (e) { console.warn("Fout bij verwijderen oud PR", id, e.message); }
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  // Voeg nieuwe/verbeterde prestaties toe
   let n = 0;
   for (const p of nieuwePrestaties) {
     try {
@@ -1600,7 +1628,7 @@ async function verwerkPRSheet(rows) {
     await new Promise(r => setTimeout(r, 150));
   }
 
-  return `✓ ${nieuweAtleten} atleet(en) en ${n} prestatie(s) geïmporteerd!`;
+  return `✓ ${nieuweAtleten} atleet(en) · ${verbeterd} PR('s) vervangen · ${nieuw} nieuw toegevoegd`;
 }
 
 // ── Gedeelde hulpfuncties voor import ─────────────────────────
@@ -2044,15 +2072,17 @@ function renderPloeg(ploeg) {
         const pr = bestePrestatie(atleet.id, item.discipline);
         if (pr) punten = berekenPunten(item.discipline, pr.resultaat, actiefGeslacht);
         totalePunten += punten;
-        // Controleer conflicten
         conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "⚠️" : "";
       }
+
+      const prVal = atleet ? bestePrestatie(atleet.id, item.discipline) : null;
+      const prTekst = prVal ? `PR: ${prVal.resultaat}` : "";
 
       slotsHtml += `
         <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
              onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
           <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
-          ${punten ? `<span class="slot-punten">${punten}pts</span>` : ""}
+          ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
           ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
         </div>`;
@@ -2136,14 +2166,14 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
       const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
       const aantalOnderdelen = telOnderdelenAtleet(ploeg, opst, a.id);
       const conflict = checkConflict(ploeg, opst, idx, a.id, item);
-      return { atleet: a, pr, pts, aantalOnderelen: aantalOnderelen, conflict };
+      return { atleet: a, pr, pts, aantalOnderdelen: aantalOnderdelen, conflict };
     })
     .sort((a, b) => b.pts - a.pts);
 
   div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
     kandidaten.map(k => {
-      const dimmed = k.aantalOnderelen >= 3 || k.conflict;
-      const waarsch = k.aantalOnderelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      const dimmed = k.aantalOnderdelen >= 3 || k.conflict;
+      const waarsch = k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
       return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
         onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
