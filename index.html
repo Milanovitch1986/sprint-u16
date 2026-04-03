@@ -431,6 +431,34 @@
     margin-bottom: 10px;
   }
 
+  /* ── Selectie toolbar ── */
+  .selectie-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .selectie-toolbar span {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  /* ── Checkbox op kaart ── */
+  .card-checkbox {
+    position: absolute; top: 12px; left: 12px;
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .card.selecteerbaar { padding-left: 38px; }
+  .card.geselecteerd  { border-color: var(--accent); background: var(--surface2); }
+
   /* ── Mobile ── */
   @media (max-width: 600px) {
     header { padding: 0 16px; }
@@ -464,12 +492,21 @@
       <div class="page-title">Atleten</div>
       <span class="count-badge" id="atleten-count">0</span>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">☑️ Selecteren</button>
         <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
           📥 Excel importeren
           <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
         </label>
         <button class="btn btn-primary" onclick="openAtleetModal()">+ Atleet toevoegen</button>
       </div>
+    </div>
+
+    <!-- Selectie toolbar (verborgen tot selectiemodus aan is) -->
+    <div class="selectie-toolbar" id="selectieToolbar" style="display:none;">
+      <span id="selectieAantal">0 geselecteerd</span>
+      <button class="btn btn-ghost btn-sm" onclick="selecteerAlle()">Alles selecteren</button>
+      <button class="btn btn-ghost btn-sm" onclick="deselecteerAlle()">Niets selecteren</button>
+      <button class="btn btn-danger btn-sm" id="verwijderGeselecteerdeBtn" onclick="verwijderGeselecteerde()" style="display:none;">🗑️ Verwijder geselecteerde</button>
     </div>
     <div class="search-bar">
       <input type="text" id="atleten-search" placeholder="Zoek op naam of club…" oninput="renderAtleten()">
@@ -614,6 +651,8 @@ let atleten    = [];
 let prestaties = [];
 let editAtleetId     = null;
 let editPrestatieId  = null;
+let selecteerModus   = false;
+let geselecteerd     = new Set();
 
 // ── API helper ────────────────────────────────────────────────
 async function api(action, body = {}) {
@@ -623,9 +662,15 @@ async function api(action, body = {}) {
   }
   const url = API + "?" + params.toString();
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow"
+    });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (_) { throw new Error("Ongeldig antwoord van server"); }
     if (!data.ok) throw new Error(data.error || "Onbekende fout");
     return data;
   } catch (e) {
@@ -670,6 +715,76 @@ function showTab(tab) {
   if (tab === "prestaties") populateAtleetSelects();
 }
 
+// ── Selectiemodus ─────────────────────────────────────────────
+function toggleSelecteerModus() {
+  selecteerModus = !selecteerModus;
+  geselecteerd.clear();
+  const btn = document.getElementById("selecteerModeBtn");
+  const toolbar = document.getElementById("selectieToolbar");
+  btn.textContent = selecteerModus ? "✖️ Stoppen" : "☑️ Selecteren";
+  btn.classList.toggle("btn-ghost",   !selecteerModus);
+  btn.classList.toggle("btn-primary",  selecteerModus);
+  toolbar.style.display = selecteerModus ? "flex" : "none";
+  renderAtleten();
+}
+
+function toggleSelectie(id, event) {
+  event.stopPropagation();
+  if (geselecteerd.has(id)) geselecteerd.delete(id);
+  else geselecteerd.add(id);
+  updateSelectieTeller();
+  // Update kaart visueel
+  document.querySelectorAll(".card[data-id]").forEach(el => {
+    el.classList.toggle("geselecteerd", geselecteerd.has(el.dataset.id));
+    const cb = el.querySelector(".card-checkbox");
+    if (cb) cb.checked = geselecteerd.has(el.dataset.id);
+  });
+}
+
+function selecteerAlle() {
+  atleten.forEach(a => geselecteerd.add(String(a.id)));
+  updateSelectieTeller();
+  renderAtleten();
+}
+
+function deselecteerAlle() {
+  geselecteerd.clear();
+  updateSelectieTeller();
+  renderAtleten();
+}
+
+function updateSelectieTeller() {
+  const n = geselecteerd.size;
+  document.getElementById("selectieAantal").textContent = `${n} geselecteerd`;
+  document.getElementById("verwijderGeselecteerdeBtn").style.display = n > 0 ? "" : "none";
+}
+
+async function verwijderGeselecteerde() {
+  const n = geselecteerd.size;
+  if (!n) return;
+  const ok = await bevestig(
+    "Atleten verwijderen",
+    `Weet je zeker dat je ${n} atleet(en) wilt verwijderen?\nDit kan niet ongedaan worden gemaakt.`
+  );
+  if (!ok) return;
+
+  let verwijderd = 0;
+  for (const id of [...geselecteerd]) {
+    try {
+      await api("deleteAtleet", { id });
+      atleten = atleten.filter(a => String(a.id) !== id);
+      verwijderd++;
+      if (verwijderd % 5 === 0) toast(`Verwijderen… (${verwijderd}/${n})`, "ok");
+    } catch (e) { console.warn("Fout bij verwijderen", id, e.message); }
+  }
+
+  geselecteerd.clear();
+  updateSelectieTeller();
+  renderAtleten();
+  populateAtleetSelects();
+  toast(`✓ ${verwijderd} atleet(en) verwijderd`);
+}
+
 // ── Atleten render ────────────────────────────────────────────
 function renderAtleten() {
   const q  = (document.getElementById("atleten-search").value || "").toLowerCase();
@@ -697,8 +812,14 @@ function renderAtleten() {
     const club     = a.club ? `<span>${a.club}</span>` : "";
     const bondsnr  = a.bondsnr ? `<span style="color:var(--muted);font-size:12px;">🪪 ${esc(a.bondsnr)}</span>` : "";
     const cnt      = prestaties.filter(p => String(p.atleetId) === String(a.id)).length;
+    const isSel    = geselecteerd.has(String(a.id));
+    const cbHtml   = selecteerModus
+      ? `<input type="checkbox" class="card-checkbox" ${isSel ? "checked" : ""} onclick="toggleSelectie('${a.id}', event)">`
+      : "";
     return `
-      <div class="card" onclick="openAtleetModal('${a.id}')">
+      <div class="card ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""}" data-id="${a.id}"
+           onclick="${selecteerModus ? `toggleSelectie('${a.id}', event)` : `openAtleetModal('${a.id}')`}">
+        ${cbHtml}
         <div class="card-badge ${gBadge}">${gLabel}</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
           <div class="detail-avatar" style="width:40px;height:40px;font-size:16px;">${initials}</div>
