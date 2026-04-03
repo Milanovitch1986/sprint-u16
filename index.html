@@ -810,6 +810,18 @@
         <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
       </div>
 
+      <!-- Beschikbaarheid sectie -->
+      <div class="detail-panel" style="margin-bottom:24px;">
+        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>✅ Beschikbare atleten</span>
+          <div style="display:flex;gap:8px;margin:8px 16px;">
+            <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(true)">Alles aan</button>
+            <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(false)">Alles uit</button>
+          </div>
+        </div>
+        <div id="beschikbaarheid-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
+      </div>
+
       <!-- Programma sectie -->
       <div class="detail-panel" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
@@ -1152,10 +1164,6 @@ function renderAtleten() {
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="card-meta">${cnt} prestatie${cnt !== 1 ? "s" : ""}</div>
-          <a href="https://www.google.com/search?q=${encodeURIComponent((a.naam || "") + ' site:athletics.app')}" target="_blank"
-            onclick="event.stopPropagation()"
-            style="font-size:12px;color:var(--accent);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;"
-            title="Zoek profiel op athletics.app">athletics.app →</a>
         </div>
       </div>`;
   }).join("");
@@ -1746,13 +1754,13 @@ function formatDatum(val) {
 
 // ── Wedstrijden state ─────────────────────────────────────────
 let wedstrijden   = [];
-let programma     = []; // onderdelen voor actieve wedstrijd+geslacht
-let editWedstrijdId = null;
+let programma     = [];
+let editWedstrijdId   = null;
 let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
 let aantalPloegen     = 2;
-// opstelling[ploeg][disciplineIndex][slotIndex] = atleetId | null
 let opstellingData    = {};
+let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 
 // ── U16 Disciplines definitie ─────────────────────────────────
 const U16_DISCIPLINES = [
@@ -1979,20 +1987,25 @@ function setOpstellingGeslacht(g) {
 
 async function laadProgrammaEnOpstelling() {
   try {
-    const [pRes, oRes] = await Promise.all([
-      api("getProgramma", { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht }),
-      api("getOpstelling", { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht })
+    const [pRes, oRes, bRes] = await Promise.all([
+      api("getProgramma",  { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht }),
+      api("getOpstelling", { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht }),
+      api("getBeschikbaar",{ wedstrijdId: actiefWedstrijdId })
     ]);
     programma = pRes.data || [];
     programma.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
 
-    // Herstel opgeslagen opstelling
     opstellingData = {};
-    (oRes.data || []).forEach(o => {
-      opstellingData[o.ploeg] = o.data;
+    (oRes.data || []).forEach(o => { opstellingData[o.ploeg] = o.data; });
+
+    // Beschikbaarheid: standaard iedereen beschikbaar tenzij expliciet false
+    beschikbaarData = {};
+    (bRes.data || []).forEach(b => {
+      beschikbaarData[String(b.atleetId)] = String(b.beschikbaar) !== "false";
     });
 
     renderProgrammaOverzicht();
+    renderBeschikbaarheid();
     renderPloegen();
   } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
 }
@@ -2220,9 +2233,9 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
   const div = document.createElement("div");
   div.className = "slot-select";
 
-  // Filter: geslacht, heeft PR voor dit onderdeel
+  // Filter: geslacht, beschikbaar
   const kandidaten = atleten
-    .filter(a => !actiefGeslacht || a.geslacht === actiefGeslacht)
+    .filter(a => (!actiefGeslacht || a.geslacht === actiefGeslacht) && isBeschikbaar(a.id))
     .map(a => {
       const pr  = bestePrestatie(a.id, item.discipline);
       const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
@@ -2283,7 +2296,63 @@ function clearSlot(ploeg, idx, slotNr) {
   renderPloegen();
 }
 
-// ── Automatisch opstellen ─────────────────────────────────────
+// ── Beschikbaarheid ───────────────────────────────────────────
+function isBeschikbaar(atleetId) {
+  const v = beschikbaarData[String(atleetId)];
+  return v === undefined ? true : v; // standaard beschikbaar
+}
+
+function renderBeschikbaarheid() {
+  const grid = document.getElementById("beschikbaarheid-grid");
+  const lijst = atleten.filter(a => a.geslacht === actiefGeslacht);
+  if (!lijst.length) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen atleten gevonden voor dit geslacht.</div>`;
+    return;
+  }
+  grid.innerHTML = lijst.map(a => {
+    const beschikbaar = isBeschikbaar(a.id);
+    return `
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;
+        background:var(--surface2);border:1px solid ${beschikbaar ? "var(--success)" : "var(--border)"};
+        border-radius:8px;padding:8px 12px;transition:all .2s;">
+        <input type="checkbox" ${beschikbaar ? "checked" : ""}
+          onchange="toggleBeschikbaar('${a.id}', this.checked)"
+          style="accent-color:var(--success);width:16px;height:16px;">
+        <span style="font-size:13px;font-weight:600;">${esc(a.naam)}</span>
+      </label>`;
+  }).join("");
+}
+
+async function toggleBeschikbaar(atleetId, beschikbaar) {
+  beschikbaarData[String(atleetId)] = beschikbaar;
+  // Sla op in Google Sheets
+  try {
+    await api("saveBeschikbaar", {
+      wedstrijdId: actiefWedstrijdId,
+      atleetId,
+      beschikbaar: String(beschikbaar)
+    });
+  } catch(e) { console.warn("Fout bij opslaan beschikbaarheid", e.message); }
+  // Herrender labels
+  renderBeschikbaarheid();
+}
+
+async function alleenBeschikbaar(aan) {
+  const lijst = atleten.filter(a => a.geslacht === actiefGeslacht);
+  for (const a of lijst) {
+    beschikbaarData[String(a.id)] = aan;
+    try {
+      await api("saveBeschikbaar", {
+        wedstrijdId: actiefWedstrijdId,
+        atleetId: a.id,
+        beschikbaar: String(aan)
+      });
+      await new Promise(r => setTimeout(r, 100));
+    } catch(e) { console.warn(e.message); }
+  }
+  renderBeschikbaarheid();
+  toast(aan ? "Alle atleten beschikbaar" : "Alle atleten uitgeschakeld");
+}
 function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   opstellingData = {};
@@ -2298,9 +2367,9 @@ function genereerOpstelling() {
       const isEstafette = item.type === "estafette";
       const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
 
-      // Rangschik kandidaten op punten (beste eerst)
+      // Rangschik kandidaten op punten — alleen beschikbare atleten
       const kandidaten = atleten
-        .filter(a => a.geslacht === actiefGeslacht)
+        .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
