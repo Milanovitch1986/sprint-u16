@@ -638,6 +638,7 @@
       <span class="count-badge" id="atleten-count">0</span>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">☑️ Selecteren</button>
+        <button class="btn btn-ghost" onclick="openAtlNuModal()">🔍 Atletiek.nu</button>
         <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
           📥 Excel importeren
           <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
@@ -887,6 +888,61 @@
 <!-- ── PRINT VIEW ── -->
 <div id="print-view" style="display:none;">
 </div>
+<!-- ── ATLETIEK.NU MODAL ── -->
+<div class="modal-overlay" id="atlNuModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">🔍 Zoek op Atletiek.nu</div>
+
+    <!-- Tabbladen -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button id="atlnu-tab-atleet" class="btn btn-primary btn-sm" onclick="setAtlNuTab('atleet')">Atleet</button>
+      <button id="atlnu-tab-wedstrijd" class="btn btn-ghost btn-sm" onclick="setAtlNuTab('wedstrijd')">Wedstrijd</button>
+    </div>
+
+    <!-- Atleet zoeken -->
+    <div id="atlnu-view-atleet">
+      <div class="field">
+        <label>Naam atleet</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="atlnu-zoek-input" placeholder="bijv. Jente Jongmans"
+            onkeydown="if(event.key==='Enter') zoekAtlNuAtleet()">
+          <button class="btn btn-primary" onclick="zoekAtlNuAtleet()">Zoeken</button>
+        </div>
+      </div>
+      <div id="atlnu-atleet-resultaten"></div>
+      <div id="atlnu-prs-sectie" style="display:none;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;margin:16px 0 10px;" id="atlnu-prs-naam"></div>
+        <div id="atlnu-prs-lijst"></div>
+        <div class="modal-actions" style="margin-top:12px;">
+          <button class="btn btn-ghost" onclick="document.getElementById('atlnu-prs-sectie').style.display='none';document.getElementById('atlnu-atleet-resultaten').style.display=''">← Terug</button>
+          <button class="btn btn-primary" onclick="importeerAtlNuPrs()">⬇️ PRs importeren</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wedstrijd zoeken -->
+    <div id="atlnu-view-wedstrijd" style="display:none;">
+      <div class="field">
+        <label>Wedstrijdnaam</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="atlnu-wedstrijd-input" placeholder="bijv. NK Atletiek"
+            onkeydown="if(event.key==='Enter') zoekAtlNuWedstrijd()">
+          <button class="btn btn-primary" onclick="zoekAtlNuWedstrijd()">Zoeken</button>
+        </div>
+      </div>
+      <div id="atlnu-wedstrijd-resultaten"></div>
+      <div id="atlnu-uitslagen-sectie" style="display:none;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;margin:16px 0 10px;" id="atlnu-uitslagen-naam"></div>
+        <div id="atlnu-uitslagen-lijst"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="btn btn-ghost" onclick="closeModal('atlNuModal')">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-title" id="confirmTitle">Bevestigen</div>
@@ -902,7 +958,8 @@
 
 <script>
 // ── Config ────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbxZWCuufaHl3UEnGVJwFvSDLD60gl5TlOOZw3KvC3BYLY9qz-goF1oLIzG66FyE7iG-/exec";
+const API      = "https://script.google.com/macros/s/AKfycbxZWCuufaHl3UEnGVJwFvSDLD60gl5TlOOZw3KvC3BYLY9qz-goF1oLIzG66FyE7iG-/exec";
+const ATL_API  = "https://atletiek-nu-api-milan.milande-maat.workers.dev";
 
 // ── State ─────────────────────────────────────────────────────
 let atleten    = [];
@@ -2299,6 +2356,256 @@ async function opslaanOpstelling() {
 // ── Afdrukken ─────────────────────────────────────────────────
 function printOpstelling() {
   window.print();
+}
+
+// ── Atletiek.nu integratie ────────────────────────────────────
+let atlNuGeselecteerdeAtleet = null; // { id, name }
+let atlNuPrs                 = [];   // gevonden PRs
+
+function openAtlNuModal() {
+  atlNuGeselecteerdeAtleet = null;
+  atlNuPrs = [];
+  document.getElementById("atlnu-zoek-input").value      = "";
+  document.getElementById("atlnu-atleet-resultaten").innerHTML = "";
+  document.getElementById("atlnu-prs-sectie").style.display   = "none";
+  document.getElementById("atlnu-wedstrijd-resultaten").innerHTML = "";
+  document.getElementById("atlnu-uitslagen-sectie").style.display = "none";
+  setAtlNuTab("atleet");
+  openModal("atlNuModal");
+}
+
+function setAtlNuTab(tab) {
+  document.getElementById("atlnu-view-atleet").style.display    = tab === "atleet"    ? "" : "none";
+  document.getElementById("atlnu-view-wedstrijd").style.display = tab === "wedstrijd" ? "" : "none";
+  document.getElementById("atlnu-tab-atleet").className    = tab === "atleet"    ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+  document.getElementById("atlnu-tab-wedstrijd").className  = tab === "wedstrijd" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+}
+
+async function zoekAtlNuAtleet() {
+  const q = document.getElementById("atlnu-zoek-input").value.trim();
+  if (!q) return;
+  const el = document.getElementById("atlnu-atleet-resultaten");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Zoeken…</div>`;
+  document.getElementById("atlnu-prs-sectie").style.display = "none";
+
+  try {
+    const res  = await fetch(`${ATL_API}/athlete?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>Geen atleten gevonden.</div>`;
+      return;
+    }
+
+    el.innerHTML = data.map(a => `
+      <div class="slot-select-item" style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;"
+           onclick="laadAtlNuPrs('${a.id}', '${esc(a.name)}')">
+        <span>${esc(a.name)}</span>
+        <span style="color:var(--muted);font-size:12px;">ID: ${a.id} →</span>
+      </div>`).join("");
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function laadAtlNuPrs(id, naam) {
+  atlNuGeselecteerdeAtleet = { id, name: naam };
+  document.getElementById("atlnu-atleet-resultaten").style.display = "none";
+  const sectie = document.getElementById("atlnu-prs-sectie");
+  sectie.style.display = "";
+  document.getElementById("atlnu-prs-naam").textContent = naam;
+  const lijst = document.getElementById("atlnu-prs-lijst");
+  lijst.innerHTML = `<div class="loading"><div class="spinner"></div> PRs laden…</div>`;
+
+  try {
+    const res  = await fetch(`${ATL_API}/athlete/prs?id=${id}`);
+    atlNuPrs   = await res.json();
+
+    if (!atlNuPrs.length) {
+      lijst.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen PRs gevonden.</div>`;
+      return;
+    }
+
+    lijst.innerHTML = `<div style="overflow-x:auto;max-height:260px;overflow-y:auto;">
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <thead><tr>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Onderdeel</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">PR</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Datum</th>
+          <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--surface);">Locatie</th>
+        </tr></thead>
+        <tbody>
+          ${atlNuPrs.map(p => `<tr>
+            <td style="padding:6px 10px;font-weight:700;">${esc(p.onderdeel)}</td>
+            <td style="padding:6px 10px;color:var(--accent);font-weight:700;">${esc(p.prestatie)}</td>
+            <td style="padding:6px 10px;color:var(--muted);">${esc(p.datum)}</td>
+            <td style="padding:6px 10px;color:var(--muted);">${esc(p.locatie)}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function importeerAtlNuPrs() {
+  if (!atlNuGeselecteerdeAtleet || !atlNuPrs.length) return;
+
+  const naam = atlNuGeselecteerdeAtleet.name;
+
+  // Zoek atleet in app (op naam)
+  let atleet = atleten.find(a => a.naam.toLowerCase() === naam.toLowerCase());
+  if (!atleet) {
+    const ok = await bevestig("Nieuwe atleet",
+      `"${naam}" staat nog niet in de app.\nToevoegen en PRs importeren?`);
+    if (!ok) return;
+    try {
+      const res = await api("addAtleet", { naam, geslacht: "", geboortedatum: "", club: "", bondsnr: "" });
+      atleet = { id: res.id, naam, geslacht: "", geboortedatum: "", club: "", bondsnr: "" };
+      atleten.push(atleet);
+    } catch(e) { toast("Fout bij aanmaken atleet: " + e.message, "err"); return; }
+  }
+
+  // Verwerk PRs — zelfde logica als Excel import (alleen verbeteren)
+  const vandaag  = new Date().toISOString().split("T")[0];
+  const isTijdDisc = (disc) => TIJD_DISCIPLINES.some(t => disc.toLowerCase().includes(t.toLowerCase()));
+
+  let toegevoegd = 0, verbeterd = 0, overgeslagen = 0;
+
+  for (const pr of atlNuPrs) {
+    const disc        = pr.onderdeel;
+    const resultaatStr = pr.prestatie.replace(",", ".");
+    const nieuweWaarde = parseResultaat(resultaatStr);
+    if (!nieuweWaarde) { overgeslagen++; continue; }
+
+    const isTijd  = isTijdDisc(disc);
+    const eenheid = isTijd ? "sec" : "m";
+
+    const bestaande = prestaties.filter(p =>
+      String(p.atleetId) === String(atleet.id) &&
+      p.discipline.toLowerCase() === disc.toLowerCase()
+    );
+
+    if (!bestaande.length) {
+      try {
+        const res = await api("addPrestatie", {
+          atleetId: atleet.id, discipline: disc,
+          resultaat: resultaatStr, eenheid,
+          datum: pr.datum || vandaag,
+          locatie: pr.locatie || "atletiek.nu",
+          notities: "Geïmporteerd van atletiek.nu"
+        });
+        prestaties.push({ id: res.id, atleetId: atleet.id, discipline: disc,
+          resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag,
+          locatie: pr.locatie || "atletiek.nu", notities: "Geïmporteerd van atletiek.nu" });
+        toegevoegd++;
+      } catch(e) { console.warn("Fout bij PR", disc, e.message); }
+    } else {
+      const beste = bestaande.reduce((b, p) => {
+        const vB = parseResultaat(String(b.resultaat).replace(",","."));
+        const vP = parseResultaat(String(p.resultaat).replace(",","."));
+        if (vP === null) return b;
+        return isTijd ? (vP < vB ? p : b) : (vP > vB ? p : b);
+      });
+      const besteWaarde   = parseResultaat(String(beste.resultaat).replace(",","."));
+      const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+
+      if (isVerbetering) {
+        try {
+          await api("deletePrestatie", { id: beste.id });
+          prestaties = prestaties.filter(p => String(p.id) !== String(beste.id));
+          const res  = await api("addPrestatie", {
+            atleetId: atleet.id, discipline: disc,
+            resultaat: resultaatStr, eenheid,
+            datum: pr.datum || vandaag,
+            locatie: pr.locatie || "atletiek.nu",
+            notities: `PR verbeterd via atletiek.nu (was: ${beste.resultaat})`
+          });
+          prestaties.push({ id: res.id, atleetId: atleet.id, discipline: disc,
+            resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag });
+          verbeterd++;
+        } catch(e) { console.warn("Fout bij PR update", disc, e.message); }
+      } else { overgeslagen++; }
+    }
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  closeModal("atlNuModal");
+  renderAtleten();
+  renderPrestaties();
+  toast(`✓ ${toegevoegd} nieuw · ${verbeterd} verbeterd · ${overgeslagen} overgeslagen`);
+}
+
+async function zoekAtlNuWedstrijd() {
+  const q = document.getElementById("atlnu-wedstrijd-input").value.trim();
+  if (!q) return;
+  const el = document.getElementById("atlnu-wedstrijd-resultaten");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Zoeken…</div>`;
+  document.getElementById("atlnu-uitslagen-sectie").style.display = "none";
+
+  try {
+    const res  = await fetch(`${ATL_API}/competitions?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🏟️</div>Geen wedstrijden gevonden.</div>`;
+      return;
+    }
+
+    el.innerHTML = data.map(w => {
+      // Haal ID op uit link
+      const id = w.link ? w.link.split("/").filter(Boolean).pop() : "";
+      return `<div class="slot-select-item" style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;padding:10px 14px;"
+        onclick="laadAtlNuUitslagen('${id}', '${esc(w.title)}')">
+        <span>${esc(w.title)}</span>
+        <span style="color:var(--muted);font-size:12px;">Uitslagen →</span>
+      </div>`;
+    }).join("");
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
+}
+
+async function laadAtlNuUitslagen(id, naam) {
+  document.getElementById("atlnu-wedstrijd-resultaten").style.display = "none";
+  const sectie = document.getElementById("atlnu-uitslagen-sectie");
+  sectie.style.display = "";
+  document.getElementById("atlnu-uitslagen-naam").textContent = naam;
+  const lijst = document.getElementById("atlnu-uitslagen-lijst");
+  lijst.innerHTML = `<div class="loading"><div class="spinner"></div> Uitslagen laden…</div>`;
+
+  try {
+    const res  = await fetch(`${ATL_API}/results?id=${id}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      lijst.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen uitslagen gevonden.</div>`;
+      return;
+    }
+
+    lijst.innerHTML = `
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:12px;"
+        onclick="document.getElementById('atlnu-uitslagen-sectie').style.display='none';document.getElementById('atlnu-wedstrijd-resultaten').style.display=''">← Terug</button>
+      <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+          <thead><tr>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">#</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Naam</th>
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Prestatie</th>
+          </tr></thead>
+          <tbody>
+            ${data.map(r => `<tr>
+              <td style="padding:6px 10px;color:var(--muted);">${esc(r.positie)}</td>
+              <td style="padding:6px 10px;font-weight:700;">${esc(r.naam)}</td>
+              <td style="padding:6px 10px;color:var(--accent);font-weight:700;">${esc(r.performance)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`;
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────
