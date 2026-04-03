@@ -607,7 +607,7 @@
 
 <script>
 // ── Config ────────────────────────────────────────────────────
-const API = "https://script.google.com/macros/s/AKfycbyreD-LlRSj1ixyQC5RD0wCE3npTEB2H99pt5ztGyjGtmcwx1mkwPXdg1RmiaN4gZfF/exec";
+const API = "https://script.google.com/macros/s/AKfycbxZWCuufaHl3UEnGVJwFvSDLD60gl5TlOOZw3KvC3BYLY9qz-goF1oLIzG66FyE7iG-/exec";
 
 // ── State ─────────────────────────────────────────────────────
 let atleten    = [];
@@ -617,10 +617,18 @@ let editPrestatieId  = null;
 
 // ── API helper ────────────────────────────────────────────────
 async function api(action, body = {}) {
-  const params = new URLSearchParams({ action, ...flattenForUrl(body) });
-  const url = API + "?" + params.toString();
+  const payload = { action, ...body };
+  // Stuur als form-encoded POST — werkt met speciale tekens én omzeilt CORS preflight
+  const form = new URLSearchParams();
+  for (const [k, v] of Object.entries(payload)) {
+    form.append(k, v === null || v === undefined ? "" : String(v));
+  }
   try {
-    const res = await fetch(url, { method: "GET" });
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString()
+    });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Onbekende fout");
