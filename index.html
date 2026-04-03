@@ -459,6 +459,149 @@
   .card.selecteerbaar { padding-left: 38px; }
   .card.geselecteerd  { border-color: var(--accent); background: var(--surface2); }
 
+  /* ── Ploeg opstelling ── */
+  .ploeg-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .ploeg-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ploeg-naam {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 18px; text-transform: uppercase;
+  }
+  .ploeg-punten {
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 13px;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .onderdeel-rij {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border)44;
+    transition: background .15s;
+  }
+  .onderdeel-rij:hover { background: var(--surface2); }
+  .onderdeel-naam {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 14px;
+    color: var(--text);
+  }
+  .onderdeel-tijd {
+    font-size: 12px; color: var(--muted);
+  }
+  .atleet-slot {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    min-height: 36px;
+    display: flex; align-items: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .atleet-slot:hover { border-color: var(--accent); }
+  .atleet-slot.bezet { border-style: solid; border-color: var(--border); background: var(--surface); }
+  .atleet-slot.conflict { border-color: var(--accent2); background: var(--accent2)11; }
+  .atleet-slot .slot-naam { flex: 1; }
+  .atleet-slot .slot-punten {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 13px;
+    color: var(--accent); margin-left: 8px;
+  }
+  .atleet-slot .slot-remove {
+    margin-left: 6px; color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .atleet-slot .slot-remove:hover { color: var(--accent2); background: var(--accent2)22; }
+  .conflict-badge {
+    font-size: 10px; color: var(--accent2);
+    margin-left: 6px;
+  }
+
+  /* ── Atleet keuze dropdown in slot ── */
+  .slot-select {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    max-height: 200px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .slot-select-item {
+    padding: 9px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background .15s;
+  }
+  .slot-select-item:hover { background: var(--surface2); }
+  .slot-select-item.dimmed { color: var(--muted); }
+  .slot-select-item .si-punten { color: var(--accent); font-weight: 700; font-size: 12px; }
+  .slot-select-search {
+    width: 100%; background: var(--surface2);
+    border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); padding: 9px 14px; font-size: 13px;
+    outline: none; font-family: 'Barlow', sans-serif;
+  }
+
+  /* ── Programma modal rijen ── */
+  .programma-rij {
+    display: grid;
+    grid-template-columns: 1fr 100px 80px 80px 36px;
+    gap: 8px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .programma-rij select, .programma-rij input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 8px 10px;
+    font-family: 'Barlow', sans-serif; font-size: 13px; outline: none;
+    width: 100%;
+  }
+  .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
+
+  /* ── Wedstrijd kaart ── */
+  .wedstrijd-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+  }
+  .wedstrijd-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .wedstrijd-datum { font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+  .wedstrijd-naam { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 4px; }
+  .wedstrijd-locatie { font-size: 13px; color: var(--muted); }
+
+  /* ── Print styles ── */
+  @media print {
+    header, nav, .btn, #opstelling-stap1, .page-header,
+    #opstelling-tab-M, #opstelling-tab-V,
+    .atleet-slot .slot-remove { display: none !important; }
+    body { background: white; color: black; }
+    .ploeg-container { break-inside: avoid; border: 1px solid #ccc; }
+    .onderdeel-rij { border-bottom: 1px solid #eee; }
+    .atleet-slot { border: 1px solid #ccc; }
+  }
+
   /* ── Mobile ── */
   @media (max-width: 600px) {
     header { padding: 0 16px; }
@@ -476,6 +619,8 @@
   <nav>
     <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
+    <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
+    <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
   </nav>
   <button class="sync-btn" id="syncBtn" onclick="syncAll()" title="Vernieuwen">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -628,7 +773,120 @@
   </div>
 </div>
 
-<!-- ── CONFIRM DIALOOG ── -->
+  <!-- WEDSTRIJDEN TAB -->
+  <div id="view-wedstrijden" style="display:none;">
+    <div class="page-header">
+      <div class="page-title">Wedstrijden</div>
+      <span class="count-badge" id="wedstrijden-count">0</span>
+      <div class="ml-auto">
+        <button class="btn btn-primary" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
+      </div>
+    </div>
+    <div id="wedstrijden-grid" class="grid"></div>
+  </div>
+
+  <!-- PROGRAMMA MODAL (tijdschema per wedstrijd) -->
+  <div id="view-opstelling" style="display:none;">
+    <div class="page-header">
+      <div class="page-title">Opstelling</div>
+    </div>
+
+    <!-- Stap 1: Kies wedstrijd -->
+    <div id="opstelling-stap1">
+      <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om een opstelling te maken:</div>
+      <div id="opstelling-wedstrijd-lijst" class="grid"></div>
+    </div>
+
+    <!-- Stap 2: Opstelling voor gekozen wedstrijd -->
+    <div id="opstelling-stap2" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">← Terug</button>
+        <div id="opstelling-wedstrijd-naam" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
+      </div>
+
+      <!-- Geslacht tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button id="opstelling-tab-M" class="btn btn-primary" onclick="setOpstellingGeslacht('M')">👦 Jongens</button>
+        <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
+      </div>
+
+      <!-- Programma sectie -->
+      <div class="detail-panel" style="margin-bottom:24px;">
+        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>📋 Wedstrijdprogramma</span>
+          <button class="btn btn-ghost btn-sm" style="margin:8px 16px;" onclick="openProgrammaModal()">✏️ Bewerken</button>
+        </div>
+        <div id="programma-overzicht" style="padding:16px;">
+          <div class="empty-state"><div class="icon">📋</div>Nog geen programma ingevoerd.</div>
+        </div>
+      </div>
+
+      <!-- Ploegen sectie -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
+        <select id="aantal-ploegen-select" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+          <option value="1">1 ploeg</option>
+          <option value="2" selected>2 ploegen</option>
+          <option value="3">3 ploegen</option>
+        </select>
+        <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
+        <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
+        <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
+      </div>
+
+      <div id="ploegen-container"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ── WEDSTRIJD MODAL ── -->
+<div class="modal-overlay" id="wedstrijdModal">
+  <div class="modal">
+    <div class="modal-title" id="wedstrijdModalTitle">Wedstrijd toevoegen</div>
+    <div class="field">
+      <label>Naam</label>
+      <input type="text" id="w-naam" placeholder="bijv. Competitieronde 1">
+    </div>
+    <div class="field">
+      <label>Datum</label>
+      <input type="date" id="w-datum">
+    </div>
+    <div class="field">
+      <label>Locatie</label>
+      <input type="text" id="w-locatie" placeholder="bijv. Atletiekbaan Breda">
+    </div>
+    <div class="field">
+      <label>Notities</label>
+      <input type="text" id="w-notities" placeholder="optioneel">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('wedstrijdModal')">Annuleren</button>
+      <button class="btn btn-danger btn-sm" id="wedstrijdDeleteBtn" onclick="deleteWedstrijd()" style="display:none;">Verwijderen</button>
+      <button class="btn btn-primary" onclick="saveWedstrijd()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROGRAMMA MODAL ── -->
+<div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
+  <div class="modal" style="max-width:640px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-title">Wedstrijdprogramma</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="programma-modal-sub"></div>
+
+    <div id="programma-items-list"></div>
+
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="addProgrammaRij()">+ Onderdeel toevoegen</button>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('programmaModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveProgrammaModal()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRINT VIEW ── -->
+<div id="print-view" style="display:none;">
+</div>
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-title" id="confirmTitle">Bevestigen</div>
@@ -692,11 +950,15 @@ async function syncAll() {
   const btn = document.getElementById("syncBtn");
   btn.classList.add("spinning");
   try {
-    const [a, p] = await Promise.all([api("getAtleten"), api("getPrestaties")]);
+    const [a, p, w] = await Promise.all([
+      api("getAtleten"), api("getPrestaties"), api("getWedstrijden")
+    ]);
     atleten    = a.data || [];
     prestaties = p.data || [];
+    wedstrijden = w.data || [];
     renderAtleten();
     renderPrestaties();
+    renderWedstrijden();
     populateAtleetSelects();
     toast("Gegevens bijgewerkt ✓");
   } catch (e) {
@@ -708,11 +970,13 @@ async function syncAll() {
 
 // ── Tabs ──────────────────────────────────────────────────────
 function showTab(tab) {
-  document.getElementById("view-atleten").style.display    = tab === "atleten"    ? "" : "none";
-  document.getElementById("view-prestaties").style.display = tab === "prestaties" ? "" : "none";
-  document.getElementById("tab-atleten").classList.toggle("active",    tab === "atleten");
-  document.getElementById("tab-prestaties").classList.toggle("active", tab === "prestaties");
-  if (tab === "prestaties") populateAtleetSelects();
+  ["atleten","prestaties","wedstrijden","opstelling"].forEach(t => {
+    document.getElementById("view-" + t).style.display = t === tab ? "" : "none";
+    document.getElementById("tab-" + t).classList.toggle("active", t === tab);
+  });
+  if (tab === "prestaties")   populateAtleetSelects();
+  if (tab === "wedstrijden")  renderWedstrijden();
+  if (tab === "opstelling")   renderOpstellingWedstrijden();
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────
@@ -1388,6 +1652,623 @@ function formatDatum(val) {
   const s = String(val);
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   return s;
+}
+
+// ── Wedstrijden state ─────────────────────────────────────────
+let wedstrijden   = [];
+let programma     = []; // onderdelen voor actieve wedstrijd+geslacht
+let editWedstrijdId = null;
+let actiefWedstrijdId = null;
+let actiefGeslacht    = "M";
+let aantalPloegen     = 2;
+// opstelling[ploeg][disciplineIndex][slotIndex] = atleetId | null
+let opstellingData    = {};
+
+// ── U16 Disciplines definitie ─────────────────────────────────
+const U16_DISCIPLINES = [
+  // Loop
+  { naam:"60m",         type:"loop",      duur:15 },
+  { naam:"80m",         type:"loop",      duur:15 },
+  { naam:"100m",        type:"loop",      duur:20 },
+  { naam:"150m",        type:"loop",      duur:20 },
+  { naam:"200m",        type:"loop",      duur:25 },
+  { naam:"300m",        type:"loop",      duur:30 },
+  { naam:"600m",        type:"loop",      duur:40 },
+  { naam:"800m",        type:"loop",      duur:45 },
+  { naam:"1000m",       type:"loop",      duur:50 },
+  { naam:"1500m",       type:"loop",      duur:60 },
+  { naam:"80m horden",  type:"loop",      duur:20 },
+  { naam:"100m horden", type:"loop",      duur:20 },
+  { naam:"300m horden", type:"loop",      duur:35 },
+  { naam:"4x100m",      type:"estafette", duur:20 },
+  { naam:"4x80m",       type:"estafette", duur:20 },
+  // Technisch - springen
+  { naam:"Hoogspringen",  type:"technisch", duur:90 },
+  { naam:"Verspringen",   type:"technisch", duur:60 },
+  // Technisch - werpen
+  { naam:"Kogelstoten",   type:"technisch", duur:60 },
+  { naam:"Discuswerpen",  type:"technisch", duur:60 },
+  { naam:"Speerwerpen",   type:"technisch", duur:60 },
+];
+
+// ── U16 Puntentelling (Atletiekunie formule, pag 10-11 doc) ───
+function berekenPunten(discipline, resultaat, geslacht) {
+  const r = parseResultaat(resultaat);
+  if (r === null || r <= 0) return 0;
+
+  // Loop: INT(A / tijd - B)   — zelfde constanten voor M én V bij U16
+  const loopConst = {
+    "60m":         { A:15365.0,  B:1158.0  },
+    "80m":         { A:19933.0,  B:1193.0  },
+    "100m":        { A:24450.0,  B:1212.0  },
+    "150m":        { A:36380.0,  B:1200.0  },
+    "200m":        { A:0,        B:0       }, // niet in tabel, schat
+    "300m":        { A:78286.0,  B:1204.0  },
+    "600m":        { A:160470.5, B:911.35  },
+    "800m":        { A:216604.8, B:884.5   },
+    "1000m":       { A:276912.0, B:838.5   },
+    "1500m":       { A:425682.0, B:788.5   },
+    "80m horden":  { A:18100.0,  B:804.5   },
+    "100m horden": { A:21800.0,  B:727.0   },
+    "300m horden": { A:70800.0,  B:872.5   },
+    "4x100m":      { A:95150.0,  B:1189.5  },
+    "4x80m":       { A:77325.0,  B:1168.0  },
+  };
+  // Spring/werp: INT(A * SQRT(afstand) - B)
+  const veldConst = {
+    "Kogelstoten":  { A:303.73, B:437.5 },
+    "Discuswerpen": { A:166.79, B:438.5 },
+    "Speerwerpen":  { A:170.39, B:437.5 },
+    "Verspringen":  { A:887.99, B:1364.5, drempel:4.41, drempelA:200, drempelB:1.91 },
+    "Hoogspringen": { A:1977.53,B:1798.5, drempel:1.35, drempelA:733.33333, drempelB:0.67 },
+  };
+
+  const disc = discipline.trim();
+  if (loopConst[disc]) {
+    const {A, B} = loopConst[disc];
+    if (A === 0) return 0;
+    return Math.max(0, Math.floor(A / r - B));
+  }
+  if (veldConst[disc]) {
+    const c = veldConst[disc];
+    if (c.drempel && r <= c.drempel) {
+      // Speciale formule voor lage waarden
+      return Math.max(0, Math.floor((r - c.drempelB) * c.drempelA + 0.5));
+    }
+    return Math.max(0, Math.floor(c.A * Math.sqrt(r) - c.B));
+  }
+  return 0;
+}
+
+// Zet "7,45", "1:02,3", "1.02.3" om naar seconden of meters als getal
+function parseResultaat(val) {
+  if (!val) return null;
+  const s = String(val).replace(",", ".").trim();
+  // Formaat m:ss.f of m.ss.f
+  const minSec = s.match(/^(\d+)[:.]([\d.]+)$/);
+  if (minSec) {
+    return parseFloat(minSec[1]) * 60 + parseFloat(minSec[2]);
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Beste prestatie van atleet voor een discipline
+function bestePrestatie(atleetId, discipline) {
+  const prs = prestaties.filter(p =>
+    String(p.atleetId) === String(atleetId) &&
+    p.discipline.trim().toLowerCase() === discipline.trim().toLowerCase()
+  );
+  if (!prs.length) return null;
+  // Tijdonderdelen: lager = beter; veld: hoger = beter
+  const isLoop = ["loop","estafette"].includes(getDisciplineType(discipline));
+  return prs.reduce((best, p) => {
+    const v = parseResultaat(p.resultaat);
+    const b = parseResultaat(best.resultaat);
+    if (v === null) return best;
+    if (b === null) return p;
+    return isLoop ? (v < b ? p : best) : (v > b ? p : best);
+  });
+}
+
+function getDisciplineType(naam) {
+  const d = U16_DISCIPLINES.find(d => d.naam.toLowerCase() === naam.trim().toLowerCase());
+  return d ? d.type : "loop";
+}
+
+// ── Wedstrijden render ────────────────────────────────────────
+function renderWedstrijden() {
+  document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
+  const grid = document.getElementById("wedstrijden-grid");
+  if (!wedstrijden.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
+    return;
+  }
+  grid.innerHTML = wedstrijden.map(w => `
+    <div class="wedstrijd-card" onclick="openWedstrijdModal('${w.id}')">
+      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+      <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
+      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
+      ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
+    </div>`).join("");
+}
+
+// ── Wedstrijd Modal ───────────────────────────────────────────
+function openWedstrijdModal(id = null) {
+  editWedstrijdId = id;
+  document.getElementById("wedstrijdModalTitle").textContent = id ? "Wedstrijd bewerken" : "Wedstrijd toevoegen";
+  document.getElementById("wedstrijdDeleteBtn").style.display = id ? "" : "none";
+  if (id) {
+    const w = wedstrijden.find(x => String(x.id) === String(id));
+    if (w) {
+      document.getElementById("w-naam").value     = w.naam     || "";
+      document.getElementById("w-datum").value    = w.datum    || "";
+      document.getElementById("w-locatie").value  = w.locatie  || "";
+      document.getElementById("w-notities").value = w.notities || "";
+    }
+  } else {
+    document.getElementById("w-naam").value     = "";
+    document.getElementById("w-datum").value    = "";
+    document.getElementById("w-locatie").value  = "";
+    document.getElementById("w-notities").value = "";
+  }
+  openModal("wedstrijdModal");
+}
+
+async function saveWedstrijd() {
+  const naam = document.getElementById("w-naam").value.trim();
+  if (!naam) { toast("Vul een naam in", "err"); return; }
+  const body = {
+    naam, datum: document.getElementById("w-datum").value,
+    locatie: document.getElementById("w-locatie").value.trim(),
+    notities: document.getElementById("w-notities").value.trim()
+  };
+  try {
+    if (editWedstrijdId) {
+      await api("updateWedstrijd", { id: editWedstrijdId, ...body });
+      const i = wedstrijden.findIndex(w => String(w.id) === String(editWedstrijdId));
+      if (i >= 0) wedstrijden[i] = { ...wedstrijden[i], ...body };
+      toast("Wedstrijd bijgewerkt ✓");
+    } else {
+      const res = await api("addWedstrijd", body);
+      wedstrijden.push({ id: res.id, ...body });
+      toast("Wedstrijd toegevoegd ✓");
+    }
+    closeModal("wedstrijdModal");
+    renderWedstrijden();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function deleteWedstrijd() {
+  if (!await bevestig("Wedstrijd verwijderen", "Weet je het zeker?")) return;
+  try {
+    await api("deleteWedstrijd", { id: editWedstrijdId });
+    wedstrijden = wedstrijden.filter(w => String(w.id) !== String(editWedstrijdId));
+    closeModal("wedstrijdModal");
+    renderWedstrijden();
+    toast("Wedstrijd verwijderd");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Opstelling scherm ─────────────────────────────────────────
+function renderOpstellingWedstrijden() {
+  const lijst = document.getElementById("opstelling-wedstrijd-lijst");
+  if (!wedstrijden.length) {
+    lijst.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Voeg eerst een wedstrijd toe via het tabblad Wedstrijden.</div>`;
+    return;
+  }
+  lijst.innerHTML = wedstrijden.map(w => `
+    <div class="wedstrijd-card" onclick="openOpstelling('${w.id}')">
+      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+      <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
+      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")} &nbsp;→ Opstelling maken</div>
+    </div>`).join("");
+}
+
+async function openOpstelling(wedstrijdId) {
+  actiefWedstrijdId = wedstrijdId;
+  const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
+  document.getElementById("opstelling-wedstrijd-naam").textContent = w ? w.naam : "";
+  document.getElementById("opstelling-stap1").style.display = "none";
+  document.getElementById("opstelling-stap2").style.display = "";
+  await laadProgrammaEnOpstelling();
+}
+
+function terug_naar_wedstrijden() {
+  document.getElementById("opstelling-stap1").style.display = "";
+  document.getElementById("opstelling-stap2").style.display = "none";
+  actiefWedstrijdId = null;
+}
+
+function setOpstellingGeslacht(g) {
+  actiefGeslacht = g;
+  document.getElementById("opstelling-tab-M").className = g === "M" ? "btn btn-primary" : "btn btn-ghost";
+  document.getElementById("opstelling-tab-V").className = g === "V" ? "btn btn-primary" : "btn btn-ghost";
+  laadProgrammaEnOpstelling();
+}
+
+async function laadProgrammaEnOpstelling() {
+  try {
+    const [pRes, oRes] = await Promise.all([
+      api("getProgramma", { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht }),
+      api("getOpstelling", { wedstrijdId: actiefWedstrijdId, geslacht: actiefGeslacht })
+    ]);
+    programma = pRes.data || [];
+    programma.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
+
+    // Herstel opgeslagen opstelling
+    opstellingData = {};
+    (oRes.data || []).forEach(o => {
+      opstellingData[o.ploeg] = o.data;
+    });
+
+    renderProgrammaOverzicht();
+    renderPloegen();
+  } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
+}
+
+// ── Programma overzicht ───────────────────────────────────────
+function renderProgrammaOverzicht() {
+  const el = document.getElementById("programma-overzicht");
+  if (!programma.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Nog geen programma. Klik op ✏️ Bewerken.</div>`;
+    return;
+  }
+  el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;">
+    <thead><tr>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Onderdeel</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Type</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Starttijd</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Duur</th>
+    </tr></thead>
+    <tbody>
+      ${programma.map(p => `<tr>
+        <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.type}</td>
+        <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
+      </tr>`).join("")}
+    </tbody>
+  </table></div>`;
+}
+
+// ── Programma Modal ───────────────────────────────────────────
+function openProgrammaModal() {
+  const g = actiefGeslacht === "M" ? "Jongens" : "Meisjes";
+  const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
+  document.getElementById("programma-modal-sub").textContent =
+    `${w ? w.naam : ""} — ${g}`;
+
+  const lijst = document.getElementById("programma-items-list");
+  lijst.innerHTML = "";
+  if (programma.length) {
+    programma.forEach(p => addProgrammaRijMet(p));
+  } else {
+    addProgrammaRij();
+  }
+  openModal("programmaModal");
+}
+
+function addProgrammaRij() {
+  addProgrammaRijMet({});
+}
+
+function addProgrammaRijMet(p) {
+  const lijst = document.getElementById("programma-items-list");
+  const div = document.createElement("div");
+  div.className = "programma-rij";
+  const discOpties = U16_DISCIPLINES.map(d =>
+    `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
+  ).join("");
+  div.innerHTML = `
+    <select class="pr-disc" onchange="updateProgrammaType(this)">
+      ${discOpties}
+    </select>
+    <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
+    <input type="number" class="pr-duur" value="${p.duur||30}" min="5" max="180" placeholder="min">
+    <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
+    <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+  `;
+  lijst.appendChild(div);
+}
+
+function updateProgrammaType(sel) {
+  const rij = sel.parentElement;
+  const disc = U16_DISCIPLINES.find(d => d.naam === sel.value);
+  rij.querySelector(".pr-type").textContent = disc ? disc.type : "";
+}
+
+async function saveProgrammaModal() {
+  const rijen = document.querySelectorAll(".programma-rij");
+  const items = [];
+  rijen.forEach(rij => {
+    const disc = rij.querySelector(".pr-disc").value;
+    const tijd = rij.querySelector(".pr-tijd").value;
+    const duur = rij.querySelector(".pr-duur").value;
+    const d = U16_DISCIPLINES.find(x => x.naam === disc);
+    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd, duur: parseInt(duur)||30 });
+  });
+  try {
+    await api("saveProgramma", {
+      wedstrijdId: actiefWedstrijdId,
+      geslacht: actiefGeslacht,
+      items: JSON.stringify(items)
+    });
+    programma = items;
+    programma.sort((a,b) => (a.starttijd||"").localeCompare(b.starttijd||""));
+    closeModal("programmaModal");
+    renderProgrammaOverzicht();
+    renderPloegen();
+    toast("Programma opgeslagen ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Ploegen render ────────────────────────────────────────────
+function setAantalPloegen(n) {
+  aantalPloegen = parseInt(n);
+  renderPloegen();
+}
+
+function renderPloegen() {
+  const cont = document.getElementById("ploegen-container");
+  if (!programma.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
+    return;
+  }
+
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  cont.innerHTML = ploegNamen.map(ploeg => renderPloeg(ploeg)).join("");
+}
+
+function renderPloeg(ploeg) {
+  const opst = opstellingData[ploeg] || {};
+  let totalePunten = 0;
+
+  const rijen = programma.map((item, idx) => {
+    const isLoop      = item.type === "loop";
+    const isEstafette = item.type === "estafette";
+    const isTechnisch = item.type === "technisch";
+    const maxSlots = isTechnisch ? 2 : 3;
+    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
+    const slots = isEstafette ? 1 : maxSlots;
+
+    let slotsHtml = "";
+    for (let s = 0; s < slots; s++) {
+      const slotKey = `${ploeg}_${idx}_${s}`;
+      const atleetId = opst[slotKey] || null;
+      const atleet   = atleetId ? atleten.find(a => String(a.id) === String(atleetId)) : null;
+      let punten = 0;
+      let conflictWaarschuwing = "";
+
+      if (atleet) {
+        const pr = bestePrestatie(atleet.id, item.discipline);
+        if (pr) punten = berekenPunten(item.discipline, pr.resultaat, actiefGeslacht);
+        totalePunten += punten;
+        // Controleer conflicten
+        conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "⚠️" : "";
+      }
+
+      slotsHtml += `
+        <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
+             onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
+          <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
+          ${punten ? `<span class="slot-punten">${punten}pts</span>` : ""}
+          ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
+          ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
+        </div>`;
+    }
+
+    return `
+      <div class="onderdeel-rij">
+        <div>
+          <div class="onderdeel-naam">${esc(item.discipline)}</div>
+          <div class="onderdeel-tijd">${item.starttijd || "—"} · ${item.duur||30}min</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
+        <div style="grid-column:3;"></div>
+        <div></div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="ploeg-container">
+      <div class="ploeg-header">
+        <div class="ploeg-naam">Ploeg ${ploeg}</div>
+        <div class="ploeg-punten">~${totalePunten} pts</div>
+      </div>
+      ${rijen}
+    </div>`;
+}
+
+// Controleer tijdconflict: zelfde atleet al ingepland binnen 15 min
+function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
+  if (!huidigItem.starttijd || !atleetId) return false;
+  const huidigMin = tijdNaarMinuten(huidigItem.starttijd);
+
+  return programma.some((item, idx) => {
+    if (idx === huidigIdx || !item.starttijd) return false;
+    const itemMin = tijdNaarMinuten(item.starttijd);
+    if (Math.abs(itemMin - huidigMin) > 15) return false;
+    // Kijk of atleet in dit onderdeel zit
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    for (let s = 0; s < maxSlots; s++) {
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
+    }
+    return false;
+  });
+}
+
+function tijdNaarMinuten(tijdStr) {
+  if (!tijdStr) return 0;
+  const [h, m] = tijdStr.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Tel hoeveel onderdelen atleet al heeft in deze ploeg
+function telOnderdelenAtleet(ploeg, opst, atleetId) {
+  let tel = 0;
+  programma.forEach((item, idx) => {
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    for (let s = 0; s < maxSlots; s++) {
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
+    }
+  });
+  return tel;
+}
+
+// ── Atleet slot keuze ─────────────────────────────────────────
+let actiefSlot = null;
+
+function openSlotKeuze(ploeg, idx, slotNr, el) {
+  // Sluit bestaande dropdown
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  const opst = opstellingData[ploeg] || {};
+  const item = programma[idx];
+
+  const div = document.createElement("div");
+  div.className = "slot-select";
+
+  // Filter: geslacht, heeft PR voor dit onderdeel
+  const kandidaten = atleten
+    .filter(a => !actiefGeslacht || a.geslacht === actiefGeslacht)
+    .map(a => {
+      const pr  = bestePrestatie(a.id, item.discipline);
+      const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+      const aantalOnderdelen = telOnderdelenAtleet(ploeg, opst, a.id);
+      const conflict = checkConflict(ploeg, opst, idx, a.id, item);
+      return { atleet: a, pr, pts, aantalOnderelen: aantalOnderelen, conflict };
+    })
+    .sort((a, b) => b.pts - a.pts);
+
+  div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
+    kandidaten.map(k => {
+      const dimmed = k.aantalOnderelen >= 3 || k.conflict;
+      const waarsch = k.aantalOnderelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
+        data-naam="${esc(k.atleet.naam).toLowerCase()}"
+        onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
+        <span>${esc(k.atleet.naam)} ${waarsch ? `<small style="color:var(--accent2)">(${waarsch})</small>` : ""}</span>
+        <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${k.pr.resultaat}` : "geen PR"}</span>
+      </div>`;
+    }).join("") +
+    `<div class="slot-select-item" onclick="kiesAtleet('${ploeg}',${idx},${slotNr},null)">
+      <span style="color:var(--muted)">— Leeg maken —</span>
+    </div>`;
+
+  el.style.position = "relative";
+  el.appendChild(div);
+  div.querySelector(".slot-select-search").focus();
+
+  // Sluit bij klik buiten
+  setTimeout(() => {
+    document.addEventListener("click", function sluiter(e) {
+      if (!div.contains(e.target) && e.target !== el) {
+        div.remove();
+        document.removeEventListener("click", sluiter);
+      }
+    });
+  }, 100);
+}
+
+function filterSlotKeuze(input) {
+  const q = input.value.toLowerCase();
+  input.parentElement.querySelectorAll(".slot-select-item[data-naam]").forEach(item => {
+    item.style.display = item.dataset.naam.includes(q) ? "" : "none";
+  });
+}
+
+function kiesAtleet(ploeg, idx, slotNr, atleetId) {
+  if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+  const slotKey = `${ploeg}_${idx}_${slotNr}`;
+  opstellingData[ploeg][slotKey] = atleetId;
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  renderPloegen();
+}
+
+function clearSlot(ploeg, idx, slotNr) {
+  if (!opstellingData[ploeg]) return;
+  delete opstellingData[ploeg][`${ploeg}_${idx}_${slotNr}`];
+  renderPloegen();
+}
+
+// ── Automatisch opstellen ─────────────────────────────────────
+function genereerOpstelling() {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  opstellingData = {};
+
+  ploegNamen.forEach(ploeg => {
+    opstellingData[ploeg] = {};
+    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen
+    const atleetIngepland = {};       // atleetId → [{idx, starttijd}]
+
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette = item.type === "estafette";
+      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+
+      // Rangschik kandidaten op punten (beste eerst)
+      const kandidaten = atleten
+        .filter(a => a.geslacht === actiefGeslacht)
+        .map(a => {
+          const pr  = bestePrestatie(a.id, item.discipline);
+          const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+          return { atleet: a, pts };
+        })
+        .filter(k => k.pts > 0)
+        .sort((a, b) => b.pts - a.pts);
+
+      let gevuld = 0;
+      for (const k of kandidaten) {
+        if (gevuld >= maxSlots) break;
+        const aid = String(k.atleet.id);
+
+        // Regel: max 3 onderdelen
+        if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
+
+        // Regel: geen tijdconflict binnen 15 min
+        if (item.starttijd) {
+          const hMin = tijdNaarMinuten(item.starttijd);
+          const conflict = (atleetIngepland[aid] || []).some(ingepland => {
+            if (!ingepland.starttijd) return false;
+            return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
+          });
+          if (conflict) continue;
+        }
+
+        // Wijs toe
+        opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
+        atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
+        if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
+        atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+        gevuld++;
+      }
+    });
+  });
+
+  renderPloegen();
+  toast("Opstelling gegenereerd ✓");
+}
+
+// ── Opslaan ───────────────────────────────────────────────────
+async function opslaanOpstelling() {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  try {
+    for (const ploeg of ploegNamen) {
+      await api("saveOpstelling", {
+        wedstrijdId: actiefWedstrijdId,
+        geslacht: actiefGeslacht,
+        ploeg,
+        data: JSON.stringify(opstellingData[ploeg] || {})
+      });
+      await new Promise(r => setTimeout(r, 150));
+    }
+    toast("Opstelling opgeslagen ✓");
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Afdrukken ─────────────────────────────────────────────────
+function printOpstelling() {
+  window.print();
 }
 
 // ── Init ──────────────────────────────────────────────────────
