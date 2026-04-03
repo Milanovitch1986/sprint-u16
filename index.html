@@ -776,6 +776,8 @@ async function verwijderGeselecteerde() {
       verwijderd++;
       if (verwijderd % 5 === 0) toast(`Verwijderen… (${verwijderd}/${n})`, "ok");
     } catch (e) { console.warn("Fout bij verwijderen", id, e.message); }
+    // Korte pauze zodat Google Apps Script niet overbelast raakt
+    await new Promise(r => setTimeout(r, 150));
   }
 
   geselecteerd.clear();
@@ -1246,6 +1248,7 @@ async function verwerkAtletenlijst(rows) {
       n++;
       if (n % 5 === 0) toast(`Atleten uploaden… (${n}/${nieuw.length})`, "ok");
     } catch (e) { console.warn("Fout bij", a.naam, e.message); }
+    await new Promise(r => setTimeout(r, 150));
   }
   return `✓ ${n} atleet(en) geïmporteerd!`;
 }
@@ -1330,6 +1333,7 @@ async function verwerkPRSheet(rows) {
       n++;
       if (n % 10 === 0) toast(`Prestaties uploaden… (${n}/${nieuwePrestaties.length})`, "ok");
     } catch (e) { console.warn("Fout bij prestatie", e.message); }
+    await new Promise(r => setTimeout(r, 150));
   }
 
   return `✓ ${nieuweAtleten} atleet(en) en ${n} prestatie(s) geïmporteerd!`;
