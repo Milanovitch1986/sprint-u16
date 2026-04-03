@@ -617,18 +617,13 @@ let editPrestatieId  = null;
 
 // ── API helper ────────────────────────────────────────────────
 async function api(action, body = {}) {
-  const payload = { action, ...body };
-  // Stuur als form-encoded POST — werkt met speciale tekens én omzeilt CORS preflight
-  const form = new URLSearchParams();
-  for (const [k, v] of Object.entries(payload)) {
-    form.append(k, v === null || v === undefined ? "" : String(v));
+  const params = new URLSearchParams({ action });
+  for (const [k, v] of Object.entries(body)) {
+    params.append(k, v === null || v === undefined ? "" : String(v));
   }
+  const url = API + "?" + params.toString();
   try {
-    const res = await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString()
-    });
+    const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "Onbekende fout");
@@ -636,15 +631,6 @@ async function api(action, body = {}) {
   } catch (e) {
     throw e;
   }
-}
-
-// Zet een object om naar platte string-waarden voor URL params
-function flattenForUrl(obj) {
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    out[k] = v === null || v === undefined ? "" : String(v);
-  }
-  return out;
 }
 
 // ── Toast ─────────────────────────────────────────────────────
