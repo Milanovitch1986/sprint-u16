@@ -155,12 +155,29 @@
     <!-- Login formulier -->
     <div id="form-login">
       <div class="fout" id="login-fout"></div>
+      <div class="ok-msg" id="login-ok"></div>
       <div class="field"><label>E-mailadres</label>
         <input type="email" id="login-email" placeholder="jouw@email.nl" autocomplete="email"></div>
       <div class="field"><label>Wachtwoord</label>
         <input type="password" id="login-ww" placeholder="••••••••"
           onkeydown="if(event.key==='Enter') login()"></div>
       <button class="btn" id="login-btn" onclick="login()">Inloggen</button>
+      <div style="text-align:center;margin-top:14px;">
+        <button onclick="toonWachtwoordVergeten()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Barlow',sans-serif;">Wachtwoord vergeten?</button>
+      </div>
+    </div>
+
+    <!-- Wachtwoord vergeten formulier -->
+    <div id="form-reset" style="display:none;">
+      <div class="fout" id="reset-fout"></div>
+      <div class="ok-msg" id="reset-ok"></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Vul je e-mailadres in. Als er een account bestaat sturen we een resetlink.</div>
+      <div class="field"><label>E-mailadres</label>
+        <input type="email" id="reset-email" placeholder="jouw@email.nl" autocomplete="email"
+          onkeydown="if(event.key==='Enter') stuurResetMail()">
+      </div>
+      <button class="btn" id="reset-btn" onclick="stuurResetMail()">Resetlink versturen</button>
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="verbergWachtwoordVergeten()">&#8592; Terug naar inloggen</button>
     </div>
 
     <!-- Registreer formulier -->
@@ -283,6 +300,41 @@ function bezig(id, ja, label) {
 })();
 
 // ── Inloggen ──────────────────────────────────────────────────
+// ── Wachtwoord vergeten ───────────────────────────────────────
+function toonWachtwoordVergeten() {
+  document.getElementById("form-login").style.display = "none";
+  document.getElementById("form-reset").style.display = "";
+  document.getElementById("reset-fout").style.display = "none";
+  document.getElementById("reset-ok").style.display = "none";
+  const email = document.getElementById("login-email").value;
+  if (email) document.getElementById("reset-email").value = email;
+  document.getElementById("reset-email").focus();
+}
+
+function verbergWachtwoordVergeten() {
+  document.getElementById("form-reset").style.display = "none";
+  document.getElementById("form-login").style.display = "";
+}
+
+async function stuurResetMail() {
+  const el = document.getElementById("reset-fout");
+  const ok = document.getElementById("reset-ok");
+  el.style.display = "none"; ok.style.display = "none";
+  const email = document.getElementById("reset-email").value.trim();
+  if (!email || !email.includes("@")) {
+    el.textContent = "Vul een geldig e-mailadres in.";
+    el.style.display = "block"; return;
+  }
+  bezig("reset-btn", true, "Versturen…");
+  const redirectUrl = window.location.origin + window.location.pathname.replace("index.html", "") + "index.html";
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
+  bezig("reset-btn", false);
+  // Altijd succes tonen (geen info over of account bestaat = privacy)
+  ok.textContent = "Als dit e-mailadres bekend is, ontvang je een resetlink in je inbox.";
+  ok.style.display = "block";
+  document.getElementById("reset-email").value = "";
+}
+
 async function login() {
   toonFout("login-fout", "");
   const email = document.getElementById("login-email").value.trim();
