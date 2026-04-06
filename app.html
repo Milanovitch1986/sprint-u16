@@ -1942,11 +1942,17 @@ function berekenPunten(discipline, resultaat, geslacht) {
 function parseResultaat(val) {
   if (!val) return null;
   const s = String(val).replace(",", ".").trim();
-  // Formaat m:ss.f of m.ss.f
-  const minSec = s.match(/^(\d+)[:.]([\d.]+)$/);
-  if (minSec) {
-    return parseFloat(minSec[1]) * 60 + parseFloat(minSec[2]);
+  // Formaat m:ss.f (met dubbele punt) — bijv. 1:02.3 = 62.3 sec
+  const metDubbelpunt = s.match(/^(\d+):(\d+(?:\.\d+)?)$/);
+  if (metDubbelpunt) {
+    return parseFloat(metDubbelpunt[1]) * 60 + parseFloat(metDubbelpunt[2]);
   }
+  // Formaat m.ss.f (met punten) — bijv. 1.02.3 = 62.3 sec (alleen als er 2 punten zijn)
+  const metPunten = s.match(/^(\d+)\.(\d{2})\.(\d+)$/);
+  if (metPunten) {
+    return parseFloat(metPunten[1]) * 60 + parseFloat(metPunten[2] + '.' + metPunten[3]);
+  }
+  // Gewoon een getal: 7.45 sec, 13.50 sec, 3.85 m, etc.
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
 }
