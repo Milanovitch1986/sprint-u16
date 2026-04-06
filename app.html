@@ -862,6 +862,7 @@
         </select>
         <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
         <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
+        <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
         <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
       </div>
 
@@ -2962,6 +2963,109 @@ async function wisselRol(gebruikerId, huidigeRol) {
     toast(`Rol gewijzigd naar ${nieuweRol} ✓`);
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Export opstelling naar Excel ──────────────────────────────
+async function exporteerOpstelling() {
+  if (!actiefWedstrijdId) { toast("Geen wedstrijd geselecteerd", "err"); return; }
+  if (!programma.length)  { toast("Geen programma ingevoerd", "err"); return; }
+
+  // Laad SheetJS dynamisch
+  if (!window.XLSX) {
+    toast("SheetJS laden…", "ok");
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const wedstrijd  = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  const bestandsnaam = wedstrijd ? wedstrijd.naam.replace(/[^a-zA-Z0-9 _-]/g, "") : "opstelling";
+  const ploegNamen   = ["A","B","C"].slice(0, aantalPloegen);
+
+  // Alle disciplines uit het programma (kolomkoppen)
+  const disciplines = programma.map(p => p.discipline);
+
+  // Bouw rijen voor het huidige geslacht
+  function bouwRijen(geslacht) {
+    const atletenLijst = atleten.filter(a => a.geslacht === geslacht);
+    const rijen = [];
+
+    // Headerrij
+    rijen.push(["Naam", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", ...disciplines]);
+
+    for (const ploeg of ploegNamen) {
+      const opst = opstellingData[ploeg] || {};
+
+      // Verzamel alle atleten in deze ploeg
+      const atleetInPloeg = new Set();
+      programma.forEach((item, idx) => {
+        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+        for (let s = 0; s < maxSlots; s++) {
+          const aid = opst[`${ploeg}_${idx}_${s}`];
+          if (aid) atleetInPloeg.add(String(aid));
+        }
+      });
+
+      for (const atleetId of atleetInPloeg) {
+        const atleet = atleten.find(a => String(a.id) === atleetId);
+        if (!atleet) continue;
+        if (atleet.geslacht !== geslacht) continue;
+
+        // Bouw rij: naam, bondsnr, geslacht, club, ploeg, dan per discipline een x of leeg
+        const rij = [
+          atleet.naam || "",
+          atleet.bondsnr || "",
+          atleet.geslacht === "V" ? "F" : "M",
+          atleet.club || "",
+          `Ploeg ${ploeg}`
+        ];
+
+        disciplines.forEach((disc, idx) => {
+          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
+          let staat = false;
+          for (let s = 0; s < maxSlots; s++) {
+            if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
+          }
+          rij.push(staat ? "x" : "");
+        });
+
+        rijen.push(rij);
+      }
+    }
+    return rijen;
+  }
+
+  // Maak twee aparte werkboeken
+  const geslachten = [
+    { code: "V", label: "Meisjes", suffix: "meisjes" },
+    { code: "M", label: "Jongens", suffix: "jongens" }
+  ];
+
+  for (const g of geslachten) {
+    const rijen = bouwRijen(g.code);
+    if (rijen.length <= 1) { toast(`Geen ${g.label.toLowerCase()} in de opstelling`, "ok"); continue; }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rijen);
+
+    // Kolombreedte instellen
+    ws["!cols"] = [
+      { wch: 25 }, // Naam
+      { wch: 18 }, // Bondsnr
+      { wch: 10 }, // Geslacht
+      { wch: 16 }, // Vereniging
+      { wch: 12 }, // Team
+      ...disciplines.map(() => ({ wch: 14 }))
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, g.label);
+    XLSX.writeFile(wb, `${bestandsnaam}_${g.suffix}.xlsx`);
+  }
+
+  toast("Opstelling geëxporteerd ✓");
 }
 
 // ── Init ──────────────────────────────────────────────────────
