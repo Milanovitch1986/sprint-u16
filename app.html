@@ -772,18 +772,7 @@
       <label>Eenheid</label>
       <input type="text" id="f-eenheid" placeholder="sec / m / cm">
     </div>
-    <div class="field">
-      <label>Datum</label>
-      <input type="date" id="f-datum">
-    </div>
-    <div class="field">
-      <label>Locatie / wedstrijd</label>
-      <input type="text" id="f-locatie" placeholder="bijv. NK Atletiek Apeldoorn">
-    </div>
-    <div class="field">
-      <label>Notities</label>
-      <input type="text" id="f-notities" placeholder="optioneel">
-    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('prestatieModal')">Annuleren</button>
       <button class="btn btn-danger btn-sm" id="prestatieDeleteBtn" onclick="deletePrestatie()" style="display:none;">Verwijderen</button>
@@ -1316,7 +1305,7 @@ function renderPrestatieTable(rows, showPR = false) {
   const sorted = [...rows].sort((a, b) => new Date(b.datum) - new Date(a.datum));
   return `<div class="table-wrap"><table>
     <thead><tr>
-      <th>Discipline</th><th>Resultaat</th><th>Datum</th><th>Locatie</th><th>Notities</th><th></th>
+      <th>Discipline</th><th>Resultaat</th><th></th>
     </tr></thead>
     <tbody>
       ${sorted.map(p => {
@@ -1324,9 +1313,7 @@ function renderPrestatieTable(rows, showPR = false) {
         return `<tr>
           <td><strong>${esc(p.discipline||"")}</strong></td>
           <td><span class="result-val">${esc(p.resultaat||"")} ${esc(p.eenheid||"")}</span>${isPR ? '<span class="pr-badge">PR</span>' : ""}</td>
-          <td>${formatDate(p.datum)}</td>
-          <td style="color:var(--muted)">${esc(p.locatie||"")}</td>
-          <td style="color:var(--muted);font-size:13px;">${esc(p.notities||"")}</td>
+
           <td><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal('${p.id}')">✏️</button></td>
         </tr>`;
       }).join("")}
@@ -1424,17 +1411,11 @@ function openPrestatieModal(id = null, defaultAtleetId = null) {
       document.getElementById("f-discipline").value = p.discipline || "100m";
       document.getElementById("f-resultaat").value  = p.resultaat  || "";
       document.getElementById("f-eenheid").value    = p.eenheid    || "";
-      document.getElementById("f-datum").value      = p.datum      || "";
-      document.getElementById("f-locatie").value    = p.locatie    || "";
-      document.getElementById("f-notities").value   = p.notities   || "";
     }
   } else {
     if (defaultAtleetId) sel.value = defaultAtleetId;
     document.getElementById("f-discipline").value = "100m";
     document.getElementById("f-resultaat").value  = "";
-    document.getElementById("f-datum").value      = new Date().toISOString().split("T")[0];
-    document.getElementById("f-locatie").value    = "";
-    document.getElementById("f-notities").value   = "";
   }
   updateEenheidField();
   openModal("prestatieModal");
@@ -1473,9 +1454,6 @@ async function savePrestatie() {
     discipline: document.getElementById("f-discipline").value,
     resultaat,
     eenheid:  document.getElementById("f-eenheid").value.trim(),
-    datum:    document.getElementById("f-datum").value || null,
-    locatie:  document.getElementById("f-locatie").value.trim(),
-    notities: document.getElementById("f-notities").value.trim()
   };
   try {
     if (editPrestatieId) {
