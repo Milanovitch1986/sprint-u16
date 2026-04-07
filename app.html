@@ -1595,11 +1595,15 @@ async function importExcel(input) {
     if (rows.length < 2) continue;
     const header = rows[0].map(h => String(h).toLowerCase().trim());
 
-    const isAtletenlijst = header.some(h => h.includes("search") || h.includes("bondsnr") || h.includes("bondsnummer"));
-    const isPRSheet      = header[0].toLowerCase().includes("atleet") || header[0].toLowerCase().includes("naam");
+    const isAtletenlijst  = header.some(h => h.includes("search") || h.includes("bondsnr") || h.includes("bondsnummer"));
+    const isLangeLijst    = header.includes("onderdeel") && header.includes("record") && (header.includes("atleet") || header.includes("naam"));
+    const isPRSheet       = !isLangeLijst && (header[0].toLowerCase().includes("atleet") || header[0].toLowerCase().includes("naam"));
 
     if (isAtletenlijst) {
       resultaat = await verwerkAtletenlijst(rows);
+      break;
+    } else if (isLangeLijst) {
+      resultaat = await verwerkLangeLijst(rows);
       break;
     } else if (isPRSheet) {
       resultaat = await verwerkPRSheet(rows);
@@ -1616,6 +1620,169 @@ async function importExcel(input) {
   renderPrestaties();
   populateAtleetSelects();
   toast(resultaat, "ok");
+}
+
+// ── Verwerk lange lijst (Atleet | Leeftijd | Onderdeel | Record | Datum) ──
+async function verwerkLangeLijst(rows) {
+  const uid = await getUid();
+  const header = rows[0].map(h => String(h).toLowerCase().trim());
+  const iAtleet   = header.findIndex(h => h.includes("atleet") || h.includes("naam"));
+  const iOnderdeel= header.findIndex(h => h.includes("onderdeel"));
+  const iRecord   = header.findIndex(h => h.includes("record"));
+  const iDatum    = header.findIndex(h => h.includes("datum") || h.includes("wedstrijd"));
+
+  if (iAtleet < 0 || iOnderdeel < 0 || iRecord < 0) {
+    return "Kolommen niet gevonden in bestand";
+  }
+
+  // Discipline-mapping: bestandsnamen → app-namen
+  const DISC_MAP = {
+    "60 meter":"60m","60 meter handtijd":"60m","60 meter ontbrekende windmeting":"60m","60 meter ongeldige windmeting":"60m",
+    "80 meter":"80m","80 meter ontbrekende windmeting":"80m","80 meter ongeldige windmeting":"80m",
+    "100 meter":"100m","100 meter ongeldige windmeting":"100m",
+    "150 meter":"150m","200 meter":"200m","200 meter ongeldige windmeting":"200m",
+    "300 meter":"300m","400 meter":"400m","600 meter":"600m",
+    "800 meter":"800m","1000 meter":"1000m","1500 meter":"1500m",
+    "60 meter horden 76.2cm":"60m horden","60 meter horden76.2cm":"60m horden",
+    "60 meter horden76.2cm (12m-8m)":"60m horden","60 meter horden76.2cm ongeldige windmeting":"60m horden",
+    "60 meter horden 83.8cm":"60m horden","60 meter horden83.8cm":"60m horden",
+    "80 meter horden 76.2cm":"80m horden","80 meter horden76.2cm":"80m horden",
+    "80 meter horden76.2cm ongeldige windmeting":"80m horden",
+    "100 meter horden":"100m horden","100 meter horden 84 cm":"100m horden",
+    "300 meter horden68.6cm":"300m horden","300 meter horden 68.6cm":"300m horden",
+    "kogelstoten 2kg":"Kogelstoten","kogelstoten 3kg":"Kogelstoten",
+    "kogelstoten2kg":"Kogelstoten","kogelstoten3kg":"Kogelstoten","kogelstotenonbekend gewicht":"Kogelstoten",
+    "discuswerpen 1kg":"Discuswerpen","discuswerpen1kg":"Discuswerpen","discuswerpen750gr":"Discuswerpen",
+    "speerwerpen 400gr":"Speerwerpen","speerwerpen400gr":"Speerwerpen","speerwerpen500gr":"Speerwerpen",
+    "verspringen":"Verspringen","verspringen ongeldige windmeting":"Verspringen","verspringen ontbrekende windmeting":"Verspringen",
+    "hoogspringen":"Hoogspringen",
+    "4 x 100 meter":"4x100m","4x100m":"4x100m","4 x 80 meter":"4x80m","4x80m":"4x80m",
+  };
+
+  function mapDisc(naam) {
+    return DISC_MAP[naam.toLowerCase().trim()] || null;
+  }
+
+  function cleanRecord(raw) {
+    if (!raw) return null;
+    let s = String(raw).trim();
+    // Verwijder windinfo (bijv. "+0,4 m/s"), handtijd-marker "h", "n/a" etc.
+    s = s.split(" ")[0];
+    s = s.replace("h","").replace(",",".").trim();
+    // Verwijder punten als duizendtalscheidingsteken (bijv. "1.550,00" → al gedaan hierboven)
+    if (!s || s === "0" || isNaN(parseFloat(s.replace(":","").replace(".",""))) ) return null;
+    return s;
+  }
+
+  // Groepeer per atleet+discipline, bewaar alleen het beste resultaat
+  const vandaag = new Date().toISOString().split("T")[0];
+  const bestPerAtleetDisc = {}; // "naam||disc" → {naam, disc, resultaat, datum}
+
+  for (const row of rows.slice(1)) {
+    const naam    = String(row[iAtleet] || "").trim();
+    const discRaw = String(row[iOnderdeel] || "").trim();
+    const recRaw  = String(row[iRecord] || "").trim();
+    const datum   = iDatum >= 0 ? String(row[iDatum] || "").trim() : "";
+
+    if (!naam || !discRaw || !recRaw) continue;
+
+    const disc = mapDisc(discRaw);
+    if (!disc) continue; // discipline niet in mapping, overslaan
+
+    const rec = cleanRecord(recRaw);
+    if (!rec) continue;
+
+    const key = naam.toLowerCase() + "||" + disc;
+    const isTijd = TIJD_DISCIPLINES.some(t => disc.toLowerCase().includes(t.toLowerCase()));
+    const nieuweWaarde = parseResultaat(rec);
+    if (nieuweWaarde === null) continue;
+
+    if (!bestPerAtleetDisc[key]) {
+      bestPerAtleetDisc[key] = { naam, disc, resultaat: rec, datum };
+    } else {
+      const oudeWaarde = parseResultaat(bestPerAtleetDisc[key].resultaat);
+      const isVerbetering = isTijd ? nieuweWaarde < oudeWaarde : nieuweWaarde > oudeWaarde;
+      if (isVerbetering) bestPerAtleetDisc[key] = { naam, disc, resultaat: rec, datum };
+    }
+  }
+
+  const items = Object.values(bestPerAtleetDisc);
+  if (!items.length) return "Geen herkenbare prestaties gevonden in het bestand";
+
+  const ok = await bevestig("Prestaties importeren",
+    `${items.length} prestatie(s) gevonden voor ${new Set(items.map(i=>i.naam)).size} atleet(en).
+
+Doorgaan?`);
+  if (!ok) return "Geannuleerd";
+
+  let toegevoegd = 0, verbeterd = 0, overgeslagen = 0, nieuweAtleten = 0;
+
+  for (const item of items) {
+    // Zoek of maak atleet
+    let atleet = atleten.find(a => a.naam.toLowerCase() === item.naam.toLowerCase());
+    if (!atleet) {
+      try {
+        const { data, error } = await sb.from("atleten")
+          .insert({ naam: item.naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid })
+          .select().single();
+        if (error) throw error;
+        atleet = { ...data, atleetId: data.id };
+        atleten.push(atleet);
+        nieuweAtleten++;
+      } catch(e) { console.warn("Fout atleet", item.naam, e.message); continue; }
+    }
+
+    const isTijd = TIJD_DISCIPLINES.some(t => item.disc.toLowerCase().includes(t.toLowerCase()));
+    const nieuweWaarde = parseResultaat(item.resultaat);
+
+    // Vergelijk met bestaande PRs
+    const bestaande = prestaties.filter(p =>
+      String(p.atleetId) === String(atleet.id) &&
+      p.discipline.toLowerCase() === item.disc.toLowerCase()
+    );
+
+    if (!bestaande.length) {
+      try {
+        const { data, error } = await sb.from("prestaties").insert({
+          eigenaar_id: uid, atleet_id: atleet.id,
+          discipline: item.disc, resultaat: item.resultaat,
+          eenheid: isTijd ? "sec" : "m",
+          datum: item.datum || vandaag,
+          locatie: item.datum || "", notities: "Geïmporteerd uit Excel"
+        }).select().single();
+        if (error) throw error;
+        prestaties.push({ ...data, atleetId: data.atleet_id });
+        toegevoegd++;
+      } catch(e) { console.warn("Fout prestatie", item.disc, e.message); }
+    } else {
+      const beste = bestaande.reduce((b, p) => {
+        const vB = parseResultaat(String(b.resultaat).replace(",","."));
+        const vP = parseResultaat(String(p.resultaat).replace(",","."));
+        if (vP === null) return b;
+        return isTijd ? (vP < vB ? p : b) : (vP > vB ? p : b);
+      });
+      const besteWaarde = parseResultaat(String(beste.resultaat).replace(",","."));
+      const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+      if (isVerbetering) {
+        try {
+          await sb.from("prestaties").delete().eq("id", beste.id).eq("eigenaar_id", uid);
+          prestaties = prestaties.filter(p => String(p.id) !== String(beste.id));
+          const { data, error } = await sb.from("prestaties").insert({
+            eigenaar_id: uid, atleet_id: atleet.id,
+            discipline: item.disc, resultaat: item.resultaat,
+            eenheid: isTijd ? "sec" : "m",
+            datum: item.datum || vandaag,
+            locatie: item.datum || "", notities: `PR verbeterd (was: ${beste.resultaat})`
+          }).select().single();
+          if (error) throw error;
+          prestaties.push({ ...data, atleetId: data.atleet_id });
+          verbeterd++;
+        } catch(e) { console.warn("Fout PR update", item.disc, e.message); }
+      } else { overgeslagen++; }
+    }
+  }
+
+  return `✓ ${toegevoegd} nieuw · ${verbeterd} verbeterd · ${overgeslagen} overgeslagen · ${nieuweAtleten} nieuwe atleet(en)`;
 }
 
 // ── Verwerk atletenlijst (zoals atletenlijst_tbv_competitietool.xlsx) ──
