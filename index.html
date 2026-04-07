@@ -345,11 +345,20 @@ async function login() {
   bezig("login-btn", false);
   if (error) { toonFout("login-fout", "Inloggen mislukt: controleer je e-mail en wachtwoord."); return; }
 
+  // Haal alle aangemelde factoren op
+  const { data: factors } = await sb.auth.mfa.listFactors();
+  const totp = factors?.totp?.[0];
+
+  // Geen 2FA factor aangemeld → verplicht setup starten
+  if (!totp) {
+    await start2FASetup();
+    return;
+  }
+
+  // Wel een factor maar nog niet geverifieerd in deze sessie
   const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal?.nextLevel === "aal2" && aal?.nextLevel !== aal?.currentLevel) {
-    const { data: factors } = await sb.auth.mfa.listFactors();
-    const totp = factors?.totp?.[0];
-    if (totp) { totpFactorId = totp.id; toonView("view-2fa"); document.getElementById("totp-code").focus(); return; }
+    totpFactorId = totp.id; toonView("view-2fa"); document.getElementById("totp-code").focus(); return;
   }
   window.location.href = "app.html";
 }
