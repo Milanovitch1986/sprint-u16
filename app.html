@@ -2504,6 +2504,16 @@ function tijdNaarMinuten(tijdStr) {
   return h * 60 + (m || 0);
 }
 
+// Controleer of atleet al in een andere ploeg zit
+function zitInAnderePloeg(huidigePloeg, atleetId) {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  return ploegNamen.some(ploeg => {
+    if (ploeg === huidigePloeg) return false;
+    const opst = opstellingData[ploeg] || {};
+    return Object.values(opst).some(id => String(id) === String(atleetId));
+  });
+}
+
 // Tel hoeveel onderdelen atleet al heeft in deze ploeg
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
@@ -2536,14 +2546,15 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
       const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
       const aantalOnderdelen = telOnderdelenAtleet(ploeg, opst, a.id);
       const conflict = checkConflict(ploeg, opst, idx, a.id, item);
-      return { atleet: a, pr, pts, aantalOnderdelen: aantalOnderdelen, conflict };
+      const andereP = zitInAnderePloeg(ploeg, a.id);
+      return { atleet: a, pr, pts, aantalOnderdelen, conflict, andereP };
     })
     .sort((a, b) => b.pts - a.pts);
 
   div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
     kandidaten.map(k => {
-      const dimmed = k.aantalOnderdelen >= 3 || k.conflict;
-      const waarsch = k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      const dimmed = k.aantalOnderdelen >= 3 || k.conflict || k.andereP;
+      const waarsch = k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
       return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
         onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
@@ -2655,10 +2666,11 @@ async function alleenBeschikbaar(aan) {
 function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   opstellingData = {};
+  const atleetInPloeg = {}; // atleetId → ploeg (over alle ploegen)
 
   ploegNamen.forEach(ploeg => {
     opstellingData[ploeg] = {};
-    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen
+    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen in deze ploeg
     const atleetIngepland = {};       // atleetId → [{idx, starttijd}]
 
     programma.forEach((item, idx) => {
@@ -2682,6 +2694,9 @@ function genereerOpstelling() {
         if (gevuld >= maxSlots) break;
         const aid = String(k.atleet.id);
 
+        // Regel: atleet mag maar in 1 ploeg
+        if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) continue;
+
         // Regel: max 3 onderdelen
         if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
 
@@ -2697,6 +2712,7 @@ function genereerOpstelling() {
 
         // Wijs toe
         opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
+        atleetInPloeg[aid] = ploeg;
         atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
         if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
         atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
