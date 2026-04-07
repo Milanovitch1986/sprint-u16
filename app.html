@@ -595,11 +595,17 @@
   @media print {
     header, nav, .btn, #opstelling-stap1, .page-header,
     #opstelling-tab-M, #opstelling-tab-V,
-    .atleet-slot .slot-remove { display: none !important; }
+    .atleet-slot .slot-remove,
+    #beschikbaarheid-sectie,
+    .print-hide { display: none !important; }
     body { background: white; color: black; }
     .ploeg-container { break-inside: avoid; border: 1px solid #ccc; }
     .onderdeel-rij { border-bottom: 1px solid #eee; }
     .atleet-slot { border: 1px solid #ccc; }
+    .slot-punten { display: none !important; }
+    .onderdeel-duur { display: none !important; }
+    .programma-type-col { display: none !important; }
+    .programma-duur-col { display: none !important; }
   }
 
   .profiel-input {
@@ -819,7 +825,7 @@
       </div>
 
       <!-- Beschikbaarheid sectie -->
-      <div class="detail-panel" style="margin-bottom:24px;">
+      <div class="detail-panel print-hide" id="beschikbaarheid-sectie" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
           <span>✅ Beschikbare atleten</span>
           <div style="display:flex;gap:8px;margin:8px 16px;">
@@ -2288,16 +2294,16 @@ function renderProgrammaOverzicht() {
   el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;">
     <thead><tr>
       <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Onderdeel</th>
-      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Type</th>
+      <th class="programma-type-col" style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Type</th>
       <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Starttijd</th>
-      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Duur</th>
+      <th class="programma-duur-col" style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Duur</th>
     </tr></thead>
     <tbody>
       ${programma.map(p => `<tr>
         <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
-        <td style="padding:8px 12px;color:var(--muted);">${p.type}</td>
+        <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
         <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
-        <td style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
+        <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
       </tr>`).join("")}
     </tbody>
   </table></div>`;
@@ -2453,7 +2459,7 @@ function renderPloeg(ploeg) {
       <div class="onderdeel-rij">
         <div>
           <div class="onderdeel-naam">${esc(item.discipline)}</div>
-          <div class="onderdeel-tijd">${item.starttijd || "—"} · ${item.duur||30}min</div>
+          <div class="onderdeel-tijd">${item.starttijd || "—"}<span class="onderdeel-duur"> · ${item.duur||30}min</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
         <div style="grid-column:3;"></div>
@@ -2461,11 +2467,14 @@ function renderPloeg(ploeg) {
       </div>`;
   }).join("");
 
+  const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
+  const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+  const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
   return `
     <div class="ploeg-container">
       <div class="ploeg-header">
-        <div class="ploeg-naam">Ploeg ${ploeg}</div>
-        <div class="ploeg-punten">~${totalePunten} pts</div>
+        <div class="ploeg-naam">${teamNaam}</div>
+        <div class="ploeg-punten print-hide">~${totalePunten} pts</div>
       </div>
       ${rijen}
     </div>`;
