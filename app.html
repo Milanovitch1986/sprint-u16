@@ -846,8 +846,8 @@
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
         <select id="aantal-ploegen-select" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
           <option value="1">1 ploeg</option>
-          <option value="2" selected>2 ploegen</option>
-          <option value="3">3 ploegen</option>
+          <option value="2">2 ploegen</option>
+          <option value="3" selected>3 ploegen</option>
         </select>
         <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
         <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
@@ -2003,7 +2003,7 @@ let programma     = [];
 let editWedstrijdId   = null;
 let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
-let aantalPloegen     = 2;
+let aantalPloegen     = 3;
 let opstellingData    = {};
 let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 
@@ -3166,12 +3166,15 @@ async function exporteerOpstelling() {
         if (atleet.geslacht !== geslacht) continue;
 
         // Bouw rij: naam, bondsnr, geslacht, club, ploeg, dan per discipline een x of leeg
+        const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
+        const geslachtCode = geslacht === "V" ? "V" : "M";
+        const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
         const rij = [
           atleet.naam || "",
           atleet.bondsnr || "",
           atleet.geslacht === "V" ? "F" : "M",
-          atleet.club || "",
-          `Ploeg ${ploeg}`
+          "AV Sprint",
+          teamNaam
         ];
 
         disciplines.forEach((disc, idx) => {
