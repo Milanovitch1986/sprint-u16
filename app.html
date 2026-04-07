@@ -565,7 +565,7 @@
   /* ── Programma modal rijen ── */
   .programma-rij {
     display: grid;
-    grid-template-columns: 1fr 100px 80px 80px 36px;
+    grid-template-columns: 1fr 100px 80px 36px;
     gap: 8px; align-items: center;
     margin-bottom: 8px;
   }
@@ -2343,7 +2343,6 @@ function addProgrammaRijMet(p) {
       ${discOpties}
     </select>
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
-    <input type="number" class="pr-duur" value="${p.duur||30}" min="5" max="180" placeholder="min">
     <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
     <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
   `;
@@ -2363,9 +2362,8 @@ async function saveProgrammaModal() {
   rijen.forEach(rij => {
     const disc = rij.querySelector(".pr-disc").value;
     const tijd = rij.querySelector(".pr-tijd").value;
-    const duur = rij.querySelector(".pr-duur").value;
     const d = U16_DISCIPLINES.find(x => x.naam === disc);
-    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd || null, duur: parseInt(duur)||30 });
+    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd || null });
   });
   try {
     // Verwijder bestaande programmarijen voor deze wedstrijd/geslacht combo
@@ -2460,7 +2458,7 @@ function renderPloeg(ploeg) {
       <div class="onderdeel-rij">
         <div>
           <div class="onderdeel-naam">${esc(item.discipline)}</div>
-          <div class="onderdeel-tijd">${item.starttijd || "—"}<span class="onderdeel-duur"> · ${item.duur||30}min</span></div>
+          <div class="onderdeel-tijd">${item.starttijd || "—"}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
         <div style="grid-column:3;"></div>
@@ -2687,7 +2685,6 @@ function genereerOpstelling() {
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
           return { atleet: a, pts };
         })
-        .filter(k => k.pts > 0)
         .sort((a, b) => b.pts - a.pts);
 
       let gevuld = 0;
