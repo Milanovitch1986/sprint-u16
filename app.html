@@ -87,6 +87,27 @@
   .sync-btn.spinning svg { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Categorie switcher ── */
+  .cat-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .04em;
+    padding: 4px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+
   /* ── Layout ── */
   main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
@@ -637,7 +658,8 @@
 <body>
 
 <header>
-  <div class="logo">⚡ Sprint <span>U16</span></div>
+  <div class="logo">⚡ Sprint <span id="logo-cat">U16</span></div>
+  <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
     <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
@@ -894,19 +916,78 @@
   <!-- ADMIN TAB -->
   <div id="view-admin" style="display:none;">
     <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
+
+    <!-- Uitnodigingen -->
     <div class="detail-panel" style="margin-bottom:24px;">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
         <span>📨 Uitnodigingen</span>
-        <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="maakUitnodiging()">+ Nieuwe uitnodiging</button>
+        <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openUitnodigingModal()">+ Nieuwe uitnodiging</button>
       </div>
       <div id="uitnodigingen-lijst" style="padding:16px;"></div>
     </div>
-    <div class="detail-panel">
+
+    <!-- Gebruikers -->
+    <div class="detail-panel" style="margin-bottom:24px;">
       <div class="section-label">👥 Geregistreerde gebruikers</div>
       <div id="gebruikers-lijst" style="padding:16px;"></div>
     </div>
+
+    <!-- Categorieën -->
+    <div class="detail-panel" style="margin-bottom:24px;">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📂 Categorieën</span>
+        <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openCategorieModal()">+ Nieuwe categorie</button>
+      </div>
+      <div id="categorieen-lijst" style="padding:16px;"></div>
+    </div>
+
+    <!-- Trainer–categorie koppelingen -->
+    <div class="detail-panel">
+      <div class="section-label">🔗 Toegang per trainer</div>
+      <div id="trainer-categorie-beheer" style="padding:16px;"></div>
+    </div>
   </div>
 </main>
+
+<!-- ── UITNODIGING MODAL ── -->
+<div class="modal-overlay" id="uitnodigingModal">
+  <div class="modal">
+    <div class="modal-title">Nieuwe uitnodiging</div>
+    <div class="field">
+      <label class="field-label">E-mailadres</label>
+      <input type="email" id="uitn-email" placeholder="trainer@example.com">
+    </div>
+    <div class="field">
+      <label class="field-label">Categorie</label>
+      <select id="uitn-categorie">
+        <option value="">— kies categorie —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('uitnodigingModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="verstuurUitnodiging()">Uitnodiging aanmaken</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CATEGORIE MODAL ── -->
+<div class="modal-overlay" id="categorieModal">
+  <div class="modal">
+    <div class="modal-title">Nieuwe categorie</div>
+    <div class="field">
+      <label class="field-label">Naam (bijv. U14, U18)</label>
+      <input type="text" id="cat-naam" placeholder="U14" maxlength="20">
+    </div>
+    <div class="field">
+      <label class="field-label">Volgorde (lager = eerder in lijst)</label>
+      <input type="number" id="cat-volgorde" value="10" min="0" max="99">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('categorieModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="maakCategorie()">Aanmaken</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── WEDSTRIJD MODAL ── -->
 <div class="modal-overlay" id="wedstrijdModal">
@@ -1031,11 +1112,14 @@ const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const ATL_API  = "https://atletiek-nu-api-milan.milande-maat.workers.dev";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-let huidigeProfiel = null; // ingelogde gebruiker profiel
+let huidigeProfiel    = null; // ingelogde gebruiker profiel
+let beschikbareCategorieen = []; // alle categorieën waar trainer toegang toe heeft
+let actieveCategorie  = null;    // huidig geselecteerde categorie {id, naam}
 
 // ── State ─────────────────────────────────────────────────────
 let atleten    = [];
 let prestaties = [];
+let wedstrijden = [];
 let editAtleetId     = null;
 let editPrestatieId  = null;
 let selecteerModus   = false;
@@ -1057,7 +1141,65 @@ async function checkAuth() {
   document.getElementById("profiel-naam").value  = profiel?.gebruikersnaam || "";
   document.getElementById("profiel-email").value = session.user.email || "";
   await sb.from("profielen").update({ laatste_login: new Date().toISOString() }).eq("id", session.user.id);
+
+  // Laad categorieën waar deze trainer toegang toe heeft
+  await laadMijnCategorieen();
   return true;
+}
+
+// ── Categorieën laden ────────────────────────────────────────
+async function laadMijnCategorieen() {
+  const uid = huidigeProfiel?.id;
+  if (!uid) return;
+
+  // Admin ziet alle categorieën, trainer alleen zijn eigen
+  let query;
+  if (huidigeProfiel?.rol === "admin") {
+    const { data } = await sb.from("categorieen").select("*").order("volgorde");
+    beschikbareCategorieen = data || [];
+  } else {
+    const { data } = await sb.from("trainer_categorieen")
+      .select("categorie_id, categorieen(id, naam, volgorde)")
+      .eq("trainer_id", uid);
+    beschikbareCategorieen = (data || [])
+      .map(r => r.categorieen)
+      .filter(Boolean)
+      .sort((a, b) => a.volgorde - b.volgorde);
+  }
+
+  // Stel actieve categorie in (eerste beschikbare)
+  if (beschikbareCategorieen.length > 0 && !actieveCategorie) {
+    actieveCategorie = beschikbareCategorieen[0];
+  }
+
+  renderCategorieSwitcher();
+}
+
+function renderCategorieSwitcher() {
+  const switcher = document.getElementById("categorie-switcher");
+  const logo = document.getElementById("logo-cat");
+  if (logo && actieveCategorie) logo.textContent = actieveCategorie.naam;
+  if (!switcher) return;
+
+  if (beschikbareCategorieen.length <= 1) {
+    switcher.innerHTML = "";
+    return;
+  }
+
+  // Meerdere categorieën: toon knoppen om te wisselen
+  switcher.innerHTML = beschikbareCategorieen.map(c => `
+    <button class="cat-btn ${actieveCategorie?.id === c.id ? "active" : ""}"
+      onclick="wisselCategorie('${c.id}', '${esc(c.naam)}')">
+      ${esc(c.naam)}
+    </button>
+  `).join("");
+}
+
+async function wisselCategorie(id, naam) {
+  if (actieveCategorie?.id === id) return;
+  actieveCategorie = { id, naam };
+  renderCategorieSwitcher();
+  await syncAll(); // herlaad data voor nieuwe categorie
 }
 
 async function uitloggen() {
@@ -1083,12 +1225,12 @@ async function syncAll() {
   const btn = document.getElementById("syncBtn");
   btn.classList.add("spinning");
   try {
-    const uid = await getUid();
-    if (!uid) return;
+    if (!actieveCategorie) { toast("Geen categorie beschikbaar", "err"); return; }
+    const cid = actieveCategorie.id;
     const [aRes, pRes, wRes] = await Promise.all([
-      sb.from("atleten").select("*").eq("eigenaar_id", uid).order("naam"),
-      sb.from("prestaties").select("*").eq("eigenaar_id", uid),
-      sb.from("wedstrijden").select("*").eq("eigenaar_id", uid).order("datum", { ascending: false })
+      sb.from("atleten").select("*").eq("categorie_id", cid).order("naam"),
+      sb.from("prestaties").select("*").eq("categorie_id", cid),
+      sb.from("wedstrijden").select("*").eq("categorie_id", cid).order("datum", { ascending: false })
     ]);
     if (aRes.error) throw aRes.error;
     if (pRes.error) throw pRes.error;
@@ -1178,7 +1320,7 @@ async function verwijderGeselecteerde() {
   const uid = await getUid();
   const ids = [...geselecteerd];
   try {
-    const { error } = await sb.from("atleten").delete().eq("eigenaar_id", uid).in("id", ids);
+    const { error } = await sb.from("atleten").delete().eq("categorie_id", actieveCategorie.id).in("id", ids);
     if (error) throw error;
     atleten    = atleten.filter(a => !ids.includes(String(a.id)));
     prestaties = prestaties.filter(p => !ids.includes(String(p.atleet_id || p.atleetId)));
@@ -1357,7 +1499,8 @@ function openAtleetModal(id = null) {
 async function saveAtleet() {
   const naam = document.getElementById("f-naam").value.trim();
   if (!naam) { toast("Vul een naam in", "err"); return; }
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast("Geen categorie actief", "err"); return; }
   const body = {
     naam,
     geboortedatum: document.getElementById("f-geboortedatum").value || null,
@@ -1367,13 +1510,13 @@ async function saveAtleet() {
   };
   try {
     if (editAtleetId) {
-      const { error } = await sb.from("atleten").update(body).eq("id", editAtleetId).eq("eigenaar_id", uid);
+      const { error } = await sb.from("atleten").update(body).eq("id", editAtleetId).eq("categorie_id", cid);
       if (error) throw error;
       const i = atleten.findIndex(a => String(a.id) === String(editAtleetId));
       if (i >= 0) atleten[i] = { ...atleten[i], ...body };
       toast("Atleet bijgewerkt ✓");
     } else {
-      const { data, error } = await sb.from("atleten").insert({ ...body, eigenaar_id: uid }).select().single();
+      const { data, error } = await sb.from("atleten").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
       atleten.push({ ...data, atleetId: data.id });
     }
@@ -1385,9 +1528,9 @@ async function saveAtleet() {
 
 async function deleteAtleet() {
   if (!await bevestig("Atleet verwijderen", "Weet je het zeker? Dit kan niet ongedaan worden.")) return;
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   try {
-    const { error } = await sb.from("atleten").delete().eq("id", editAtleetId).eq("eigenaar_id", uid);
+    const { error } = await sb.from("atleten").delete().eq("id", editAtleetId).eq("categorie_id", cid);
     if (error) throw error;
     atleten = atleten.filter(a => String(a.id) !== String(editAtleetId));
     prestaties = prestaties.filter(p => String(p.atleet_id || p.atleetId) !== String(editAtleetId));
@@ -1454,7 +1597,8 @@ function updateEenheidField() {
 async function savePrestatie() {
   const resultaat = document.getElementById("f-resultaat").value.trim();
   if (!resultaat) { toast("Vul een resultaat in", "err"); return; }
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast("Geen categorie actief", "err"); return; }
   const atleetId = document.getElementById("f-atleetId").value;
   const body = {
     atleet_id:  atleetId,
@@ -1464,13 +1608,13 @@ async function savePrestatie() {
   };
   try {
     if (editPrestatieId) {
-      const { error } = await sb.from("prestaties").update(body).eq("id", editPrestatieId).eq("eigenaar_id", uid);
+      const { error } = await sb.from("prestaties").update(body).eq("id", editPrestatieId).eq("categorie_id", cid);
       if (error) throw error;
       const i = prestaties.findIndex(p => String(p.id) === String(editPrestatieId));
       if (i >= 0) prestaties[i] = { ...prestaties[i], ...body, atleetId };
       toast("Prestatie bijgewerkt ✓");
     } else {
-      const { data, error } = await sb.from("prestaties").insert({ ...body, eigenaar_id: uid }).select().single();
+      const { data, error } = await sb.from("prestaties").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
       prestaties.push({ ...data, atleetId: data.atleet_id });
     }
@@ -1482,9 +1626,9 @@ async function savePrestatie() {
 
 async function deletePrestatie() {
   if (!await bevestig("Prestatie verwijderen", "Weet je het zeker?")) return;
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   try {
-    const { error } = await sb.from("prestaties").delete().eq("id", editPrestatieId).eq("eigenaar_id", uid);
+    const { error } = await sb.from("prestaties").delete().eq("id", editPrestatieId).eq("categorie_id", cid);
     if (error) throw error;
     prestaties = prestaties.filter(p => String(p.id) !== String(editPrestatieId));
     closeModal("prestatieModal");
@@ -1708,7 +1852,7 @@ Doorgaan?`);
     if (!atleet) {
       try {
         const { data, error } = await sb.from("atleten")
-          .insert({ naam: item.naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid })
+          .insert({ naam: item.naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", categorie_id: actieveCategorie.id })
           .select().single();
         if (error) throw error;
         atleet = { ...data, atleetId: data.id };
@@ -1729,7 +1873,7 @@ Doorgaan?`);
     if (!bestaande.length) {
       try {
         const { data, error } = await sb.from("prestaties").insert({
-          eigenaar_id: uid, atleet_id: atleet.id,
+          categorie_id: actieveCategorie.id, atleet_id: atleet.id,
           discipline: item.disc, resultaat: item.resultaat,
           eenheid: isTijd ? "sec" : "m",
           datum: item.datum || vandaag,
@@ -1750,10 +1894,10 @@ Doorgaan?`);
       const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
       if (isVerbetering) {
         try {
-          await sb.from("prestaties").delete().eq("id", beste.id).eq("eigenaar_id", uid);
+          await sb.from("prestaties").delete().eq("id", beste.id).eq("categorie_id", actieveCategorie.id);
           prestaties = prestaties.filter(p => String(p.id) !== String(beste.id));
           const { data, error } = await sb.from("prestaties").insert({
-            eigenaar_id: uid, atleet_id: atleet.id,
+            categorie_id: actieveCategorie.id, atleet_id: atleet.id,
             discipline: item.disc, resultaat: item.resultaat,
             eenheid: isTijd ? "sec" : "m",
             datum: item.datum || vandaag,
@@ -1815,7 +1959,7 @@ async function verwerkAtletenlijst(rows) {
   const uid = await getUid();
   for (const a of nieuw) {
     try {
-      const { data, error } = await sb.from("atleten").insert({ ...a, eigenaar_id: uid }).select().single();
+      const { data, error } = await sb.from("atleten").insert({ ...a, categorie_id: actieveCategorie.id }).select().single();
       if (error) throw error;
       atleten.push({ ...data, atleetId: data.id });
       n++;
@@ -1843,8 +1987,7 @@ async function verwerkPRSheet(rows) {
     let atleet = atleten.find(a => a.naam.toLowerCase() === naamRaw.toLowerCase());
     if (!atleet) {
       try {
-        const uid2 = await getUid();
-        const { data, error } = await sb.from("atleten").insert({ naam: naamRaw, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid2 }).select().single();
+        const { data, error } = await sb.from("atleten").insert({ naam: naamRaw, geslacht: "", geboortedatum: null, club: "", bondsnr: "", categorie_id: actieveCategorie.id }).select().single();
         if (error) throw error;
         atleet = { ...data, atleetId: data.id };
         atleten.push(atleet);
@@ -1922,7 +2065,7 @@ async function verwerkPRSheet(rows) {
   // Verwijder oude PRs
   if (teVervangenIds.length) {
     const { error: delErr } = await sb.from("prestaties")
-      .delete().eq("eigenaar_id", uid).in("id", teVervangenIds);
+      .delete().eq("categorie_id", actieveCategorie.id).in("id", teVervangenIds);
     if (delErr) console.warn("Fout bij verwijderen oude PRs", delErr.message);
     teVervangenIds.forEach(id => { prestaties = prestaties.filter(p => String(p.id) !== id); });
   }
@@ -1932,7 +2075,7 @@ async function verwerkPRSheet(rows) {
   const batchSize = 20;
   for (let i = 0; i < nieuwePrestaties.length; i += batchSize) {
     const batch = nieuwePrestaties.slice(i, i + batchSize).map(p => ({
-      eigenaar_id: uid,
+      categorie_id: actieveCategorie.id,
       atleet_id:   p.atleetId,
       discipline:  p.discipline,
       resultaat:   p.resultaat,
@@ -2174,7 +2317,8 @@ function openWedstrijdModal(id = null) {
 async function saveWedstrijd() {
   const naam = document.getElementById("w-naam").value.trim();
   if (!naam) { toast("Vul een naam in", "err"); return; }
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast("Geen categorie actief", "err"); return; }
   const body = {
     naam, datum: document.getElementById("w-datum").value || null,
     locatie: document.getElementById("w-locatie").value.trim(),
@@ -2182,13 +2326,13 @@ async function saveWedstrijd() {
   };
   try {
     if (editWedstrijdId) {
-      const { error } = await sb.from("wedstrijden").update(body).eq("id", editWedstrijdId).eq("eigenaar_id", uid);
+      const { error } = await sb.from("wedstrijden").update(body).eq("id", editWedstrijdId).eq("categorie_id", cid);
       if (error) throw error;
       const i = wedstrijden.findIndex(w => String(w.id) === String(editWedstrijdId));
       if (i >= 0) wedstrijden[i] = { ...wedstrijden[i], ...body };
       toast("Wedstrijd bijgewerkt ✓");
     } else {
-      const { data, error } = await sb.from("wedstrijden").insert({ ...body, eigenaar_id: uid }).select().single();
+      const { data, error } = await sb.from("wedstrijden").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
       wedstrijden.unshift(data);
       toast("Wedstrijd toegevoegd ✓");
@@ -2200,9 +2344,9 @@ async function saveWedstrijd() {
 
 async function deleteWedstrijd() {
   if (!await bevestig("Wedstrijd verwijderen", "Weet je het zeker?")) return;
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   try {
-    const { error } = await sb.from("wedstrijden").delete().eq("id", editWedstrijdId).eq("eigenaar_id", uid);
+    const { error } = await sb.from("wedstrijden").delete().eq("id", editWedstrijdId).eq("categorie_id", cid);
     if (error) throw error;
     wedstrijden = wedstrijden.filter(w => String(w.id) !== String(editWedstrijdId));
     closeModal("wedstrijdModal");
@@ -2249,20 +2393,20 @@ function setOpstellingGeslacht(g) {
 }
 
 async function laadProgrammaEnOpstelling() {
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   try {
     const [pRes, oRes, bRes] = await Promise.all([
       sb.from("programma").select("*")
-        .eq("eigenaar_id", uid)
+        .eq("categorie_id", cid)
         .eq("wedstrijd_id", actiefWedstrijdId)
         .eq("geslacht", actiefGeslacht)
         .order("starttijd"),
       sb.from("opstelling").select("*")
-        .eq("eigenaar_id", uid)
+        .eq("categorie_id", cid)
         .eq("wedstrijd_id", actiefWedstrijdId)
         .eq("geslacht", actiefGeslacht),
       sb.from("beschikbaarheid").select("*")
-        .eq("eigenaar_id", uid)
+        .eq("categorie_id", cid)
         .eq("wedstrijd_id", actiefWedstrijdId)
     ]);
     if (pRes.error) throw pRes.error;
@@ -2356,7 +2500,7 @@ function updateProgrammaType(sel) {
 }
 
 async function saveProgrammaModal() {
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   const rijen = document.querySelectorAll(".programma-rij");
   const items = [];
   rijen.forEach(rij => {
@@ -2369,14 +2513,14 @@ async function saveProgrammaModal() {
     // Verwijder bestaande programmarijen voor deze wedstrijd/geslacht combo
     const { error: delErr } = await sb.from("programma")
       .delete()
-      .eq("eigenaar_id", uid)
+      .eq("categorie_id", cid)
       .eq("wedstrijd_id", actiefWedstrijdId)
       .eq("geslacht", actiefGeslacht);
     if (delErr) throw delErr;
 
     if (items.length) {
       const rows = items.map(item => ({
-        eigenaar_id:  uid,
+        categorie_id: cid,
         wedstrijd_id: actiefWedstrijdId,
         geslacht:     actiefGeslacht,
         discipline:   item.discipline,
@@ -2630,33 +2774,33 @@ function renderBeschikbaarheid() {
 
 async function toggleBeschikbaar(atleetId, beschikbaar) {
   beschikbaarData[String(atleetId)] = beschikbaar;
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   try {
     const { error } = await sb.from("beschikbaarheid").upsert({
-      eigenaar_id:  uid,
+      categorie_id: cid,
       wedstrijd_id: actiefWedstrijdId,
       atleet_id:    atleetId,
       beschikbaar
-    }, { onConflict: "eigenaar_id,wedstrijd_id,atleet_id" });
+    }, { onConflict: "categorie_id,wedstrijd_id,atleet_id" });
     if (error) throw error;
   } catch(e) { console.warn("Fout bij opslaan beschikbaarheid", e.message); }
   renderBeschikbaarheid();
 }
 
 async function alleenBeschikbaar(aan) {
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   const lijst = atleten.filter(a => a.geslacht === actiefGeslacht);
   for (const a of lijst) beschikbaarData[String(a.id)] = aan;
   renderBeschikbaarheid();
   try {
     const rows = lijst.map(a => ({
-      eigenaar_id:  uid,
+      categorie_id: cid,
       wedstrijd_id: actiefWedstrijdId,
       atleet_id:    a.id,
       beschikbaar:  aan
     }));
     if (rows.length) {
-      const { error } = await sb.from("beschikbaarheid").upsert(rows, { onConflict: "eigenaar_id,wedstrijd_id,atleet_id" });
+      const { error } = await sb.from("beschikbaarheid").upsert(rows, { onConflict: "categorie_id,wedstrijd_id,atleet_id" });
       if (error) throw error;
     }
     toast(aan ? "Alle atleten beschikbaar" : "Alle atleten uitgeschakeld");
@@ -2725,18 +2869,18 @@ function genereerOpstelling() {
 
 // ── Opslaan ───────────────────────────────────────────────────
 async function opslaanOpstelling() {
-  const uid = await getUid();
+  const cid = actieveCategorie?.id;
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   try {
     const rows = ploegNamen.map(ploeg => ({
-      eigenaar_id:  uid,
+      categorie_id: cid,
       wedstrijd_id: actiefWedstrijdId,
       geslacht:     actiefGeslacht,
       ploeg,
       data: opstellingData[ploeg] || {}
     }));
     const { error } = await sb.from("opstelling").upsert(rows, {
-      onConflict: "eigenaar_id,wedstrijd_id,geslacht,ploeg"
+      onConflict: "categorie_id,wedstrijd_id,geslacht,ploeg"
     });
     if (error) throw error;
     toast("Opstelling opgeslagen ✓");
@@ -2842,7 +2986,7 @@ async function laadAtlNuPrs(id, naam) {
 async function importeerAtlNuPrs() {
   if (!atlNuGeselecteerdeAtleet || !atlNuPrs.length) return;
 
-  const uid  = await getUid();
+  const cid  = actieveCategorie?.id;
   const naam = atlNuGeselecteerdeAtleet.name;
 
   // Zoek atleet in app (op naam) of maak nieuw aan
@@ -2853,7 +2997,7 @@ async function importeerAtlNuPrs() {
     if (!ok) return;
     try {
       const { data, error } = await sb.from("atleten")
-        .insert({ naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", eigenaar_id: uid })
+        .insert({ naam, geslacht: "", geboortedatum: null, club: "", bondsnr: "", categorie_id: cid })
         .select().single();
       if (error) throw error;
       atleet = { ...data, atleetId: data.id };
@@ -2883,7 +3027,7 @@ async function importeerAtlNuPrs() {
     );
 
     if (!bestaande.length) {
-      teInserteren.push({ eigenaar_id: uid, atleet_id: atleet.id, discipline: disc,
+      teInserteren.push({ categorie_id: cid, atleet_id: atleet.id, discipline: disc,
         resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag,
         locatie: pr.locatie || "atletiek.nu", notities: "Geïmporteerd van atletiek.nu" });
       toegevoegd++;
@@ -2899,7 +3043,7 @@ async function importeerAtlNuPrs() {
 
       if (isVerbetering) {
         teVerwijderen.push(String(beste.id));
-        teInserteren.push({ eigenaar_id: uid, atleet_id: atleet.id, discipline: disc,
+        teInserteren.push({ categorie_id: cid, atleet_id: atleet.id, discipline: disc,
           resultaat: resultaatStr, eenheid, datum: pr.datum || vandaag,
           locatie: pr.locatie || "atletiek.nu",
           notities: `PR verbeterd via atletiek.nu (was: ${beste.resultaat})` });
@@ -2910,7 +3054,7 @@ async function importeerAtlNuPrs() {
 
   // Verwijder oude PRs in één call
   if (teVerwijderen.length) {
-    await sb.from("prestaties").delete().eq("eigenaar_id", uid).in("id", teVerwijderen);
+    await sb.from("prestaties").delete().eq("categorie_id", cid).in("id", teVerwijderen);
     teVerwijderen.forEach(id => { prestaties = prestaties.filter(p => String(p.id) !== id); });
   }
 
@@ -3026,85 +3170,249 @@ async function wijzigWachtwoord() {
 // ── Admin panel ───────────────────────────────────────────────
 async function laadAdmin() {
   if (!huidigeProfiel || huidigeProfiel.rol !== "admin") return;
+  await Promise.all([
+    laadAdminUitnodigingen(),
+    laadAdminGebruikers(),
+    laadCategorieBeheer(),
+    laadTrainerCategorieBeheer()
+  ]);
+}
 
-  // Laad uitnodigingen
+async function laadAdminUitnodigingen() {
   const uitnEl = document.getElementById("uitnodigingen-lijst");
   uitnEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
   try {
-    const { data: uitn, error: uitnErr } = await sb.from("uitnodigingen")
-      .select("*").order("aangemaakt", { ascending: false });
-    if (uitnErr) throw uitnErr;
+    // Haal ook categorie naam op via join
+    const { data: uitn, error } = await sb.from("uitnodigingen")
+      .select("*, categorieen(naam)")
+      .order("aangemaakt", { ascending: false });
+    if (error) throw error;
 
     if (!uitn.length) {
       uitnEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nog geen uitnodigingen aangemaakt.</div>`;
-    } else {
-      uitnEl.innerHTML = uitn.map(u => {
-        const verlopen = new Date(u.vervalt) < new Date();
-        const statusKleur = u.gebruikt ? "var(--success)" : verlopen ? "var(--accent2)" : "var(--accent)";
-        const statusTekst = u.gebruikt ? "Gebruikt" : verlopen ? "Verlopen" : "Actief";
-        return `
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-                Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
-              </div>
-            </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-              color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
-              padding:3px 10px;border-radius:20px;">${statusTekst}</span>
-            ${!u.gebruikt && !verlopen ? `
-              <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Link kopiëren</button>
-            ` : ""}
-          </div>`;
-      }).join("");
+      return;
     }
+    uitnEl.innerHTML = uitn.map(u => {
+      const verlopen   = new Date(u.vervalt) < new Date();
+      const statusKleur = u.gebruikt ? "var(--success)" : verlopen ? "var(--accent2)" : "var(--accent)";
+      const statusTekst = u.gebruikt ? "Gebruikt" : verlopen ? "Verlopen" : "Actief";
+      const catNaam     = u.categorieen?.naam || "—";
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+              Categorie: <strong>${esc(catNaam)}</strong> ·
+              Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+            </div>
+          </div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+            color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
+            padding:3px 10px;border-radius:20px;">${statusTekst}</span>
+          ${!u.gebruikt && !verlopen ? `
+            <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
+          ` : ""}
+        </div>`;
+    }).join("");
   } catch(e) { uitnEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
+}
 
-  // Laad gebruikers
+async function laadAdminGebruikers() {
   const gebruEl = document.getElementById("gebruikers-lijst");
   gebruEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
   try {
-    const { data: gebruikers, error: gebruErr } = await sb.from("profielen")
+    const { data: gebruikers, error } = await sb.from("profielen")
       .select("*").order("aangemaakt");
-    if (gebruErr) throw gebruErr;
+    if (error) throw error;
 
     if (!gebruikers.length) {
       gebruEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen gebruikers gevonden.</div>`;
-    } else {
-      gebruEl.innerHTML = gebruikers.map(g => {
-        const isZelf = g.id === huidigeProfiel?.id;
-        const rolKleur = g.rol === "admin" ? "var(--accent)" : "var(--muted)";
-        return `
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:13px;font-weight:600;">${esc(g.gebruikersnaam)} ${isZelf ? '<span style="color:var(--muted);font-size:11px;">(jij)</span>' : ""}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(g.email)}</div>
-            </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-              color:${rolKleur};text-transform:uppercase;">${g.rol}</span>
-            <span style="font-size:11px;color:var(--muted);">
-              ${g.actief ? "✅ Actief" : "❌ Inactief"} · 
-              Laatste login: ${g.laatste_login ? formatDate(g.laatste_login) : "nooit"}
-            </span>
-            ${!isZelf ? `
-              <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
-                ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
-              </button>
-            ` : ""}
-          </div>`;
-      }).join("");
+      return;
     }
+    gebruEl.innerHTML = gebruikers.map(g => {
+      const isZelf     = g.id === huidigeProfiel?.id;
+      const rolKleur   = g.rol === "admin" ? "var(--accent)" : "var(--muted)";
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:13px;font-weight:600;">${esc(g.gebruikersnaam)} ${isZelf ? '<span style="color:var(--muted);font-size:11px;">(jij)</span>' : ""}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(g.email)}</div>
+          </div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+            color:${rolKleur};text-transform:uppercase;">${g.rol}</span>
+          <span style="font-size:11px;color:var(--muted);">
+            ${g.actief ? "✅ Actief" : "❌ Inactief"} ·
+            Laatste login: ${g.laatste_login ? formatDate(g.laatste_login) : "nooit"}
+          </span>
+          ${!isZelf ? `
+            <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
+              ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
+            </button>
+          ` : ""}
+        </div>`;
+    }).join("");
   } catch(e) { gebruEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
 }
 
-async function maakUitnodiging() {
-  const email = prompt("E-mailadres van de uitgenodigde trainer:");
+// ── Categoriebeheer ───────────────────────────────────────────
+async function laadCategorieBeheer() {
+  const el = document.getElementById("categorieen-lijst");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  try {
+    const { data: cats, error } = await sb.from("categorieen")
+      .select("*").order("volgorde");
+    if (error) throw error;
+
+    if (!cats.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen categorieën gevonden.</div>`;
+      return;
+    }
+    el.innerHTML = cats.map(c => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <span style="font-size:14px;font-weight:700;color:var(--accent);">${esc(c.naam)}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:8px;">volgorde: ${c.volgorde}</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="color:var(--accent2);"
+          onclick="verwijderCategorie('${c.id}', '${esc(c.naam)}')">🗑 Verwijderen</button>
+      </div>
+    `).join("");
+  } catch(e) { el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
+}
+
+async function laadTrainerCategorieBeheer() {
+  const el = document.getElementById("trainer-categorie-beheer");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  try {
+    const [gRes, cRes, kRes] = await Promise.all([
+      sb.from("profielen").select("id,gebruikersnaam,email,rol").order("aangemaakt"),
+      sb.from("categorieen").select("id,naam").order("volgorde"),
+      sb.from("trainer_categorieen").select("trainer_id,categorie_id")
+    ]);
+    if (gRes.error) throw gRes.error;
+    if (cRes.error) throw cRes.error;
+    if (kRes.error) throw kRes.error;
+
+    const gebruikers  = gRes.data || [];
+    const categorieen = cRes.data || [];
+    const koppelingen = kRes.data || [];
+
+    if (!gebruikers.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen gebruikers.</div>`;
+      return;
+    }
+
+    el.innerHTML = gebruikers.map(g => {
+      const checkboxes = categorieen.map(c => {
+        const gekoppeld = koppelingen.some(k => k.trainer_id === g.id && k.categorie_id === c.id);
+        return `
+          <label style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" ${gekoppeld ? "checked" : ""}
+              onchange="wisselTrainerCategorie('${g.id}', '${c.id}', this.checked)"
+              style="accent-color:var(--accent);width:15px;height:15px;">
+            ${esc(c.naam)}
+          </label>`;
+      }).join("");
+
+      return `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">
+            ${esc(g.gebruikersnaam)}
+            <span style="font-size:11px;color:var(--muted);font-weight:400;"> — ${esc(g.email)}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${checkboxes}</div>
+        </div>`;
+    }).join("");
+  } catch(e) { el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
+}
+
+async function wisselTrainerCategorie(trainerId, categorieId, toevoegen) {
+  try {
+    if (toevoegen) {
+      const { error } = await sb.from("trainer_categorieen")
+        .insert({ trainer_id: trainerId, categorie_id: categorieId });
+      if (error && error.code !== "23505") throw error; // 23505 = duplicate, negeer
+    } else {
+      const { error } = await sb.from("trainer_categorieen")
+        .delete().eq("trainer_id", trainerId).eq("categorie_id", categorieId);
+      if (error) throw error;
+    }
+    toast(toevoegen ? "Toegang verleend ✓" : "Toegang ingetrokken ✓");
+    // Update beschikbareCategorieen als het om jezelf gaat
+    if (trainerId === huidigeProfiel?.id) await laadMijnCategorieen();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+function openCategorieModal() {
+  document.getElementById("cat-naam").value = "";
+  document.getElementById("cat-volgorde").value = "10";
+  openModal("categorieModal");
+}
+
+async function maakCategorie() {
+  const naam     = document.getElementById("cat-naam").value.trim().toUpperCase();
+  const volgorde = parseInt(document.getElementById("cat-volgorde").value) || 10;
+  if (!naam) { toast("Vul een naam in", "err"); return; }
+  try {
+    const { error } = await sb.from("categorieen").insert({ naam, volgorde });
+    if (error) {
+      if (error.code === "23505") { toast("Categorie bestaat al", "err"); }
+      else throw error;
+      return;
+    }
+    toast(`Categorie ${naam} aangemaakt ✓`);
+    closeModal("categorieModal");
+    // Herlaad eigen categorieën (admin ziet ze allemaal)
+    await laadMijnCategorieen();
+    laadAdmin();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function verwijderCategorie(id, naam) {
+  const ok = await bevestig(
+    "Categorie verwijderen",
+    `Weet je zeker dat je "${naam}" wilt verwijderen?\n\nAlle atleten, wedstrijden en prestaties van deze categorie worden ook verwijderd.`
+  );
+  if (!ok) return;
+  try {
+    const { error } = await sb.from("categorieen").delete().eq("id", id);
+    if (error) throw error;
+    toast(`Categorie ${naam} verwijderd`);
+    await laadMijnCategorieen();
+    laadAdmin();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Uitnodiging modal ─────────────────────────────────────────
+async function openUitnodigingModal() {
+  // Vul categorie dropdown
+  const sel = document.getElementById("uitn-categorie");
+  sel.innerHTML = `<option value="">— kies categorie —</option>`;
+  try {
+    const { data: cats } = await sb.from("categorieen").select("id,naam").order("volgorde");
+    (cats || []).forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.naam;
+      sel.appendChild(opt);
+    });
+    // Stel actieve categorie voor als standaard
+    if (actieveCategorie) sel.value = actieveCategorie.id;
+  } catch(e) { /* negeer, dropdown blijft leeg */ }
+  document.getElementById("uitn-email").value = "";
+  openModal("uitnodigingModal");
+}
+
+async function verstuurUitnodiging() {
+  const email      = document.getElementById("uitn-email").value.trim().toLowerCase();
+  const categorieId = document.getElementById("uitn-categorie").value;
   if (!email || !email.includes("@")) { toast("Ongeldig e-mailadres", "err"); return; }
+  if (!categorieId) { toast("Kies een categorie", "err"); return; }
   const uid = await getUid();
   try {
     const { error } = await sb.from("uitnodigingen").insert({
-      email: email.toLowerCase().trim(),
+      email,
+      categorie_id:   categorieId,
       aangemaakt_door: uid
     });
     if (error) {
@@ -3113,9 +3421,13 @@ async function maakUitnodiging() {
       return;
     }
     toast(`Uitnodiging aangemaakt voor ${email} ✓`);
+    closeModal("uitnodigingModal");
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
+
+// Bewaar maakUitnodiging als alias zodat eventuele oude aanroepen niet breken
+async function maakUitnodiging() { openUitnodigingModal(); }
 
 function kopieerUitnodigingslink(token) {
   const basis = window.location.origin + window.location.pathname.replace("app.html","");
