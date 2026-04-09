@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sprint U16 — Atletiek</title>
+<title>Sprint U16 â Atletiek</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -29,7 +29,7 @@
     overflow-x: hidden;
   }
 
-  /* ── Header ── */
+  /* ââ Header ââ */
   header {
     background: var(--surface);
     border-bottom: 2px solid var(--accent);
@@ -87,7 +87,7 @@
   .sync-btn.spinning svg { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Categorie switcher ── */
+  /* ââ Categorie switcher ââ */
   .cat-btn {
     background: transparent;
     border: 1px solid var(--border);
@@ -108,10 +108,10 @@
     color: #000;
   }
 
-  /* ── Layout ── */
+  /* ââ Layout ââ */
   main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
-  /* ── Toast ── */
+  /* ââ Toast ââ */
   #toast {
     position: fixed; bottom: 24px; right: 24px;
     background: var(--surface2);
@@ -130,7 +130,7 @@
   #toast.ok   { border-color: var(--success); }
   #toast.err  { border-color: var(--accent2); }
 
-  /* ── Cards grid ── */
+  /* ââ Cards grid ââ */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -170,7 +170,7 @@
   .card-badge.m { color: #60a5fa; border-color: #60a5fa30; }
   .card-badge.v { color: #f472b6; border-color: #f472b630; }
 
-  /* ── Page header ── */
+  /* ââ Page header ââ */
   .page-header {
     display: flex; align-items: center; gap: 12px;
     margin-bottom: 24px; flex-wrap: wrap;
@@ -192,7 +192,7 @@
   }
   .ml-auto { margin-left: auto; }
 
-  /* ── Buttons ── */
+  /* ââ Buttons ââ */
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 18px;
@@ -218,7 +218,7 @@
   .btn-danger:hover { background: #c0272b; }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-  /* ── Search ── */
+  /* ââ Search ââ */
   .search-bar {
     display: flex; gap: 10px; margin-bottom: 20px;
   }
@@ -247,7 +247,7 @@
     cursor: pointer;
   }
 
-  /* ── Modal ── */
+  /* ââ Modal ââ */
   .modal-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,.7);
@@ -304,7 +304,7 @@
     margin-top: 22px;
   }
 
-  /* ── Atleet detail panel ── */
+  /* ââ Atleet detail panel ââ */
   .detail-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -336,7 +336,7 @@
   }
   .detail-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
-  /* ── Prestaties tabel ── */
+  /* ââ Prestaties tabel ââ */
   .table-wrap { overflow-x: auto; }
   table {
     width: 100%;
@@ -388,7 +388,7 @@
   }
   .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
 
-  /* ── Divider ── */
+  /* ââ Divider ââ */
   .section-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
@@ -400,7 +400,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* ── Loading ── */
+  /* ââ Loading ââ */
   .loading {
     display: flex; align-items: center; justify-content: center;
     gap: 10px;
@@ -416,7 +416,7 @@
     animation: spin .7s linear infinite;
   }
 
-  /* ── Confirm dialoog ── */
+  /* ââ Confirm dialoog ââ */
   .confirm-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,.7);
@@ -452,7 +452,7 @@
     margin-bottom: 10px;
   }
 
-  /* ── Selectie toolbar ── */
+  /* ââ Selectie toolbar ââ */
   .selectie-toolbar {
     display: flex; align-items: center; gap: 10px;
     background: var(--surface2);
@@ -469,7 +469,7 @@
     color: var(--accent);
   }
 
-  /* ── Checkbox op kaart ── */
+  /* ââ Checkbox op kaart ââ */
   .card-checkbox {
     position: absolute; top: 12px; left: 12px;
     width: 18px; height: 18px;
@@ -480,7 +480,7 @@
   .card.selecteerbaar { padding-left: 38px; }
   .card.geselecteerd  { border-color: var(--accent); background: var(--surface2); }
 
-  /* ── Ploeg opstelling ── */
+  /* ââ Ploeg opstelling ââ */
   .ploeg-container {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -557,7 +557,7 @@
     margin-left: 6px;
   }
 
-  /* ── Atleet keuze dropdown in slot ── */
+  /* ââ Atleet keuze dropdown in slot ââ */
   .slot-select {
     position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
     background: var(--surface);
@@ -583,7 +583,7 @@
     outline: none; font-family: 'Barlow', sans-serif;
   }
 
-  /* ── Programma modal rijen ── */
+  /* ââ Programma modal rijen ââ */
   .programma-rij {
     display: grid;
     grid-template-columns: 1fr 100px 80px 36px;
@@ -598,7 +598,7 @@
   }
   .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
 
-  /* ── Wedstrijd kaart ── */
+  /* ââ Wedstrijd kaart ââ */
   .wedstrijd-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -612,7 +612,7 @@
   .wedstrijd-naam { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 4px; }
   .wedstrijd-locatie { font-size: 13px; color: var(--muted); }
 
-  /* ── Print styles ── */
+  /* ââ Print styles ââ */
   @media print {
     header, nav, .btn, #opstelling-stap1, .page-header,
     #opstelling-tab-M, #opstelling-tab-V,
@@ -644,7 +644,7 @@
   }
   .profiel-input:focus { border-color: var(--accent); }
 
-  /* ── Mobile ── */
+  /* ââ Mobile ââ */
   @media (max-width: 600px) {
     header { padding: 0 16px; }
     main   { padding: 16px; }
@@ -658,15 +658,15 @@
 <body>
 
 <header>
-  <div class="logo">⚡ Sprint <span id="logo-cat">U16</span></div>
+  <div class="logo">â¡ Sprint <span id="logo-cat">U16</span></div>
   <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
     <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
-    <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">👤 Profiel</button>
-    <button id="tab-admin" onclick="showTab('admin')" style="display:none;">⚙️ Admin</button>
+    <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">ð¤ Profiel</button>
+    <button id="tab-admin" onclick="showTab('admin')" style="display:none;">âï¸ Admin</button>
   </nav>
   <button class="sync-btn" id="syncBtn" onclick="syncAll()" title="Vernieuwen">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -674,8 +674,7 @@
       <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
     </svg>
   </button>
-  <button class="sync-btn" onclick="showTab('profiel')" title="Profiel" id="profiel-btn" style="font-size:16px;">👤</button>
-  <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
+  <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">ðª</button>
 </header>
 
 <main>
@@ -685,9 +684,9 @@
       <div class="page-title">Atleten</div>
       <span class="count-badge" id="atleten-count">0</span>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">☑️ Selecteren</button>
+        <button class="btn btn-ghost" id="selecteerModeBtn" onclick="toggleSelecteerModus()">âï¸ Selecteren</button>
         <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
-          📥 Excel importeren
+          ð¥ Excel importeren
           <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
         </label>
         <button class="btn btn-primary" onclick="openAtleetModal()">+ Atleet toevoegen</button>
@@ -699,10 +698,10 @@
       <span id="selectieAantal">0 geselecteerd</span>
       <button class="btn btn-ghost btn-sm" onclick="selecteerAlle()">Alles selecteren</button>
       <button class="btn btn-ghost btn-sm" onclick="deselecteerAlle()">Niets selecteren</button>
-      <button class="btn btn-danger btn-sm" id="verwijderGeselecteerdeBtn" onclick="verwijderGeselecteerde()" style="display:none;">🗑️ Verwijder geselecteerde</button>
+      <button class="btn btn-danger btn-sm" id="verwijderGeselecteerdeBtn" onclick="verwijderGeselecteerde()" style="display:none;">ðï¸ Verwijder geselecteerde</button>
     </div>
     <div class="search-bar">
-      <input type="text" id="atleten-search" placeholder="Zoek op naam of club…" oninput="renderAtleten()">
+      <input type="text" id="atleten-search" placeholder="Zoek op naam of clubâ¦" oninput="renderAtleten()">
       <select id="atleten-filter-geslacht" onchange="renderAtleten()">
         <option value="">Alle</option>
         <option value="M">Jongens</option>
@@ -724,7 +723,7 @@
     <!-- Atleet selectie -->
     <div class="search-bar">
       <select id="prestatie-atleet-filter" onchange="renderPrestaties()" style="flex:1;">
-        <option value="">— Kies een atleet —</option>
+        <option value="">â Kies een atleet â</option>
       </select>
       <select id="prestatie-disc-filter" onchange="renderPrestaties()">
         <option value="">Alle disciplines</option>
@@ -735,7 +734,7 @@
   </div>
 </main>
 
-<!-- ── ATLEET MODAL ── -->
+<!-- ââ ATLEET MODAL ââ -->
 <div class="modal-overlay" id="atleetModal">
   <div class="modal">
     <div class="modal-title" id="atleetModalTitle">Atleet toevoegen</div>
@@ -770,7 +769,7 @@
   </div>
 </div>
 
-<!-- ── PRESTATIE MODAL ── -->
+<!-- ââ PRESTATIE MODAL ââ -->
 <div class="modal-overlay" id="prestatieModal">
   <div class="modal">
     <div class="modal-title" id="prestatieModalTitle">Prestatie invoeren</div>
@@ -789,7 +788,7 @@
         <option value="hoogspringen">Hoogspringen</option>
         <option value="kogelstoten">Kogelstoten</option>
         <option value="speerwerpen">Speerwerpen</option>
-        <option value="4x100m">4×100m estafette</option>
+        <option value="4x100m">4Ã100m estafette</option>
         <option value="overig">Overig</option>
       </select>
     </div>
@@ -837,20 +836,20 @@
     <!-- Stap 2: Opstelling voor gekozen wedstrijd -->
     <div id="opstelling-stap2" style="display:none;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">← Terug</button>
+        <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">â Terug</button>
         <div id="opstelling-wedstrijd-naam" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
       </div>
 
       <!-- Geslacht tabs -->
       <div style="display:flex;gap:8px;margin-bottom:20px;">
-        <button id="opstelling-tab-M" class="btn btn-primary" onclick="setOpstellingGeslacht('M')">👦 Jongens</button>
-        <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
+        <button id="opstelling-tab-M" class="btn btn-primary" onclick="setOpstellingGeslacht('M')">ð¦ Jongens</button>
+        <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">ð§ Meisjes</button>
       </div>
 
       <!-- Beschikbaarheid sectie -->
       <div class="detail-panel print-hide" id="beschikbaarheid-sectie" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>✅ Beschikbare atleten</span>
+          <span>â Beschikbare atleten</span>
           <div style="display:flex;gap:8px;margin:8px 16px;">
             <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(true)">Alles aan</button>
             <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(false)">Alles uit</button>
@@ -862,11 +861,11 @@
       <!-- Programma sectie -->
       <div class="detail-panel" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>📋 Wedstrijdprogramma</span>
-          <button class="btn btn-ghost btn-sm" style="margin:8px 16px;" onclick="openProgrammaModal()">✏️ Bewerken</button>
+          <span>ð Wedstrijdprogramma</span>
+          <button class="btn btn-ghost btn-sm" style="margin:8px 16px;" onclick="openProgrammaModal()">âï¸ Bewerken</button>
         </div>
         <div id="programma-overzicht" style="padding:16px;">
-          <div class="empty-state"><div class="icon">📋</div>Nog geen programma ingevoerd.</div>
+          <div class="empty-state"><div class="icon">ð</div>Nog geen programma ingevoerd.</div>
         </div>
       </div>
 
@@ -878,10 +877,10 @@
           <option value="2">2 ploegen</option>
           <option value="3" selected>3 ploegen</option>
         </select>
-        <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
-        <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
-        <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
-        <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
+        <button class="btn btn-primary" onclick="genereerOpstelling()">â¡ Automatisch opstellen</button>
+        <button class="btn btn-ghost" onclick="opslaanOpstelling()">ð¾ Opslaan</button>
+        <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">ð¥ Exporteren (.xlsx)</button>
+        <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">ð¨ï¸ Afdrukken</button>
       </div>
 
       <div id="ploegen-container"></div>
@@ -906,7 +905,7 @@
         <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Wachtwoord wijzigen</div>
           <div class="field"><label>Nieuw wachtwoord (min. 8 tekens)</label>
-            <input type="password" id="profiel-ww" placeholder="••••••••" class="profiel-input"></div>
+            <input type="password" id="profiel-ww" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢" class="profiel-input"></div>
           <button class="btn btn-ghost" onclick="wijzigWachtwoord()">Wachtwoord wijzigen</button>
         </div>
       </div>
@@ -915,12 +914,12 @@
 
   <!-- ADMIN TAB -->
   <div id="view-admin" style="display:none;">
-    <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
+    <div class="page-header"><div class="page-title">âï¸ Admin</div></div>
 
     <!-- Uitnodigingen -->
     <div class="detail-panel" style="margin-bottom:24px;">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>📨 Uitnodigingen</span>
+        <span>ð¨ Uitnodigingen</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openUitnodigingModal()">+ Nieuwe uitnodiging</button>
       </div>
       <div id="uitnodigingen-lijst" style="padding:16px;"></div>
@@ -928,28 +927,28 @@
 
     <!-- Gebruikers -->
     <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label">👥 Geregistreerde gebruikers</div>
+      <div class="section-label">ð¥ Geregistreerde gebruikers</div>
       <div id="gebruikers-lijst" style="padding:16px;"></div>
     </div>
 
-    <!-- Categorieën -->
+    <!-- CategorieÃ«n -->
     <div class="detail-panel" style="margin-bottom:24px;">
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>📂 Categorieën</span>
+        <span>ð CategorieÃ«n</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openCategorieModal()">+ Nieuwe categorie</button>
       </div>
       <div id="categorieen-lijst" style="padding:16px;"></div>
     </div>
 
-    <!-- Trainer–categorie koppelingen -->
+    <!-- Trainerâcategorie koppelingen -->
     <div class="detail-panel">
-      <div class="section-label">🔗 Toegang per trainer</div>
+      <div class="section-label">ð Toegang per trainer</div>
       <div id="trainer-categorie-beheer" style="padding:16px;"></div>
     </div>
   </div>
 </main>
 
-<!-- ── UITNODIGING MODAL ── -->
+<!-- ââ UITNODIGING MODAL ââ -->
 <div class="modal-overlay" id="uitnodigingModal">
   <div class="modal">
     <div class="modal-title">Nieuwe uitnodiging</div>
@@ -960,7 +959,7 @@
     <div class="field">
       <label class="field-label">Categorie</label>
       <select id="uitn-categorie">
-        <option value="">— kies categorie —</option>
+        <option value="">â kies categorie â</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -970,7 +969,7 @@
   </div>
 </div>
 
-<!-- ── CATEGORIE MODAL ── -->
+<!-- ââ CATEGORIE MODAL ââ -->
 <div class="modal-overlay" id="categorieModal">
   <div class="modal">
     <div class="modal-title">Nieuwe categorie</div>
@@ -989,7 +988,7 @@
   </div>
 </div>
 
-<!-- ── WEDSTRIJD MODAL ── -->
+<!-- ââ WEDSTRIJD MODAL ââ -->
 <div class="modal-overlay" id="wedstrijdModal">
   <div class="modal">
     <div class="modal-title" id="wedstrijdModalTitle">Wedstrijd toevoegen</div>
@@ -1017,7 +1016,7 @@
   </div>
 </div>
 
-<!-- ── PROGRAMMA MODAL ── -->
+<!-- ââ PROGRAMMA MODAL ââ -->
 <div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
   <div class="modal" style="max-width:640px;max-height:80vh;overflow-y:auto;">
     <div class="modal-title">Wedstrijdprogramma</div>
@@ -1034,7 +1033,7 @@
   </div>
 </div>
 
-<!-- ── PRINT VIEW ── -->
+<!-- ââ PRINT VIEW ââ -->
 <div id="print-view" style="display:none;">
 </div>
 
@@ -1052,16 +1051,16 @@
 <div id="toast"></div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────
+// ââ Config ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SUPA_URL = "https://wntxmxvjvnishwkwvkux.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndudHhteHZqdm5pc2h3a3d2a3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTU4MTUsImV4cCI6MjA5MDc5MTgxNX0.0udcgomCHH_Tyg_uXzuXfr99eE2aHP9UVYF50MppcLw";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let huidigeProfiel    = null; // ingelogde gebruiker profiel
-let beschikbareCategorieen = []; // alle categorieën waar trainer toegang toe heeft
+let beschikbareCategorieen = []; // alle categorieÃ«n waar trainer toegang toe heeft
 let actieveCategorie  = null;    // huidig geselecteerde categorie {id, naam}
 
-// ── State ─────────────────────────────────────────────────────
+// ââ State âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let atleten    = [];
 let prestaties = [];
 let wedstrijden = [];
@@ -1070,7 +1069,7 @@ let editPrestatieId  = null;
 let selecteerModus   = false;
 let geselecteerd     = new Set();
 
-// ── Auth guard ────────────────────────────────────────────────
+// ââ Auth guard ââââââââââââââââââââââââââââââââââââââââââââââââ
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = "index.html"; return false; }
@@ -1087,17 +1086,17 @@ async function checkAuth() {
   document.getElementById("profiel-email").value = session.user.email || "";
   await sb.from("profielen").update({ laatste_login: new Date().toISOString() }).eq("id", session.user.id);
 
-  // Laad categorieën waar deze trainer toegang toe heeft
+  // Laad categorieÃ«n waar deze trainer toegang toe heeft
   await laadMijnCategorieen();
   return true;
 }
 
-// ── Categorieën laden ────────────────────────────────────────
+// ââ CategorieÃ«n laden ââââââââââââââââââââââââââââââââââââââââ
 async function laadMijnCategorieen() {
   const uid = huidigeProfiel?.id;
   if (!uid) return;
 
-  // Admin ziet alle categorieën, trainer alleen zijn eigen
+  // Admin ziet alle categorieÃ«n, trainer alleen zijn eigen
   let query;
   if (huidigeProfiel?.rol === "admin") {
     const { data } = await sb.from("categorieen").select("*").order("volgorde");
@@ -1131,7 +1130,7 @@ function renderCategorieSwitcher() {
     return;
   }
 
-  // Meerdere categorieën: toon knoppen om te wisselen
+  // Meerdere categorieÃ«n: toon knoppen om te wisselen
   switcher.innerHTML = beschikbareCategorieen.map(c => `
     <button class="cat-btn ${actieveCategorie?.id === c.id ? "active" : ""}"
       onclick="wisselCategorie('${c.id}', '${esc(c.naam)}')">
@@ -1156,7 +1155,7 @@ async function getUid() {
   return (await sb.auth.getUser()).data.user?.id;
 }
 
-// ── Toast ─────────────────────────────────────────────────────
+// ââ Toast âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function toast(msg, type = "ok") {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -1165,7 +1164,7 @@ function toast(msg, type = "ok") {
   el._t = setTimeout(() => { el.className = ""; }, 3000);
 }
 
-// ── Sync ──────────────────────────────────────────────────────
+// ââ Sync ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function syncAll() {
   const btn = document.getElementById("syncBtn");
   btn.classList.add("spinning");
@@ -1187,7 +1186,7 @@ async function syncAll() {
     renderPrestaties();
     renderWedstrijden();
     populateAtleetSelects();
-    toast("Gegevens bijgewerkt ✓");
+    toast("Gegevens bijgewerkt â");
   } catch (e) {
     toast("Fout: " + e.message, "err");
   } finally {
@@ -1195,7 +1194,7 @@ async function syncAll() {
   }
 }
 
-// ── Tabs ──────────────────────────────────────────────────────
+// ââ Tabs ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function showTab(tab) {
   ["atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
     const el = document.getElementById("view-" + t);
@@ -1209,13 +1208,13 @@ function showTab(tab) {
   if (tab === "admin")        laadAdmin();
 }
 
-// ── Selectiemodus ─────────────────────────────────────────────
+// ââ Selectiemodus âââââââââââââââââââââââââââââââââââââââââââââ
 function toggleSelecteerModus() {
   selecteerModus = !selecteerModus;
   geselecteerd.clear();
   const btn = document.getElementById("selecteerModeBtn");
   const toolbar = document.getElementById("selectieToolbar");
-  btn.textContent = selecteerModus ? "✖️ Stoppen" : "☑️ Selecteren";
+  btn.textContent = selecteerModus ? "âï¸ Stoppen" : "âï¸ Selecteren";
   btn.classList.toggle("btn-ghost",   !selecteerModus);
   btn.classList.toggle("btn-primary",  selecteerModus);
   toolbar.style.display = selecteerModus ? "flex" : "none";
@@ -1273,11 +1272,11 @@ async function verwijderGeselecteerde() {
     updateSelectieTeller();
     renderAtleten();
     populateAtleetSelects();
-    toast(`✓ ${ids.length} atleet(en) verwijderd`);
+    toast(`â ${ids.length} atleet(en) verwijderd`);
   } catch (e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Atleten render ────────────────────────────────────────────
+// ââ Atleten render ââââââââââââââââââââââââââââââââââââââââââââ
 function renderAtleten() {
   const q  = (document.getElementById("atleten-search").value || "").toLowerCase();
   const gf = document.getElementById("atleten-filter-geslacht").value;
@@ -1293,7 +1292,7 @@ function renderAtleten() {
   const grid = document.getElementById("atleten-grid");
 
   if (!list.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏃</div>Geen atleten gevonden.</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">ð</div>Geen atleten gevonden.</div>`;
     return;
   }
 
@@ -1302,7 +1301,7 @@ function renderAtleten() {
     const gBadge   = a.geslacht === "V" ? "v" : "m";
     const gLabel   = a.geslacht === "V" ? "Meisje" : "Jongen";
     const club     = a.club ? `<span>${a.club}</span>` : "";
-    const bondsnr  = a.bondsnr ? `<span style="color:var(--muted);font-size:12px;">🪪 ${esc(a.bondsnr)}</span>` : "";
+    const bondsnr  = a.bondsnr ? `<span style="color:var(--muted);font-size:12px;">ðªª ${esc(a.bondsnr)}</span>` : "";
     const cnt      = prestaties.filter(p => String(p.atleetId) === String(a.id)).length;
     const isSel    = geselecteerd.has(String(a.id));
     const cbHtml   = selecteerModus
@@ -1317,7 +1316,7 @@ function renderAtleten() {
           <div class="detail-avatar" style="width:40px;height:40px;font-size:16px;">${initials}</div>
           <div>
             <div class="card-name">${esc(a.naam || "")}</div>
-            <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr}</div>
+            <div class="card-meta">${club}${club && bondsnr ? " Â· " : ""}${bondsnr}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -1327,7 +1326,7 @@ function renderAtleten() {
   }).join("");
 }
 
-// ── Prestaties render ─────────────────────────────────────────
+// ââ Prestaties render âââââââââââââââââââââââââââââââââââââââââ
 function renderPrestaties() {
   const atleetId = document.getElementById("prestatie-atleet-filter").value;
   const disc     = document.getElementById("prestatie-disc-filter").value;
@@ -1345,7 +1344,7 @@ function renderPrestaties() {
 
   const cont = document.getElementById("prestaties-content");
   if (!list.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${atleetId ? "Geen prestaties voor deze atleet." : "Selecteer een atleet of voeg prestaties toe."}</div>`;
+    cont.innerHTML = `<div class="empty-state"><div class="icon">ð</div>${atleetId ? "Geen prestaties voor deze atleet." : "Selecteer een atleet of voeg prestaties toe."}</div>`;
     return;
   }
 
@@ -1372,7 +1371,7 @@ function renderPrestaties() {
       ${naam ? `<div class="detail-header">
         <div class="detail-avatar">${naam.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div>
         <div><div class="detail-name">${naam}</div><div class="detail-sub">${atl.club||""}</div></div>
-        <button class="btn btn-ghost btn-sm ml-auto" onclick="openAtleetModal('${atleetId}')">✏️ Bewerken</button>
+        <button class="btn btn-ghost btn-sm ml-auto" onclick="openAtleetModal('${atleetId}')">âï¸ Bewerken</button>
       </div>` : ""}
       ${renderPrestatieTable(list, true)}
     </div>`;
@@ -1408,14 +1407,14 @@ function renderPrestatieTable(rows, showPR = false) {
           <td><strong>${esc(p.discipline||"")}</strong></td>
           <td><span class="result-val">${esc(p.resultaat||"")} ${esc(p.eenheid||"")}</span>${isPR ? '<span class="pr-badge">PR</span>' : ""}</td>
 
-          <td><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal('${p.id}')">✏️</button></td>
+          <td><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal('${p.id}')">âï¸</button></td>
         </tr>`;
       }).join("")}
     </tbody>
   </table></div>`;
 }
 
-// ── Atleet Modal ──────────────────────────────────────────────
+// ââ Atleet Modal ââââââââââââââââââââââââââââââââââââââââââââââ
 function openAtleetModal(id = null) {
   editAtleetId = id;
   const isEdit = !!id;
@@ -1459,7 +1458,7 @@ async function saveAtleet() {
       if (error) throw error;
       const i = atleten.findIndex(a => String(a.id) === String(editAtleetId));
       if (i >= 0) atleten[i] = { ...atleten[i], ...body };
-      toast("Atleet bijgewerkt ✓");
+      toast("Atleet bijgewerkt â");
     } else {
       const { data, error } = await sb.from("atleten").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
@@ -1486,7 +1485,7 @@ async function deleteAtleet() {
   } catch (e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Prestatie Modal ───────────────────────────────────────────
+// ââ Prestatie Modal âââââââââââââââââââââââââââââââââââââââââââ
 function openPrestatieModal(id = null, defaultAtleetId = null) {
   editPrestatieId = id;
   const isEdit = !!id;
@@ -1557,7 +1556,7 @@ async function savePrestatie() {
       if (error) throw error;
       const i = prestaties.findIndex(p => String(p.id) === String(editPrestatieId));
       if (i >= 0) prestaties[i] = { ...prestaties[i], ...body, atleetId };
-      toast("Prestatie bijgewerkt ✓");
+      toast("Prestatie bijgewerkt â");
     } else {
       const { data, error } = await sb.from("prestaties").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
@@ -1583,11 +1582,11 @@ async function deletePrestatie() {
   } catch (e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Helpers ───────────────────────────────────────────────────
+// ââ Helpers âââââââââââââââââââââââââââââââââââââââââââââââââââ
 function populateAtleetSelects() {
   const sel = document.getElementById("prestatie-atleet-filter");
   const cur = sel.value;
-  sel.innerHTML = `<option value="">— Alle atleten —</option>` +
+  sel.innerHTML = `<option value="">â Alle atleten â</option>` +
     atleten.map(a => `<option value="${a.id}" ${String(a.id)===cur?"selected":""}>${esc(a.naam||"")} (${a.geslacht||""})</option>`).join("");
 }
 
@@ -1614,7 +1613,7 @@ function formatDate(d) {
   } catch { return d; }
 }
 
-// ── Bevestigingsdialoog (vervangt confirm()) ──────────────────
+// ââ Bevestigingsdialoog (vervangt confirm()) ââââââââââââââââââ
 function bevestig(titel, bericht) {
   return new Promise(res => {
     document.getElementById("confirmTitle").textContent = titel;
@@ -1635,7 +1634,7 @@ function bevestig(titel, bericht) {
   });
 }
 
-// ── Excel Import ──────────────────────────────────────────────
+// ââ Excel Import ââââââââââââââââââââââââââââââââââââââââââââââ
 
 // Disciplines die als "sneller = beter" gelden (tijd), rest is "verder/hoger = beter"
 const TIJD_DISCIPLINES = ["60m","80m","100m","150m","200m","300m","400m","600m","800m","1000m","1500m","3000m","horden","80m horden","300m horden","4x100m"];
@@ -1647,7 +1646,7 @@ async function importExcel(input) {
 
   // Laad SheetJS dynamisch
   if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
+    toast("SheetJS ladenâ¦", "ok");
     await new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -1659,9 +1658,9 @@ async function importExcel(input) {
   const buf = await file.arrayBuffer();
   const wb  = XLSX.read(buf, { type: "array", cellDates: true });
 
-  // ── Detecteer bestandstype op basis van kolomnamen ────────
-  // Type A: atletenlijst  → heeft kolom "search" / "geslacht" / "bondsnr"
-  // Type B: PR-sheet      → eerste kolom = naam, rest = disciplines
+  // ââ Detecteer bestandstype op basis van kolomnamen ââââââââ
+  // Type A: atletenlijst  â heeft kolom "search" / "geslacht" / "bondsnr"
+  // Type B: PR-sheet      â eerste kolom = naam, rest = disciplines
   let resultaat = null;
   for (const sheetName of wb.SheetNames) {
     const ws   = wb.Sheets[sheetName];
@@ -1696,7 +1695,7 @@ async function importExcel(input) {
   toast(resultaat, "ok");
 }
 
-// ── Verwerk lange lijst (Atleet | Leeftijd | Onderdeel | Record | Datum) ──
+// ââ Verwerk lange lijst (Atleet | Leeftijd | Onderdeel | Record | Datum) ââ
 async function verwerkLangeLijst(rows) {
   const uid = await getUid();
   const header = rows[0].map(h => String(h).toLowerCase().trim());
@@ -1709,7 +1708,7 @@ async function verwerkLangeLijst(rows) {
     return "Kolommen niet gevonden in bestand";
   }
 
-  // Discipline-mapping: bestandsnamen → app-namen
+  // Discipline-mapping: bestandsnamen â app-namen
   const DISC_MAP = {
     "60 meter":"60m","60 meter handtijd":"60m","60 meter ontbrekende windmeting":"60m","60 meter ongeldige windmeting":"60m",
     "80 meter":"80m","80 meter ontbrekende windmeting":"80m","80 meter ongeldige windmeting":"80m",
@@ -1743,14 +1742,14 @@ async function verwerkLangeLijst(rows) {
     // Verwijder windinfo (bijv. "+0,4 m/s"), handtijd-marker "h", "n/a" etc.
     s = s.split(" ")[0];
     s = s.replace("h","").replace(",",".").trim();
-    // Verwijder punten als duizendtalscheidingsteken (bijv. "1.550,00" → al gedaan hierboven)
+    // Verwijder punten als duizendtalscheidingsteken (bijv. "1.550,00" â al gedaan hierboven)
     if (!s || s === "0" || isNaN(parseFloat(s.replace(":","").replace(".",""))) ) return null;
     return s;
   }
 
   // Groepeer per atleet+discipline, bewaar alleen het beste resultaat
   const vandaag = new Date().toISOString().split("T")[0];
-  const bestPerAtleetDisc = {}; // "naam||disc" → {naam, disc, resultaat, datum}
+  const bestPerAtleetDisc = {}; // "naam||disc" â {naam, disc, resultaat, datum}
 
   for (const row of rows.slice(1)) {
     const naam    = String(row[iAtleet] || "").trim();
@@ -1822,7 +1821,7 @@ Doorgaan?`);
           discipline: item.disc, resultaat: item.resultaat,
           eenheid: isTijd ? "sec" : "m",
           datum: item.datum || vandaag,
-          locatie: item.datum || "", notities: "Geïmporteerd uit Excel"
+          locatie: item.datum || "", notities: "GeÃ¯mporteerd uit Excel"
         }).select().single();
         if (error) throw error;
         prestaties.push({ ...data, atleetId: data.atleet_id });
@@ -1856,10 +1855,10 @@ Doorgaan?`);
     }
   }
 
-  return `✓ ${toegevoegd} nieuw · ${verbeterd} verbeterd · ${overgeslagen} overgeslagen · ${nieuweAtleten} nieuwe atleet(en)`;
+  return `â ${toegevoegd} nieuw Â· ${verbeterd} verbeterd Â· ${overgeslagen} overgeslagen Â· ${nieuweAtleten} nieuwe atleet(en)`;
 }
 
-// ── Verwerk atletenlijst (zoals atletenlijst_tbv_competitietool.xlsx) ──
+// ââ Verwerk atletenlijst (zoals atletenlijst_tbv_competitietool.xlsx) ââ
 async function verwerkAtletenlijst(rows) {
   const header = rows[0].map(h => String(h).toLowerCase().trim());
   const colIdx = (candidates) => {
@@ -1895,7 +1894,7 @@ async function verwerkAtletenlijst(rows) {
     });
   }
 
-  if (!nieuw.length) return "Alle atleten staan al in de app — niets toegevoegd";
+  if (!nieuw.length) return "Alle atleten staan al in de app â niets toegevoegd";
 
   const ok1 = await bevestig("Atleten importeren", `${nieuw.length} nieuwe atleet(en) gevonden.\nToevoegen aan de app?`);
   if (!ok1) return "Geannuleerd";
@@ -1908,13 +1907,13 @@ async function verwerkAtletenlijst(rows) {
       if (error) throw error;
       atleten.push({ ...data, atleetId: data.id });
       n++;
-      if (n % 5 === 0) toast(`Atleten uploaden… (${n}/${nieuw.length})`, "ok");
+      if (n % 5 === 0) toast(`Atleten uploadenâ¦ (${n}/${nieuw.length})`, "ok");
     } catch (e) { console.warn("Fout bij", a.naam, e.message); }
   }
-  return `✓ ${n} atleet(en) geïmporteerd!`;
+  return `â ${n} atleet(en) geÃ¯mporteerd!`;
 }
 
-// ── Verwerk PR-sheet (zoals persoonlijke_records.xlsx) ────────
+// ââ Verwerk PR-sheet (zoals persoonlijke_records.xlsx) ââââââââ
 async function verwerkPRSheet(rows) {
   const header      = rows[0];
   const disciplines = header.slice(1).map(h => String(h).trim());
@@ -1928,7 +1927,7 @@ async function verwerkPRSheet(rows) {
     const naamRaw = String(row[0]).trim();
     if (!naamRaw) continue;
 
-    // Zoek of maak atleet — NOOIT bestaande gegevens overschrijven
+    // Zoek of maak atleet â NOOIT bestaande gegevens overschrijven
     let atleet = atleten.find(a => a.naam.toLowerCase() === naamRaw.toLowerCase());
     if (!atleet) {
       try {
@@ -1961,10 +1960,10 @@ async function verwerkPRSheet(rows) {
       );
 
       if (bestaande.length === 0) {
-        // Nog geen PR → toevoegen
+        // Nog geen PR â toevoegen
         nieuwePrestaties.push({
           atleetId: atleet.id, discipline: disc, resultaat: resultaatStr,
-          eenheid, datum: vandaag, locatie: "Import", notities: "Geïmporteerd uit Excel"
+          eenheid, datum: vandaag, locatie: "Import", notities: "GeÃ¯mporteerd uit Excel"
         });
       } else {
         // Vergelijk met beste bestaande
@@ -1986,13 +1985,13 @@ async function verwerkPRSheet(rows) {
             notities: `PR verbeterd (was: ${beste.resultaat})`
           });
         }
-        // Niet beter → overslaan
+        // Niet beter â overslaan
       }
     }
   }
 
   if (!nieuwePrestaties.length && !nieuweAtleten) {
-    return "Geen verbeteringen gevonden — alles is al up-to-date";
+    return "Geen verbeteringen gevonden â alles is al up-to-date";
   }
 
   const verbeterd = teVervangenIds.length;
@@ -2034,30 +2033,30 @@ async function verwerkPRSheet(rows) {
       if (error) throw error;
       (data || []).forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
       n += batch.length;
-      toast(`Prestaties uploaden… (${n}/${nieuwePrestaties.length})`, "ok");
+      toast(`Prestaties uploadenâ¦ (${n}/${nieuwePrestaties.length})`, "ok");
     } catch (e) { console.warn("Fout bij batch prestaties", e.message); }
   }
 
-  return `✓ ${nieuweAtleten} atleet(en) · ${verbeterd} PR('s) vervangen · ${nieuw} nieuw toegevoegd`;
+  return `â ${nieuweAtleten} atleet(en) Â· ${verbeterd} PR('s) vervangen Â· ${nieuw} nieuw toegevoegd`;
 }
 
-// ── Gedeelde hulpfuncties voor import ─────────────────────────
+// ââ Gedeelde hulpfuncties voor import âââââââââââââââââââââââââ
 
-// Zet "Achternaam, X.Y. (Voornaam)" of "Zimmeren, L.E.C. van (Léoni)" → "Léoni van Zimmeren"
+// Zet "Achternaam, X.Y. (Voornaam)" of "Zimmeren, L.E.C. van (LÃ©oni)" â "LÃ©oni van Zimmeren"
 function parseerNaam(raw) {
   const s = String(raw).trim();
   if (!s) return "";
 
-  // Voornaam uit haakjes: "(Léoni)"
+  // Voornaam uit haakjes: "(LÃ©oni)"
   const mVoornaam = s.match(/\(([^)]+)\)/);
   const voornaam  = mVoornaam ? mVoornaam[1].trim() : "";
 
-  // Splits op komma: ["Zimmeren", " L.E.C. van (Léoni)"]
+  // Splits op komma: ["Zimmeren", " L.E.C. van (LÃ©oni)"]
   const kommaPos      = s.indexOf(",");
   const deelVoorKomma = kommaPos >= 0 ? s.slice(0, kommaPos).trim() : s;
   const deelNaKomma   = kommaPos >= 0 ? s.slice(kommaPos + 1).replace(/\([^)]*\)/g, "").trim() : "";
 
-  // Tussenvoegsels — langste eerst zodat "van der" voor "van" matched
+  // Tussenvoegsels â langste eerst zodat "van der" voor "van" matched
   const tussenvoegsels = [
     "van der","van den","van de","van het","van 't",
     "van","de","den","der","het","'t",
@@ -2077,7 +2076,7 @@ function parseerNaam(raw) {
     }
   }
 
-  // Achternaam = deel vóór komma
+  // Achternaam = deel vÃ³Ã³r komma
   const achternaam = deelVoorKomma;
 
   const delen = [voornaam, tussenvoegsel, achternaam].filter(Boolean);
@@ -2092,16 +2091,16 @@ function formatDatum(val) {
   return s;
 }
 
-// ── Wedstrijden state ─────────────────────────────────────────
+// ââ Wedstrijden state âââââââââââââââââââââââââââââââââââââââââ
 let programma     = [];
 let editWedstrijdId   = null;
 let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
 let aantalPloegen     = 3;
 let opstellingData    = {};
-let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
+let beschikbaarData   = {}; // atleetId â true/false voor actieve wedstrijd
 
-// ── U16 Disciplines definitie ─────────────────────────────────
+// ââ U16 Disciplines definitie âââââââââââââââââââââââââââââââââ
 const U16_DISCIPLINES = [
   // Loop
   { naam:"60m",         type:"loop",      duur:15 },
@@ -2128,12 +2127,12 @@ const U16_DISCIPLINES = [
   { naam:"Speerwerpen",   type:"technisch", duur:60 },
 ];
 
-// ── U16 Puntentelling (Atletiekunie formule, pag 10-11 doc) ───
+// ââ U16 Puntentelling (Atletiekunie formule, pag 10-11 doc) âââ
 function berekenPunten(discipline, resultaat, geslacht) {
   const r = parseResultaat(resultaat);
   if (r === null || r <= 0) return 0;
 
-  // Loop: INT(A / tijd - B)   — zelfde constanten voor M én V bij U16
+  // Loop: INT(A / tijd - B)   â zelfde constanten voor M Ã©n V bij U16
   const loopConst = {
     "60m":         { A:15365.0,  B:1158.0  },
     "80m":         { A:19933.0,  B:1193.0  },
@@ -2181,12 +2180,12 @@ function berekenPunten(discipline, resultaat, geslacht) {
 function parseResultaat(val) {
   if (!val) return null;
   const s = String(val).replace(",", ".").trim();
-  // Formaat m:ss.f (met dubbele punt) — bijv. 1:02.3 = 62.3 sec
+  // Formaat m:ss.f (met dubbele punt) â bijv. 1:02.3 = 62.3 sec
   const metDubbelpunt = s.match(/^(\d+):(\d+(?:\.\d+)?)$/);
   if (metDubbelpunt) {
     return parseFloat(metDubbelpunt[1]) * 60 + parseFloat(metDubbelpunt[2]);
   }
-  // Formaat m.ss.f (met punten) — bijv. 1.02.3 = 62.3 sec (alleen als er 2 punten zijn)
+  // Formaat m.ss.f (met punten) â bijv. 1.02.3 = 62.3 sec (alleen als er 2 punten zijn)
   const metPunten = s.match(/^(\d+)\.(\d{2})\.(\d+)$/);
   if (metPunten) {
     return parseFloat(metPunten[1]) * 60 + parseFloat(metPunten[2] + '.' + metPunten[3]);
@@ -2219,24 +2218,24 @@ function getDisciplineType(naam) {
   return d ? d.type : "loop";
 }
 
-// ── Wedstrijden render ────────────────────────────────────────
+// ââ Wedstrijden render ââââââââââââââââââââââââââââââââââââââââ
 function renderWedstrijden() {
   document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
   const grid = document.getElementById("wedstrijden-grid");
   if (!wedstrijden.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">ðï¸</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
     return;
   }
   grid.innerHTML = wedstrijden.map(w => `
     <div class="wedstrijd-card" onclick="openWedstrijdModal('${w.id}')">
       <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
-      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
+      <div class="wedstrijd-locatie">ð ${esc(w.locatie||"")}</div>
       ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
     </div>`).join("");
 }
 
-// ── Wedstrijd Modal ───────────────────────────────────────────
+// ââ Wedstrijd Modal âââââââââââââââââââââââââââââââââââââââââââ
 function openWedstrijdModal(id = null) {
   editWedstrijdId = id;
   document.getElementById("wedstrijdModalTitle").textContent = id ? "Wedstrijd bewerken" : "Wedstrijd toevoegen";
@@ -2274,12 +2273,12 @@ async function saveWedstrijd() {
       if (error) throw error;
       const i = wedstrijden.findIndex(w => String(w.id) === String(editWedstrijdId));
       if (i >= 0) wedstrijden[i] = { ...wedstrijden[i], ...body };
-      toast("Wedstrijd bijgewerkt ✓");
+      toast("Wedstrijd bijgewerkt â");
     } else {
       const { data, error } = await sb.from("wedstrijden").insert({ ...body, categorie_id: cid }).select().single();
       if (error) throw error;
       wedstrijden.unshift(data);
-      toast("Wedstrijd toegevoegd ✓");
+      toast("Wedstrijd toegevoegd â");
     }
     closeModal("wedstrijdModal");
     renderWedstrijden();
@@ -2299,18 +2298,18 @@ async function deleteWedstrijd() {
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Opstelling scherm ─────────────────────────────────────────
+// ââ Opstelling scherm âââââââââââââââââââââââââââââââââââââââââ
 function renderOpstellingWedstrijden() {
   const lijst = document.getElementById("opstelling-wedstrijd-lijst");
   if (!wedstrijden.length) {
-    lijst.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Voeg eerst een wedstrijd toe via het tabblad Wedstrijden.</div>`;
+    lijst.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">ðï¸</div>Voeg eerst een wedstrijd toe via het tabblad Wedstrijden.</div>`;
     return;
   }
   lijst.innerHTML = wedstrijden.map(w => `
     <div class="wedstrijd-card" onclick="openOpstelling('${w.id}')">
       <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
-      <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")} &nbsp;→ Opstelling maken</div>
+      <div class="wedstrijd-locatie">ð ${esc(w.locatie||"")} &nbsp;â Opstelling maken</div>
     </div>`).join("");
 }
 
@@ -2373,11 +2372,11 @@ async function laadProgrammaEnOpstelling() {
   } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
 }
 
-// ── Programma overzicht ───────────────────────────────────────
+// ââ Programma overzicht âââââââââââââââââââââââââââââââââââââââ
 function renderProgrammaOverzicht() {
   const el = document.getElementById("programma-overzicht");
   if (!programma.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Nog geen programma. Klik op ✏️ Bewerken.</div>`;
+    el.innerHTML = `<div class="empty-state"><div class="icon">ð</div>Nog geen programma. Klik op âï¸ Bewerken.</div>`;
     return;
   }
   el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;">
@@ -2391,19 +2390,19 @@ function renderProgrammaOverzicht() {
       ${programma.map(p => `<tr>
         <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
         <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
-        <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
+        <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"â"}</td>
         <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
       </tr>`).join("")}
     </tbody>
   </table></div>`;
 }
 
-// ── Programma Modal ───────────────────────────────────────────
+// ââ Programma Modal âââââââââââââââââââââââââââââââââââââââââââ
 function openProgrammaModal() {
   const g = actiefGeslacht === "M" ? "Jongens" : "Meisjes";
   const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
   document.getElementById("programma-modal-sub").textContent =
-    `${w ? w.naam : ""} — ${g}`;
+    `${w ? w.naam : ""} â ${g}`;
 
   const lijst = document.getElementById("programma-items-list");
   lijst.innerHTML = "";
@@ -2432,7 +2431,7 @@ function addProgrammaRijMet(p) {
     </select>
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
     <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
-    <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+    <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">â</button>
   `;
   lijst.appendChild(div);
 }
@@ -2481,11 +2480,11 @@ async function saveProgrammaModal() {
     closeModal("programmaModal");
     renderProgrammaOverzicht();
     renderPloegen();
-    toast("Programma opgeslagen ✓");
+    toast("Programma opgeslagen â");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Ploegen render ────────────────────────────────────────────
+// ââ Ploegen render ââââââââââââââââââââââââââââââââââââââââââââ
 function setAantalPloegen(n) {
   aantalPloegen = parseInt(n);
   renderPloegen();
@@ -2494,7 +2493,7 @@ function setAantalPloegen(n) {
 function renderPloegen() {
   const cont = document.getElementById("ploegen-container");
   if (!programma.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
+    cont.innerHTML = `<div class="empty-state"><div class="icon">â¡</div>Voer eerst het wedstrijdprogramma in.</div>`;
     return;
   }
 
@@ -2526,7 +2525,7 @@ function renderPloeg(ploeg) {
         const pr = bestePrestatie(atleet.id, item.discipline);
         if (pr) punten = berekenPunten(item.discipline, pr.resultaat, actiefGeslacht);
         totalePunten += punten;
-        conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "⚠️" : "";
+        conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "â ï¸" : "";
       }
 
       const prVal = atleet ? bestePrestatie(atleet.id, item.discipline) : null;
@@ -2538,7 +2537,7 @@ function renderPloeg(ploeg) {
           <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
           ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
-          ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
+          ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">â</span>` : ""}
         </div>`;
     }
 
@@ -2546,7 +2545,7 @@ function renderPloeg(ploeg) {
       <div class="onderdeel-rij">
         <div>
           <div class="onderdeel-naam">${esc(item.discipline)}</div>
-          <div class="onderdeel-tijd">${item.starttijd || "—"}</div>
+          <div class="onderdeel-tijd">${item.starttijd || "â"}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
         <div style="grid-column:3;"></div>
@@ -2613,7 +2612,7 @@ function telOnderdelenAtleet(ploeg, opst, atleetId) {
   return tel;
 }
 
-// ── Atleet slot keuze ─────────────────────────────────────────
+// ââ Atleet slot keuze âââââââââââââââââââââââââââââââââââââââââ
 let actiefSlot = null;
 
 function openSlotKeuze(ploeg, idx, slotNr, el) {
@@ -2638,7 +2637,7 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
     })
     .sort((a, b) => b.pts - a.pts);
 
-  div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
+  div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleetâ¦" oninput="filterSlotKeuze(this)">` +
     kandidaten.map(k => {
       const dimmed = k.aantalOnderdelen >= 3 || k.conflict || k.andereP;
       const waarsch = k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
@@ -2646,11 +2645,11 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
         onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
         <span>${esc(k.atleet.naam)} ${waarsch ? `<small style="color:var(--accent2)">(${waarsch})</small>` : ""}</span>
-        <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${k.pr.resultaat}` : "geen PR"}</span>
+        <span class="si-punten">${k.pr ? `${k.pts}pts Â· PR: ${k.pr.resultaat}` : "geen PR"}</span>
       </div>`;
     }).join("") +
     `<div class="slot-select-item" onclick="kiesAtleet('${ploeg}',${idx},${slotNr},null)">
-      <span style="color:var(--muted)">— Leeg maken —</span>
+      <span style="color:var(--muted)">â Leeg maken â</span>
     </div>`;
 
   el.style.position = "relative";
@@ -2689,7 +2688,7 @@ function clearSlot(ploeg, idx, slotNr) {
   renderPloegen();
 }
 
-// ── Beschikbaarheid ───────────────────────────────────────────
+// ââ Beschikbaarheid âââââââââââââââââââââââââââââââââââââââââââ
 function isBeschikbaar(atleetId) {
   const v = beschikbaarData[String(atleetId)];
   return v === undefined ? true : v; // standaard beschikbaar
@@ -2753,19 +2752,19 @@ async function alleenBeschikbaar(aan) {
 function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   opstellingData = {};
-  const atleetInPloeg = {}; // atleetId → ploeg (over alle ploegen)
+  const atleetInPloeg = {}; // atleetId â ploeg (over alle ploegen)
 
   ploegNamen.forEach(ploeg => {
     opstellingData[ploeg] = {};
-    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen in deze ploeg
-    const atleetIngepland = {};       // atleetId → [{idx, starttijd}]
+    const atleetOnderdeelTeller = {}; // atleetId â aantal onderdelen in deze ploeg
+    const atleetIngepland = {};       // atleetId â [{idx, starttijd}]
 
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
       const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
 
-      // Rangschik kandidaten op punten — alleen beschikbare atleten
+      // Rangschik kandidaten op punten â alleen beschikbare atleten
       const kandidaten = atleten
         .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
         .map(a => {
@@ -2808,10 +2807,10 @@ function genereerOpstelling() {
   });
 
   renderPloegen();
-  toast("Opstelling gegenereerd ✓");
+  toast("Opstelling gegenereerd â");
 }
 
-// ── Opslaan ───────────────────────────────────────────────────
+// ââ Opslaan âââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function opslaanOpstelling() {
   const cid = actieveCategorie?.id;
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
@@ -2827,17 +2826,17 @@ async function opslaanOpstelling() {
       onConflict: "categorie_id,wedstrijd_id,geslacht,ploeg"
     });
     if (error) throw error;
-    toast("Opstelling opgeslagen ✓");
+    toast("Opstelling opgeslagen â");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Afdrukken ─────────────────────────────────────────────────
+// ââ Afdrukken âââââââââââââââââââââââââââââââââââââââââââââââââ
 function printOpstelling() {
   window.print();
 }
 
 
-// ── Profiel opslaan ───────────────────────────────────────────
+// ââ Profiel opslaan âââââââââââââââââââââââââââââââââââââââââââ
 async function slaProfielOp() {
   const naam = document.getElementById("profiel-naam").value.trim();
   if (!naam) { toast("Gebruikersnaam mag niet leeg zijn", "err"); return; }
@@ -2848,7 +2847,7 @@ async function slaProfielOp() {
       .eq("id", uid);
     if (error) throw error;
     if (huidigeProfiel) huidigeProfiel.gebruikersnaam = naam;
-    toast("Profiel opgeslagen ✓");
+    toast("Profiel opgeslagen â");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
@@ -2859,11 +2858,11 @@ async function wijzigWachtwoord() {
     const { error } = await sb.auth.updateUser({ password: ww });
     if (error) throw error;
     document.getElementById("profiel-ww").value = "";
-    toast("Wachtwoord gewijzigd ✓");
+    toast("Wachtwoord gewijzigd â");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Admin panel ───────────────────────────────────────────────
+// ââ Admin panel âââââââââââââââââââââââââââââââââââââââââââââââ
 async function laadAdmin() {
   if (!huidigeProfiel || huidigeProfiel.rol !== "admin") return;
   await Promise.all([
@@ -2876,7 +2875,7 @@ async function laadAdmin() {
 
 async function laadAdminUitnodigingen() {
   const uitnEl = document.getElementById("uitnodigingen-lijst");
-  uitnEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  uitnEl.innerHTML = `<div class="loading"><div class="spinner"></div> Ladenâ¦</div>`;
   try {
     // Haal ook categorie naam op via join
     const { data: uitn, error } = await sb.from("uitnodigingen")
@@ -2892,21 +2891,21 @@ async function laadAdminUitnodigingen() {
       const verlopen   = new Date(u.vervalt) < new Date();
       const statusKleur = u.gebruikt ? "var(--success)" : verlopen ? "var(--accent2)" : "var(--accent)";
       const statusTekst = u.gebruikt ? "Gebruikt" : verlopen ? "Verlopen" : "Actief";
-      const catNaam     = u.categorieen?.naam || "—";
+      const catNaam     = u.categorieen?.naam || "â";
       return `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
           <div style="flex:1;min-width:200px;">
             <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-              Categorie: <strong>${esc(catNaam)}</strong> ·
-              Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+              Categorie: <strong>${esc(catNaam)}</strong> Â·
+              Aangemaakt: ${formatDate(u.aangemaakt)} Â· Vervalt: ${formatDate(u.vervalt)}
             </div>
           </div>
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
             color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
             padding:3px 10px;border-radius:20px;">${statusTekst}</span>
           ${!u.gebruikt && !verlopen ? `
-            <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
+            <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">ð KopiÃ«ren</button>
           ` : ""}
         </div>`;
     }).join("");
@@ -2915,7 +2914,7 @@ async function laadAdminUitnodigingen() {
 
 async function laadAdminGebruikers() {
   const gebruEl = document.getElementById("gebruikers-lijst");
-  gebruEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  gebruEl.innerHTML = `<div class="loading"><div class="spinner"></div> Ladenâ¦</div>`;
   try {
     const { data: gebruikers, error } = await sb.from("profielen")
       .select("*").order("aangemaakt");
@@ -2937,12 +2936,12 @@ async function laadAdminGebruikers() {
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
             color:${rolKleur};text-transform:uppercase;">${g.rol}</span>
           <span style="font-size:11px;color:var(--muted);">
-            ${g.actief ? "✅ Actief" : "❌ Inactief"} ·
+            ${g.actief ? "â Actief" : "â Inactief"} Â·
             Laatste login: ${g.laatste_login ? formatDate(g.laatste_login) : "nooit"}
           </span>
           ${!isZelf ? `
             <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
-              ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
+              ${g.rol === "admin" ? "â Trainer" : "â Admin"}
             </button>
           ` : ""}
         </div>`;
@@ -2950,17 +2949,17 @@ async function laadAdminGebruikers() {
   } catch(e) { gebruEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
 }
 
-// ── Categoriebeheer ───────────────────────────────────────────
+// ââ Categoriebeheer âââââââââââââââââââââââââââââââââââââââââââ
 async function laadCategorieBeheer() {
   const el = document.getElementById("categorieen-lijst");
-  el.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Ladenâ¦</div>`;
   try {
     const { data: cats, error } = await sb.from("categorieen")
       .select("*").order("volgorde");
     if (error) throw error;
 
     if (!cats.length) {
-      el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen categorieën gevonden.</div>`;
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen categorieÃ«n gevonden.</div>`;
       return;
     }
     el.innerHTML = cats.map(c => `
@@ -2970,7 +2969,7 @@ async function laadCategorieBeheer() {
           <span style="font-size:11px;color:var(--muted);margin-left:8px;">volgorde: ${c.volgorde}</span>
         </div>
         <button class="btn btn-ghost btn-sm" style="color:var(--accent2);"
-          onclick="verwijderCategorie('${c.id}', '${esc(c.naam)}')">🗑 Verwijderen</button>
+          onclick="verwijderCategorie('${c.id}', '${esc(c.naam)}')">ð Verwijderen</button>
       </div>
     `).join("");
   } catch(e) { el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
@@ -2978,7 +2977,7 @@ async function laadCategorieBeheer() {
 
 async function laadTrainerCategorieBeheer() {
   const el = document.getElementById("trainer-categorie-beheer");
-  el.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+  el.innerHTML = `<div class="loading"><div class="spinner"></div> Ladenâ¦</div>`;
   try {
     const [gRes, cRes, kRes] = await Promise.all([
       sb.from("profielen").select("id,gebruikersnaam,email,rol").order("aangemaakt"),
@@ -3014,7 +3013,7 @@ async function laadTrainerCategorieBeheer() {
         <div style="padding:12px 0;border-bottom:1px solid var(--border);">
           <div style="font-size:13px;font-weight:600;margin-bottom:8px;">
             ${esc(g.gebruikersnaam)}
-            <span style="font-size:11px;color:var(--muted);font-weight:400;"> — ${esc(g.email)}</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;"> â ${esc(g.email)}</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">${checkboxes}</div>
         </div>`;
@@ -3033,7 +3032,7 @@ async function wisselTrainerCategorie(trainerId, categorieId, toevoegen) {
         .delete().eq("trainer_id", trainerId).eq("categorie_id", categorieId);
       if (error) throw error;
     }
-    toast(toevoegen ? "Toegang verleend ✓" : "Toegang ingetrokken ✓");
+    toast(toevoegen ? "Toegang verleend â" : "Toegang ingetrokken â");
     // Update beschikbareCategorieen als het om jezelf gaat
     if (trainerId === huidigeProfiel?.id) await laadMijnCategorieen();
   } catch(e) { toast("Fout: " + e.message, "err"); }
@@ -3056,9 +3055,9 @@ async function maakCategorie() {
       else throw error;
       return;
     }
-    toast(`Categorie ${naam} aangemaakt ✓`);
+    toast(`Categorie ${naam} aangemaakt â`);
     closeModal("categorieModal");
-    // Herlaad eigen categorieën (admin ziet ze allemaal)
+    // Herlaad eigen categorieÃ«n (admin ziet ze allemaal)
     await laadMijnCategorieen();
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
@@ -3079,11 +3078,11 @@ async function verwijderCategorie(id, naam) {
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Uitnodiging modal ─────────────────────────────────────────
+// ââ Uitnodiging modal âââââââââââââââââââââââââââââââââââââââââ
 async function openUitnodigingModal() {
   // Vul categorie dropdown
   const sel = document.getElementById("uitn-categorie");
-  sel.innerHTML = `<option value="">— kies categorie —</option>`;
+  sel.innerHTML = `<option value="">â kies categorie â</option>`;
   try {
     const { data: cats } = await sb.from("categorieen").select("id,naam").order("volgorde");
     (cats || []).forEach(c => {
@@ -3116,7 +3115,7 @@ async function verstuurUitnodiging() {
       else throw error;
       return;
     }
-    toast(`Uitnodiging aangemaakt voor ${email} ✓`);
+    toast(`Uitnodiging aangemaakt voor ${email} â`);
     closeModal("uitnodigingModal");
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
@@ -3129,7 +3128,7 @@ function kopieerUitnodigingslink(token) {
   const basis = window.location.origin + window.location.pathname.replace("app.html","");
   const link  = `${basis}index.html?uitnodiging=${token}`;
   navigator.clipboard.writeText(link).then(() => {
-    toast("Link gekopieerd naar klembord ✓");
+    toast("Link gekopieerd naar klembord â");
   }).catch(() => {
     prompt("Kopieer deze link handmatig:", link);
   });
@@ -3142,19 +3141,19 @@ async function wisselRol(gebruikerId, huidigeRol) {
   try {
     const { error } = await sb.from("profielen").update({ rol: nieuweRol }).eq("id", gebruikerId);
     if (error) throw error;
-    toast(`Rol gewijzigd naar ${nieuweRol} ✓`);
+    toast(`Rol gewijzigd naar ${nieuweRol} â`);
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Export opstelling naar Excel ──────────────────────────────
+// ââ Export opstelling naar Excel ââââââââââââââââââââââââââââââ
 async function exporteerOpstelling() {
   if (!actiefWedstrijdId) { toast("Geen wedstrijd geselecteerd", "err"); return; }
   if (!programma.length)  { toast("Geen programma ingevoerd", "err"); return; }
 
   // Laad SheetJS dynamisch
   if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
+    toast("SheetJS ladenâ¦", "ok");
     await new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -3250,13 +3249,13 @@ async function exporteerOpstelling() {
     XLSX.writeFile(wb, `${bestandsnaam}_${g.suffix}.xlsx`);
   }
 
-  toast("Opstelling geëxporteerd ✓");
+  toast("Opstelling geÃ«xporteerd â");
 }
 
-// ── Init ──────────────────────────────────────────────────────
+// ââ Init ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
-    `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
+    `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabaseâ¦</div>`;
   const ok = await checkAuth();
   if (ok) {
     document.getElementById("tab-profiel").style.display = "";
