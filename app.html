@@ -781,7 +781,6 @@
     <div class="field">
       <label>Discipline</label>
       <select id="f-discipline" onchange="updateEenheidField()">
-        <option value="60m">60m sprint</option>
         <option value="80m">80m sprint</option>
         <option value="100m">100m sprint</option>
         <option value="200m">200m sprint</option>
@@ -1441,7 +1440,7 @@ function renderPrestatieTable(rows, showPR = false) {
     rows.forEach(p => {
       const val = parseFloat(String(p.resultaat).replace(",", "."));
       if (!isNaN(val)) {
-        const isSneller = ["60m","80m","100m","200m","4x100m"].includes(p.discipline);
+        const isSneller = ["80m","100m","200m","4x100m"].includes(p.discipline);
         if (!(p.discipline in prMap)) {
           prMap[p.discipline] = { val, id: p.id };
         } else if (isSneller ? val < prMap[p.discipline].val : val > prMap[p.discipline].val) {
@@ -1573,7 +1572,7 @@ function openPrestatieModal(id = null, defaultAtleetId = null) {
 
 function updateEenheidField() {
   const disc = document.getElementById("f-discipline").value;
-  const sprints = ["60m","80m","100m","200m","4x100m"];
+  const sprints = ["80m","100m","200m","4x100m"];
   const veld = document.getElementById("f-eenheid-field");
   const label = document.getElementById("f-resultaat-label");
   if (sprints.includes(disc)) {
@@ -1693,7 +1692,7 @@ function bevestig(titel, bericht) {
 // ── Excel Import ──────────────────────────────────────────────
 
 // Disciplines die als "sneller = beter" gelden (tijd), rest is "verder/hoger = beter"
-const TIJD_DISCIPLINES = ["60m","80m","100m","150m","200m","300m","400m","600m","800m","1000m","1500m","3000m","horden","80m horden","300m horden","4x100m"];
+const TIJD_DISCIPLINES = ["80m","100m","150m","200m","300m","400m","600m","800m","1000m","1500m","3000m","horden","80m horden","300m horden","4x100m"];
 
 async function importExcel(input) {
   const file = input.files[0];
@@ -1766,15 +1765,11 @@ async function verwerkLangeLijst(rows) {
 
   // Discipline-mapping: bestandsnamen → app-namen
   const DISC_MAP = {
-    "60 meter":"60m","60 meter handtijd":"60m","60 meter ontbrekende windmeting":"60m","60 meter ongeldige windmeting":"60m",
     "80 meter":"80m","80 meter ontbrekende windmeting":"80m","80 meter ongeldige windmeting":"80m",
     "100 meter":"100m","100 meter ongeldige windmeting":"100m",
     "150 meter":"150m","200 meter":"200m","200 meter ongeldige windmeting":"200m",
     "300 meter":"300m","400 meter":"400m","600 meter":"600m",
     "800 meter":"800m","1000 meter":"1000m","1500 meter":"1500m",
-    "60 meter horden 76.2cm":"60m horden","60 meter horden76.2cm":"60m horden",
-    "60 meter horden76.2cm (12m-8m)":"60m horden","60 meter horden76.2cm ongeldige windmeting":"60m horden",
-    "60 meter horden 83.8cm":"60m horden","60 meter horden83.8cm":"60m horden",
     "80 meter horden 76.2cm":"80m horden","80 meter horden76.2cm":"80m horden",
     "80 meter horden76.2cm ongeldige windmeting":"80m horden",
     "100 meter horden":"100m horden","100 meter horden 84 cm":"100m horden",
@@ -2159,7 +2154,6 @@ let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 // ── U16 Disciplines definitie ─────────────────────────────────
 const U16_DISCIPLINES = [
   // Loop
-  { naam:"60m",         type:"loop",      duur:15 },
   { naam:"80m",         type:"loop",      duur:15 },
   { naam:"100m",        type:"loop",      duur:20 },
   { naam:"150m",        type:"loop",      duur:20 },
@@ -2190,7 +2184,6 @@ function berekenPunten(discipline, resultaat, geslacht) {
 
   // Loop: INT(A / tijd - B)   — zelfde constanten voor M én V bij U16
   const loopConst = {
-    "60m":         { A:15365.0,  B:1158.0  },
     "80m":         { A:19933.0,  B:1193.0  },
     "100m":        { A:24450.0,  B:1212.0  },
     "150m":        { A:36380.0,  B:1200.0  },
@@ -2566,8 +2559,8 @@ function renderPloeg(ploeg) {
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
     const maxSlots = isTechnisch ? 2 : 3;
-    // Estafette: 4 lopers (loper 1 t/m 4)
-    const slots = isEstafette ? 4 : maxSlots;
+    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
+    const slots = isEstafette ? 1 : maxSlots;
 
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
@@ -2632,7 +2625,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 4 : 3;
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2657,17 +2650,13 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 }
 
 // Tel hoeveel onderdelen atleet al heeft in deze ploeg
-// Estafette telt als 1 onderdeel (ook al zijn er 4 lopers-slots)
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const isEstafette = item.type === "estafette";
-    const maxSlots = item.type === "technisch" ? 2 : isEstafette ? 4 : 3;
-    let zitErin = false;
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
     for (let s = 0; s < maxSlots; s++) {
-      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) { zitErin = true; break; }
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
     }
-    if (zitErin) tel++; // estafette telt als 1 onderdeel, niet als 4
   });
   return tel;
 }
@@ -2822,11 +2811,9 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      // Estafette heeft 4 lopers-slots; technisch 2; loop/sprint 3
-      const maxSlots = isTechnisch ? 2 : isEstafette ? 4 : 3;
+      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
-      // Voor estafette: sorteer op snelste 100m/80m PR (laagste tijd = beste)
       const kandidaten = atleten
         .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
         .map(a => {
@@ -2844,7 +2831,7 @@ function genereerOpstelling() {
         // Regel: atleet mag maar in 1 ploeg
         if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) continue;
 
-        // Regel: max 3 onderdelen (estafette telt als 1 onderdeel)
+        // Regel: max 3 onderdelen
         if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
 
         // Regel: geen tijdconflict binnen 15 min
@@ -2860,12 +2847,9 @@ function genereerOpstelling() {
         // Wijs toe
         opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
         atleetInPloeg[aid] = ploeg;
-        // Estafette telt als 1 onderdeel voor de atleet (niet als 4)
-        if (!isEstafette || gevuld === 0) {
-          atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
-          if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
-          atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
-        }
+        atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
+        if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
+        atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
         gevuld++;
       }
     });
@@ -3496,7 +3480,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 4 : 3;
+        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3521,7 +3505,7 @@ async function exporteerOpstelling() {
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 4 : 3;
+          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
