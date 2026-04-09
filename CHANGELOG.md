@@ -93,11 +93,8 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 | Service | Details |
 |---------|---------|
-| Atletiek.nu API | Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev` |
 | World Athletics PR | `worldathletics.nimarion.de` |
 | NAU scoretabellen | Ingebouwd (U14/U16, feb. 2022) |
-
-**Let op:** atletiek.nu Worker kan soms worden geblokkeerd door bot-detectie.
 
 ---
 
@@ -132,9 +129,9 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 ## ✅ Geteste features (april 2026)
 
-Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
+Alle 23 features getest en werkend: login, auth guard, atleet CRUD,
 prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
-zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
+zoekfunctie, Excel import, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
 
@@ -142,53 +139,35 @@ categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
 
 ## 📋 Release Notes
 
-### Sprint U16 — april 2026 (patch 3)
+### Sprint U16 — april 2026 (patch 5)
 
-**🗑️ 60m verwijderd uit de app**
+**🗑️ Atletiek.nu koppeling volledig verwijderd**
 
-**Reden:** De 60m is geen onderdeel op de U16-competitie. Records voor dit onderdeel
-hoeven niet geregistreerd te worden, en het onderdeel hoort niet thuis in het
-wedstrijdprogramma.
+**Reden:** De koppeling met atletiek.nu via de Cloudflare Worker werkte niet betrouwbaar
+en is daarom volledig uit de app verwijderd.
 
 **Wat is verwijderd:**
-- `60m sprint` uit de discipline-dropdown bij prestaties invoeren
-- `60m` uit de "sneller is beter"-lijst (tijdvergelijking)
-- `60m` uit de sprints-array (eenheid-veld)
-- `60m` uit `TIJD_DISCIPLINES`
-- `60m horden` uit alle bovenstaande lijsten (ook geen U16-onderdeel)
-- Alle Excel-importvertalingen voor `"60 meter"` en `"60 meter horden"` varianten
-- `{ naam:"60m", type:"loop", duur:15 }` uit `U16_DISCIPLINES` (wedstrijdprogramma)
-- Puntentelling constante `"60m": { A:15365.0, B:1158.0 }` uit `loopConst`
+- `ATL_API` constante (verwijzing naar Cloudflare Worker URL)
+- Atletiek.nu modal (`atlNuModal`) met zoek- en importfunctionaliteit
+- JS functies: `openAtlNuModal`, `setAtlNuTab`, `zoekAtlNuAtleet`, `laadAtlNuPrs`,
+  `importeerAtlNuPrs`, `zoekAtlNuWedstrijd`, `laadAtlNuUitslagen`
+- Vermelding in externe koppelingen (PROJECTNOTITIES)
 
-**Let op:** bestaande 60m-prestaties in Supabase worden niet verwijderd, maar zijn
-nergens meer zichtbaar in de app.
+**Niet verwijderd:** de atletiek.nu Worker zelf (op Cloudflare) — die kan los worden
+verwijderd als die niet meer nodig is.
 
-**Bestanden gewijzigd:** `app.html`
+**Bestanden gewijzigd:** `app.html`, `PROJECTNOTITIES.md`
 
----
+### Sprint U16 — april 2026 (patch 4)
 
-### Sprint U16 — april 2026 (patch 2)
+**🐛 UI-fix: Dubbel profielpoppetje verwijderd uit header**
 
-**🐛 Bugfix: Estafette opstellingsgeneratie**
+**Probleem:** In de menubalk stond het 👤-icoon twee keer: één keer als "Profiel"-knop
+in de navigatie (naast Admin), en nogmaals als los icoontje aan de rechterkant
+van de balk (tussen de refresh-knop en de logout-knop).
 
-**Probleem:** Bij automatisch opstellen werd voor estafette-onderdelen (4×100m, 4×80m,
-Zweedse estafette) slechts 1 atleet per ploeg ingevuld. Een estafetteteam bestaat
-echter uit 4 lopers.
-
-**Oorzaak:** Op 5 plekken in de code stond `item.type === "estafette" ? 1 : ...` —
-waardoor slechts 1 slot werd aangemaakt en gevuld.
-
-**Oplossing:** Alle 5 plekken aangepast naar `? 4 :`:
-- `renderPloeg` — toont nu 4 klikbare lopers-slots bij estafette
-- `checkConflict` — herkent nu alle 4 lopers bij tijdconflict-check
-- `telOnderdelenAtleet` — telt estafette correct als 1 onderdeel (ook al zijn er 4 slots)
-- `genereerOpstelling` — vult nu de 4 snelste beschikbare atleten in
-- `exporteerOpstelling` — exporteert alle 4 lopers correct naar Excel
-
-**Regels ongewijzigd:**
-- Estafette telt als 1 onderdeel per atleet (niet als 4)
-- Max 3 onderdelen per atleet per wedstrijd geldt nog steeds
-- Atleet mag maar in 1 ploeg — geldt ook voor estafette-lopers
-- Tijdconflict-detectie (15 min) werkt voor alle 4 lopers
+**Oplossing:** Het dubbele 👤-knopje aan de rechterkant (`id="profiel-btn"`) is
+verwijderd. Het Profiel-item in de navigatie blijft staan en is de enige toegang
+tot het profielscherm.
 
 **Bestanden gewijzigd:** `app.html`
