@@ -2566,8 +2566,8 @@ function renderPloeg(ploeg) {
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
     const maxSlots = isTechnisch ? 2 : 3;
-    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
-    const slots = isEstafette ? 1 : maxSlots;
+    // Estafette: 4 lopers (loper 1 t/m 4)
+    const slots = isEstafette ? 4 : maxSlots;
 
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
@@ -2632,7 +2632,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 4 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2657,13 +2657,17 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 }
 
 // Tel hoeveel onderdelen atleet al heeft in deze ploeg
+// Estafette telt als 1 onderdeel (ook al zijn er 4 lopers-slots)
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const isEstafette = item.type === "estafette";
+    const maxSlots = item.type === "technisch" ? 2 : isEstafette ? 4 : 3;
+    let zitErin = false;
     for (let s = 0; s < maxSlots; s++) {
-      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
+      if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) { zitErin = true; break; }
     }
+    if (zitErin) tel++; // estafette telt als 1 onderdeel, niet als 4
   });
   return tel;
 }
@@ -2818,9 +2822,11 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+      // Estafette heeft 4 lopers-slots; technisch 2; loop/sprint 3
+      const maxSlots = isTechnisch ? 2 : isEstafette ? 4 : 3;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
+      // Voor estafette: sorteer op snelste 100m/80m PR (laagste tijd = beste)
       const kandidaten = atleten
         .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
         .map(a => {
@@ -2838,7 +2844,7 @@ function genereerOpstelling() {
         // Regel: atleet mag maar in 1 ploeg
         if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) continue;
 
-        // Regel: max 3 onderdelen
+        // Regel: max 3 onderdelen (estafette telt als 1 onderdeel)
         if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
 
         // Regel: geen tijdconflict binnen 15 min
@@ -2854,9 +2860,12 @@ function genereerOpstelling() {
         // Wijs toe
         opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
         atleetInPloeg[aid] = ploeg;
-        atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
-        if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
-        atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+        // Estafette telt als 1 onderdeel voor de atleet (niet als 4)
+        if (!isEstafette || gevuld === 0) {
+          atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
+          if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
+          atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+        }
         gevuld++;
       }
     });
@@ -3487,7 +3496,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 4 : 3;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3512,7 +3521,7 @@ async function exporteerOpstelling() {
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
+          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 4 : 3;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
