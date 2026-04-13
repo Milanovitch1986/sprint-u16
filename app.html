@@ -546,6 +546,7 @@
     font-weight: 700; font-size: 13px;
     color: var(--accent); margin-left: 8px;
   }
+  .print-pr { display: none; }
   .atleet-slot .slot-remove {
     margin-left: 6px; color: var(--muted);
     font-size: 14px; cursor: pointer; padding: 2px 4px;
@@ -624,6 +625,7 @@
     .onderdeel-rij { border-bottom: 1px solid #eee; break-inside: avoid; }
     .atleet-slot { border: 1px solid #ccc; }
     .slot-punten { display: none !important; }
+    .print-pr { display: inline !important; }
     .onderdeel-duur { display: none !important; }
     .programma-type-col { display: none !important; }
     .programma-duur-col { display: none !important; }
@@ -2483,13 +2485,9 @@ function addProgrammaRijMet(p) {
   const div = document.createElement("div");
   div.className = "programma-rij";
   const discOpties = U16_DISCIPLINES.map(d =>
-    `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
+    `<option value="${d.naam}">${d.naam}</option>`
   ).join("");
   const isTechnisch = p.type === "technisch";
-  const groepOpties = `
-    <option value="A" ${(p.startgroep||"A") === "A" ? "selected" : ""}>Groep A</option>
-    <option value="B" ${p.startgroep === "B" ? "selected" : ""}>Groep B</option>
-  `;
   div.innerHTML = `
     <select class="pr-disc" onchange="updateProgrammaType(this)">
       ${discOpties}
@@ -2497,11 +2495,15 @@ function addProgrammaRijMet(p) {
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
     <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
     <select class="pr-groep" style="display:${isTechnisch ? "inline-block" : "none"};font-size:12px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;background:var(--surface2);color:var(--text);">
-      ${groepOpties}
+      <option value="A">Groep A</option>
+      <option value="B">Groep B</option>
     </select>
     <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
   `;
   lijst.appendChild(div);
+  // Stel waarden programmatisch in (betrouwbaarder dan selected attribuut in innerHTML)
+  if (p.discipline) div.querySelector(".pr-disc").value = p.discipline;
+  div.querySelector(".pr-groep").value = p.startgroep || "A";
 }
 
 function updateProgrammaType(sel) {
@@ -2605,20 +2607,38 @@ function renderPloeg(ploeg) {
       const prTekst = prVal ? `PR: ${prVal.resultaat}` : "";
 
       // Startgroep voor technische onderdelen
+      // Bepaal welke groepen de andere slots van dit onderdeel al hebben
       const gekozenGroep = isTechnisch ? (startgroepData[slotKey] || "A") : null;
       const geslachtCode2 = actiefGeslacht === "V" ? "V" : "M";
-      const startgroepLabel = isTechnisch
-        ? `<span style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;"
-             onclick="wisselStartgroep('${ploeg}',${idx},${s});event.stopPropagation()"
-             title="Klik om te wisselen">U16-${geslachtCode2} · Groep ${gekozenGroep} ↕</span>`
-        : "";
+      let startgroepLabel = "";
+      if (isTechnisch) {
+        // Kijk of een ander bezet slot al een groep heeft — dan is onze groep vastgezet
+        let vastgezet = false;
+        for (let s2 = 0; s2 < maxSlots; s2++) {
+          if (s2 === s) continue;
+          const sk2 = `${ploeg}_${idx}_${s2}`;
+          if (opst[sk2]) { // ander slot is bezet
+            vastgezet = true;
+            break;
+          }
+        }
+        if (vastgezet) {
+          // Groep is automatisch bepaald (de andere), geen wissel mogelijk
+          startgroepLabel = `<span class="print-hide" style="font-size:11px;color:var(--accent);font-weight:700;">U16-${geslachtCode2} - Groep ${gekozenGroep}</span>`;
+        } else {
+          // Enige slot (of eerste slot), wissel wel mogelijk
+          startgroepLabel = `<span class="print-hide" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;"
+               onclick="wisselStartgroep('${ploeg}',${idx},${s});event.stopPropagation()"
+               title="Klik om te wisselen">U16-${geslachtCode2} - Groep ${gekozenGroep} ↕</span>`;
+        }
+      }
 
       slotsHtml += `
         <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
              onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
           <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
           ${startgroepLabel}
-          ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
+          ${prTekst ? `<span class="slot-punten">${prTekst}</span><span class="print-pr" style="font-size:11px;color:#333;">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
           ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
         </div>`;
@@ -2761,6 +2781,30 @@ function kiesAtleet(ploeg, idx, slotNr, atleetId) {
   if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
   const slotKey = `${ploeg}_${idx}_${slotNr}`;
   opstellingData[ploeg][slotKey] = atleetId;
+
+  // Bij technisch onderdeel: stel startgroep automatisch in
+  const item = programma[idx];
+  if (item && item.type === "technisch" && atleetId) {
+    // Kijk welke groep de andere bezette slots al hebben
+    const maxSlots = 2;
+    let anderGroep = null;
+    for (let s2 = 0; s2 < maxSlots; s2++) {
+      if (s2 === slotNr) continue;
+      const sk2 = `${ploeg}_${idx}_${s2}`;
+      if (opstellingData[ploeg][sk2] && startgroepData[sk2]) {
+        anderGroep = startgroepData[sk2];
+        break;
+      }
+    }
+    if (anderGroep) {
+      // Andere slot heeft al een groep — wij krijgen de tegenovergestelde
+      startgroepData[slotKey] = anderGroep === "A" ? "B" : "A";
+    } else {
+      // Wij zijn het eerste bezette slot — standaard A
+      startgroepData[slotKey] = startgroepData[slotKey] || "A";
+    }
+  }
+
   document.querySelectorAll(".slot-select").forEach(d => d.remove());
   renderPloegen();
 }
@@ -3610,7 +3654,8 @@ async function exporteerOpstelling() {
           for (let s = 0; s < 2; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) {
               const sg = startgroepData[`${ploeg}_${idx}_${s}`] || "A";
-              if (!startgroepWaarde) startgroepWaarde = `Groep ${sg}`;
+              const gc = geslacht === "V" ? "V" : "M";
+              if (!startgroepWaarde) startgroepWaarde = `U16-${gc} - Groep ${sg}`;
             }
           }
         });
