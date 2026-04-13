@@ -2452,7 +2452,7 @@ function renderProgrammaOverzicht() {
         <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
         <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
         <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
-        <td style="padding:8px 12px;color:var(--muted);">${p.type==="technisch" ? ("Groep " + (p.startgroep||"A")) : "—"}</td>
+        <td style="padding:8px 12px;color:var(--muted);font-weight:${p.type==="technisch"?"700":"400"};color:${p.type==="technisch"?"var(--accent)":"var(--muted)"};">${p.type==="technisch" ? ("Groep " + (p.startgroep||"A")) : "—"}</td>
         <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
       </tr>`).join("")}
     </tbody>
@@ -2584,9 +2584,10 @@ function renderPloeg(ploeg) {
     const isLoop      = item.type === "loop";
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
-    const maxSlots = isTechnisch ? 2 : 3;
-    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
-    const slots = isEstafette ? 1 : maxSlots;
+    // Technisch: 1 atleet per rij (elke rij = 1 startgroep A of B)
+    // Estafette: 4 lopers in 4 slots
+    const maxSlots = isEstafette ? 4 : 1;
+    const slots = maxSlots;
 
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
@@ -2606,32 +2607,11 @@ function renderPloeg(ploeg) {
       const prVal = atleet ? bestePrestatie(atleet.id, item.discipline) : null;
       const prTekst = prVal ? `PR: ${prVal.resultaat}` : "";
 
-      // Startgroep voor technische onderdelen
-      // Bepaal welke groepen de andere slots van dit onderdeel al hebben
-      const gekozenGroep = isTechnisch ? (startgroepData[slotKey] || "A") : null;
+      // Startgroeplabel: haal groep direct uit de programmarij
       const geslachtCode2 = actiefGeslacht === "V" ? "V" : "M";
-      let startgroepLabel = "";
-      if (isTechnisch) {
-        // Kijk of een ander bezet slot al een groep heeft — dan is onze groep vastgezet
-        let vastgezet = false;
-        for (let s2 = 0; s2 < maxSlots; s2++) {
-          if (s2 === s) continue;
-          const sk2 = `${ploeg}_${idx}_${s2}`;
-          if (opst[sk2]) { // ander slot is bezet
-            vastgezet = true;
-            break;
-          }
-        }
-        if (vastgezet) {
-          // Groep is automatisch bepaald (de andere), geen wissel mogelijk
-          startgroepLabel = `<span class="print-hide" style="font-size:11px;color:var(--accent);font-weight:700;">U16-${geslachtCode2} - Groep ${gekozenGroep}</span>`;
-        } else {
-          // Enige slot (of eerste slot), wissel wel mogelijk
-          startgroepLabel = `<span class="print-hide" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;"
-               onclick="wisselStartgroep('${ploeg}',${idx},${s});event.stopPropagation()"
-               title="Klik om te wisselen">U16-${geslachtCode2} - Groep ${gekozenGroep} ↕</span>`;
-        }
-      }
+      const startgroepLabel = isTechnisch
+        ? `<span class="print-hide" style="font-size:11px;color:var(--accent);font-weight:700;">U16-${geslachtCode2} - Groep ${item.startgroep||"A"}</span>`
+        : "";
 
       slotsHtml += `
         <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
@@ -2679,7 +2659,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "estafette" ? 4 : 1;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2707,7 +2687,7 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "estafette" ? 4 : 1;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
     }
@@ -2782,29 +2762,6 @@ function kiesAtleet(ploeg, idx, slotNr, atleetId) {
   const slotKey = `${ploeg}_${idx}_${slotNr}`;
   opstellingData[ploeg][slotKey] = atleetId;
 
-  // Bij technisch onderdeel: stel startgroep automatisch in
-  const item = programma[idx];
-  if (item && item.type === "technisch" && atleetId) {
-    // Kijk welke groep de andere bezette slots al hebben
-    const maxSlots = 2;
-    let anderGroep = null;
-    for (let s2 = 0; s2 < maxSlots; s2++) {
-      if (s2 === slotNr) continue;
-      const sk2 = `${ploeg}_${idx}_${s2}`;
-      if (opstellingData[ploeg][sk2] && startgroepData[sk2]) {
-        anderGroep = startgroepData[sk2];
-        break;
-      }
-    }
-    if (anderGroep) {
-      // Andere slot heeft al een groep — wij krijgen de tegenovergestelde
-      startgroepData[slotKey] = anderGroep === "A" ? "B" : "A";
-    } else {
-      // Wij zijn het eerste bezette slot — standaard A
-      startgroepData[slotKey] = startgroepData[slotKey] || "A";
-    }
-  }
-
   document.querySelectorAll(".slot-select").forEach(d => d.remove());
   renderPloegen();
 }
@@ -2815,28 +2772,8 @@ function clearSlot(ploeg, idx, slotNr) {
   renderPloegen();
 }
 
-// Wissel startgroep A ↔ B voor een technisch onderdeel (handmatig)
-function wisselStartgroep(ploeg, idx, slotNr) {
-  const slotKey = `${ploeg}_${idx}_${slotNr}`;
-  // Controleer of andere slot van dit onderdeel al bezet is met die groep
-  const huidige = startgroepData[slotKey] || "A";
-  const nieuw = huidige === "A" ? "B" : "A";
-  // Kijk of het andere slot in dit onderdeel al die groep heeft
-  const opst = opstellingData[ploeg] || {};
-  const maxSlots = 2;
-  let conflict = false;
-  for (let s = 0; s < maxSlots; s++) {
-    if (s === slotNr) continue;
-    const sk2 = `${ploeg}_${idx}_${s}`;
-    if (opst[sk2] && (startgroepData[sk2] || "A") === nieuw) { conflict = true; break; }
-  }
-  if (conflict) {
-    toast("Groep " + nieuw + " is al bezet voor dit onderdeel", "err");
-    return;
-  }
-  startgroepData[slotKey] = nieuw;
-  renderPloegen();
-}
+// wisselStartgroep: niet meer nodig (groep zit vast in de programmarij)
+// function wisselStartgroep verwijderd
 
 // ── Beschikbaarheid ───────────────────────────────────────────
 function isBeschikbaar(atleetId) {
@@ -2900,36 +2837,8 @@ async function alleenBeschikbaar(aan) {
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
-// ── Kies beste startgroep voor technisch onderdeel ───────────
-// Geeft de groep terug (A of B) waarbij de atleet het minste tijdconflict heeft
-// met zijn andere ingeplande onderdelen.
-function kiesBestStartgroep(atleetId, huidigItem, kandidaatGroepen, atleetIngepland) {
-  if (!kandidaatGroepen.length) return "A"; // fallback
-  if (kandidaatGroepen.length === 1) return kandidaatGroepen[0];
-  // Als geen starttijd bekend: kies A als standaard
-  if (!huidigItem.starttijd) return "A";
-  const huidigMin = tijdNaarMinuten(huidigItem.starttijd);
-  const ingepland = atleetIngepland[atleetId] || [];
-  // Zoek het programma-onderdeel behorend bij de startgroep
-  // Groep A en B kunnen een andere starttijd hebben: zoek in programma
-  function tijdVanGroep(groep) {
-    const match = programma.find(p => p.type === "technisch" && p.discipline === huidigItem.discipline && p.startgroep === groep);
-    return match ? tijdNaarMinuten(match.starttijd || huidigItem.starttijd) : huidigMin;
-  }
-  // Bereken totale tijdspanne (overlap) per kandidaatgroep
-  let besteGroep = kandidaatGroepen[0];
-  let kleinsteOverlap = Infinity;
-  for (const groep of kandidaatGroepen) {
-    const groepTijd = tijdVanGroep(groep);
-    const overlap = ingepland.reduce((som, ip) => {
-      if (!ip.starttijd) return som;
-      const diff = Math.abs(tijdNaarMinuten(ip.starttijd) - groepTijd);
-      return som + (diff <= 60 ? (60 - diff) : 0); // hoe dichter, hoe meer overlap
-    }, 0);
-    if (overlap < kleinsteOverlap) { kleinsteOverlap = overlap; besteGroep = groep; }
-  }
-  return besteGroep;
-}
+// kiesBestStartgroep verwijderd (niet meer nodig)
+
 
 function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
@@ -2945,7 +2854,7 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+      const maxSlots = isEstafette ? 4 : 1;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
       const kandidaten = atleten
@@ -2984,21 +2893,6 @@ function genereerOpstelling() {
         atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
         if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
         atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
-
-        // Automatische startgroep voor technische onderdelen
-        if (isTechnisch) {
-          const slotKey = `${ploeg}_${idx}_${gevuld}`;
-          // Kijk welke startgroepen al bezet zijn voor dit onderdeel
-          const bezet = [];
-          for (let s2 = 0; s2 < gevuld; s2++) {
-            const sk2 = `${ploeg}_${idx}_${s2}`;
-            if (startgroepData[sk2]) bezet.push(startgroepData[sk2]);
-          }
-          // Bepaal de beste groep op basis van tijdoverlap met andere onderdelen van deze atleet
-          const groepKandidaten = ["A","B"].filter(g => !bezet.includes(g));
-          const gekozenGroep = kiesBestStartgroep(aid, item, groepKandidaten, atleetIngepland);
-          startgroepData[slotKey] = gekozenGroep;
-        }
 
         gevuld++;
       }
@@ -3630,7 +3524,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+        const maxSlots = item.type === "estafette" ? 4 : 1;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3646,17 +3540,13 @@ async function exporteerOpstelling() {
         const geslachtCode = geslacht === "V" ? "V" : "M";
         const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
 
-        // Bepaal startgroep voor deze atleet: zoek het eerste technische onderdeel
-        // waar de atleet is ingedeeld en lees de startgroep uit startgroepData
+        // Startgroep: haal direct uit de programmarij (elke technische rij = 1 groep)
         let startgroepWaarde = "";
         programma.forEach((item, idx) => {
           if (item.type !== "technisch") return;
-          for (let s = 0; s < 2; s++) {
-            if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) {
-              const sg = startgroepData[`${ploeg}_${idx}_${s}`] || "A";
-              const gc = geslacht === "V" ? "V" : "M";
-              if (!startgroepWaarde) startgroepWaarde = `U16-${gc} - Groep ${sg}`;
-            }
+          if (String(opst[`${ploeg}_${idx}_0`]) === atleetId) {
+            const gc = geslacht === "V" ? "V" : "M";
+            if (!startgroepWaarde) startgroepWaarde = `U16-${gc} - Groep ${item.startgroep||"A"}`;
           }
         });
 
@@ -3670,7 +3560,7 @@ async function exporteerOpstelling() {
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
+          const maxSlots = programma[idx].type === "estafette" ? 4 : 1;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
