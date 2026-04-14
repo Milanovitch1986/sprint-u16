@@ -6,32 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+
 ## [april 2026 — patch 4] — 2026-04-13
 
-### ✨ Nieuw: Homepage na inloggen
+### ✨ Nieuw: Light mode en thema-instelling
 
-Na het inloggen komt de gebruiker nu op een homepage terecht in plaats van direct op Atleten.
+**Aanleiding:** AV Sprint Breda huisstijl (zwart, geel, wit) is ook toepasbaar als
+licht thema. Gebruikers kunnen nu kiezen hoe de app er uitziet.
 
-**Bovenste helft:**
-- Officieel AV Sprint Breda logo (SVG, inline, gecentreerd)
+**Wat is toegevoegd:**
+- Volledig licht kleurenschema gebaseerd op de AV Sprint Breda huisstijl
+  (witte achtergrond, lichtgrijze vlakken, zwarte tekst, geel accent)
+- Thema-knop (☀️/🌙) in de header, naast het profielicoon
+- Dropdown met drie opties: 🌙 Donker · ☀️ Licht · ⚙️ Systeem
+- "Systeem" volgt automatisch de dark/light-instelling van het apparaat
+  en reageert ook als de gebruiker die instelling tussentijds wijzigt
+- Keuze wordt opgeslagen in `localStorage` (blijft bewaard na sluiten/herladen)
+- Standaard: Donker (geen gedragsverandering voor bestaande gebruikers)
 
-**Onderste helft:**
-- Releasenotes geladen uit Supabase tabel `releasenotes`
-- Noten ouder dan 1 maand worden automatisch gearchiveerd bij het openen van de pagina
-- Archief is alleen zichtbaar voor de admin (ingeklapt)
-- Admin kan noten toevoegen (versie, type, titel, beschrijving, download-URL) en verwijderen
-
-**Navigatie:**
-- Logo "⚡ Sprint U16" in de header is klikbaar → navigeert terug naar homepage
-
-**Supabase:**
-- Nieuwe tabel `releasenotes` aangemaakt met RLS (lezen voor ingelogde gebruikers, schrijven alleen admin)
-- 4 historische releasenotes ingevoerd via SQL seed
-
-**Bestanden gewijzigd:** `app.html`, `PROJECTNOTITIES.md`, `CHANGELOG.md`
+**Bestanden gewijzigd:** `app.html`
 
 ---
-
 ## [april 2026 — patch 3] — 2026-04-09
 
 ### 🗑️ Verwijderd: 60m uit de app
