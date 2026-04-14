@@ -17,10 +17,16 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 - Print: startgroeplabel verborgen, PR zichtbaar zoals voorheen
 - Vereist in Supabase: `ALTER TABLE programma ADD COLUMN IF NOT EXISTS startgroep text;`
 
-### ✨ Hersteld: light/dark/systeem thema knop
-- Knop in de header om te schakelen tussen 🌙 Donker, ☀️ Licht en 💻 Systeem
-- Bij "Systeem" volgt de app automatisch de voorkeur van het apparaat
+### 🐛 Fix: atleet kon in beide startgroepen van zelfde onderdeel staan
+- Handmatig: atleet die al in Groep A staat, is niet meer kiesbaar voor Groep B van hetzelfde onderdeel (en vice versa) — toont waarschuwing "al in andere startgroep"
+- Automatisch: generator slaat atleet over als die al in een andere startgroep-rij van hetzelfde onderdeel staat
+
+### ✨ Hersteld: light/dark/systeem thema
+- Dropdown in de header om te kiezen tussen 🌙 Donker, ☀️ Licht en 💻 Systeem
+- Bij "Systeem" volgt de app de voorkeur van het apparaat
 - Keuze wordt opgeslagen in `localStorage` en hersteld na herladen
+
+### 🐛 Fix: dubbel profielicoontje verwijderd uit header
 
 ---
 
