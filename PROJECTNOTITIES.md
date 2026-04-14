@@ -11,7 +11,6 @@
 | Hosting | GitHub Pages | Gratis, automatisch via push |
 | Database | Supabase (PostgreSQL) | Gratis tier, ingebouwde auth + RLS |
 | Auth | Supabase Auth + TOTP 2FA | Veilig, verplicht voor alle gebruikers |
-| E-mail | Brevo API via Cloudflare Worker | Uitnodigingen automatisch versturen |
 
 **GitHub repo:** `Milanovitch1986/sprint-u16`
 **Live URL:** `https://milanovitch1986.github.io/sprint-u16/`
@@ -138,3 +137,17 @@ prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
+
+---
+
+## 📋 Release Notes
+
+### Sprint U16 — april 2026 (patch 4)
+
+**🔧 Accordeon-weergave in Prestaties-tab**
+
+De "alle atleten"-weergave in de Prestaties-tab is omgezet naar een inklapbare
+accordeon. Elke atleet heeft een klikbare koptekst; de tabel klapt pas open
+als je erop klikt. De eerste atleet staat standaard open.
+
+**Bestanden gewijzigd:** `app.html`

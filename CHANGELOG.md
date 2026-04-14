@@ -6,56 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 10] — 2026-04-14
+## [april 2026 — patch 4] — 2026-04-14
 
-### ✨ Hersteld: homepage met releasenotes
-- Na inloggen opent de app direct op de homepage
-- Bovenste helft: AV Sprint logo gecentreerd
-- Onderste helft: releasenotes uit Supabase (tabel `releasenotes`)
-- Noten ouder dan 1 maand worden automatisch gearchiveerd
-- Admin kan notes toevoegen en handmatig archiveren
+### 🔧 Verbetering: Accordeon-weergave in Prestaties-tab
 
-### ✨ Hersteld: logo klikbaar → terug naar home
-- Klikken op "⚡ Sprint U16" in de header navigeert terug naar de homepage
+**Probleem:** Bij het overzicht van alle atleten (geen filtersel) werd een lange
+doorlopende lijst getoond met per atleet een volledige prestatietabel. Dit werd
+onleesbaar naarmate meer records werden toegevoegd.
 
-### 🐛 Fix: estafette heeft weer 4 atleetslots
-- `maxSlots` voor estafette was per ongeluk op 1 gezet, nu weer 4
+**Oplossing:** De weergave per atleet is omgezet naar een inklapbare accordeon:
+- Elke atleet heeft een klikbare koptekst met naam en aantal prestaties
+- De tabel is standaard ingeklapt (behalve de eerste atleet, die staat open)
+- Klikken op de koptekst klapt de tabel in of uit (chevron ▼ draait mee)
+- Nieuwe CSS-klassen: `.accordeon-header`, `.accordeon-naam`, `.accordeon-meta`,
+  `.accordeon-chevron`, `.accordeon-body`
+- Nieuwe JS-functie: `toggleAccordeon(id)`
 
----
+**Niet veranderd:**
+- De weergave als je een specifieke atleet filtert (blijft ongewijzigd)
+- De prestatietabel zelf, inclusief PR-badges
 
-
-
-### 🔧 UI fix: programmamodal breder, verwijderknop op één regel
-- Programmamodal vergroot naar 780px breed
-- Grid van programmarij uitgebreid naar 5 kolommen zodat alle elementen (discipline, tijd, type, startgroep, verwijderknop) op één regel staan
-
-### ✨ Print: overzicht per onderdeel toegevoegd
-- Na de teamopstellingen volgt bij afdrukken een tabel met alle onderdelen, starttijden, startgroepen, atleten, teams en PRs
-- Lege onderdelen (geen atleet ingevuld) worden ook getoond
-
----
-
-
-
-### ✨ Hersteld: startgroepen voor technische onderdelen
-- Tijdschema: bij technische onderdelen verschijnt dropdown Groep A / Groep B
-- Startgroep wordt opgeslagen in Supabase en correct weergegeven na herladen
-- Opstelling: elk technisch onderdeel toont label `U16-M - Groep A` (of V/B)
-- Per technische rij precies 1 atleetslot (elke rij = één startgroep op één tijdstip)
-- Excel: kolom F = Startgroep (`U16-M - Groep A` etc.), onderdelen schuiven rechts
-- Print: startgroeplabel verborgen, PR zichtbaar zoals voorheen
-- Vereist in Supabase: `ALTER TABLE programma ADD COLUMN IF NOT EXISTS startgroep text;`
-
-### 🐛 Fix: atleet kon in beide startgroepen van zelfde onderdeel staan
-- Handmatig: atleet die al in Groep A staat, is niet meer kiesbaar voor Groep B van hetzelfde onderdeel (en vice versa) — toont waarschuwing "al in andere startgroep"
-- Automatisch: generator slaat atleet over als die al in een andere startgroep-rij van hetzelfde onderdeel staat
-
-### ✨ Hersteld: light/dark/systeem thema
-- Dropdown in de header om te kiezen tussen 🌙 Donker, ☀️ Licht en 💻 Systeem
-- Bij "Systeem" volgt de app de voorkeur van het apparaat
-- Keuze wordt opgeslagen in `localStorage` en hersteld na herladen
-
-### 🐛 Fix: dubbel profielicoontje verwijderd uit header
+**Bestanden gewijzigd:** `app.html`
 
 ---
 
