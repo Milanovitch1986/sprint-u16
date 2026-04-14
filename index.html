@@ -410,7 +410,7 @@ async function registreer() {
   }
 
   // Registreer
-  const { error } = await sb.auth.signUp({
+  const { data: signUpData, error } = await sb.auth.signUp({
     email, password: ww,
     options: { data: { gebruikersnaam: naam, rol: "trainer" } }
   });
@@ -422,23 +422,28 @@ async function registreer() {
     return;
   }
 
+  // Haal de nieuwe gebruiker op uit de signUp response
+  const nieuweUser = signUpData?.user;
+  if (!nieuweUser) {
+    bezig("reg-btn", false);
+    toonFout("reg-fout", "Registratie mislukt: geen gebruiker ontvangen. Probeer opnieuw.");
+    return;
+  }
+
   // Markeer uitnodiging als gebruikt
   await sb.from("uitnodigingen").update({ gebruikt: true }).eq("token", token);
 
   // Koppel trainer automatisch aan de categorie van de uitnodiging
   try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (user) {
-      await sb.rpc("koppel_trainer_aan_uitnodiging_categorie", {
-        p_trainer_id: user.id,
-        p_token:      token
-      });
-    }
+    await sb.rpc("koppel_trainer_aan_uitnodiging_categorie", {
+      p_trainer_id: nieuweUser.id,
+      p_token:      token
+    });
   } catch(e) { console.warn("Categorie koppeling mislukt:", e.message); }
 
   bezig("reg-btn", false);
 
-  // Start 2FA setup
+  // Start 2FA setup — sessie is nu direct beschikbaar (email confirm staat uit)
   await start2FASetup();
 }
 

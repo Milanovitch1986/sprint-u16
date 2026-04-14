@@ -6,7 +6,24 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 6] — 2026-04-14
+## [april 2026 — patch 7] — 2026-04-14
+
+### 🐛 Fix: registratie + 2FA setup werkt nu correct
+
+**Probleem:**
+Na registratie verscheen de fout "2FA instellen mislukt: invalid claim: missing sub claim".
+Oorzaak: Supabase had e-mailbevestiging aan staan, waardoor er na `signUp()` nog geen
+actieve sessie was. De 2FA setup vereist een sessie, vandaar de fout.
+
+**Oplossing:**
+- E-mailbevestiging uitgezet in Supabase (Authentication → Providers → Email → Confirm email: uit)
+- Registratiecode aangepast: gebruiker wordt nu direct uit de `signUp()` response gehaald
+  in plaats van via een aparte `getUser()` call
+- Categorie-koppeling gebruikt nu direct `signUpData.user.id` (betrouwbaarder)
+
+---
+
+
 
 ### ✨ Nieuw: automatische e-mail bij uitnodiging
 
