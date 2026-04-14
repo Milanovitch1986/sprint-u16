@@ -615,8 +615,8 @@
   /* ── Programma modal rijen ── */
   .programma-rij {
     display: grid;
-    grid-template-columns: 1fr 100px 80px 36px;
-    gap: 8px; align-items: center;
+    grid-template-columns: 1fr 110px 60px 90px 36px;
+    gap: 6px; align-items: center;
     margin-bottom: 8px;
   }
   .programma-rij select, .programma-rij input {
@@ -659,6 +659,9 @@
     .programma-type-col { display: none !important; }
     .programma-duur-col { display: none !important; }
     .detail-panel { break-inside: avoid; }
+    #print-view { display: block !important; }
+    #print-view table { width: 100%; border-collapse: collapse; }
+    #print-view td, #print-view th { border: 1px solid #ccc; padding: 5px 10px; font-size: 11px; }
   }
 
   .profiel-input {
@@ -1057,7 +1060,7 @@
 
 <!-- ── PROGRAMMA MODAL ── -->
 <div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
-  <div class="modal" style="max-width:640px;max-height:80vh;overflow-y:auto;">
+  <div class="modal" style="max-width:780px;max-height:80vh;overflow-y:auto;width:95vw;">
     <div class="modal-title">Wedstrijdprogramma</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="programma-modal-sub"></div>
 
@@ -2526,7 +2529,7 @@ function addProgrammaRijMet(p) {
       ${discOpties}
     </select>
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
-    <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
+    <span class="pr-type" style="font-size:11px;color:var(--muted);text-align:center;">${p.type||"loop"}</span>
     <select class="pr-groep" style="display:${isTechnisch ? "" : "none"};font-size:12px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;">
       <option value="A" ${p.startgroep === "A" || !p.startgroep ? "selected" : ""}>Groep A</option>
       <option value="B" ${p.startgroep === "B" ? "selected" : ""}>Groep B</option>
@@ -2982,7 +2985,82 @@ async function opslaanOpstelling() {
 
 // ── Afdrukken ─────────────────────────────────────────────────
 function printOpstelling() {
+  // Bouw overzicht per onderdeel
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  const wedstrijdNaam = wedstrijd ? wedstrijd.naam : "";
+
+  // Per onderdeel: welke atleten per ploeg
+  let overzichtHtml = `
+    <div style="page-break-before:always;font-family:Arial,sans-serif;font-size:12px;color:black;">
+      <h2 style="font-size:16px;margin-bottom:4px;">Overzicht per onderdeel — ${wedstrijdNaam}</h2>
+      <div style="font-size:11px;color:#666;margin-bottom:16px;">AV Sprint U16-${geslachtCode}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f0f0f0;">
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Onderdeel</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Starttijd</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Startgroep</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Atleet</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Team</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">PR</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  programma.forEach((item, idx) => {
+    const startgroepLabel = item.type === "technisch" && item.startgroep
+      ? `U16-${geslachtCode} - Groep ${item.startgroep}` : "—";
+
+    let atleetRijen = [];
+    ploegNamen.forEach(ploeg => {
+      const opst = opstellingData[ploeg] || {};
+      const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
+      const teamNaam = `Team ${ploegNr}`;
+      // 1 slot voor technisch, 1 voor estafette, 3 voor loop
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
+      for (let s = 0; s < maxSlots; s++) {
+        const aid = opst[`${ploeg}_${idx}_${s}`];
+        if (!aid) continue;
+        const atleet = atleten.find(a => String(a.id) === String(aid));
+        if (!atleet || atleet.geslacht !== actiefGeslacht) continue;
+        const pr = bestePrestatie(atleet.id, item.discipline);
+        atleetRijen.push({ atleet, teamNaam, pr });
+      }
+    });
+
+    if (!atleetRijen.length) {
+      overzichtHtml += `<tr>
+        <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;">${esc(item.discipline)}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;">${item.starttijd || "—"}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;">${startgroepLabel}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;color:#999;" colspan="3">— geen atleet —</td>
+      </tr>`;
+    } else {
+      atleetRijen.forEach((r, i) => {
+        overzichtHtml += `<tr style="${i % 2 === 0 ? "" : "background:#fafafa"}">
+          ${i === 0 ? `<td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;" rowspan="${atleetRijen.length}">${esc(item.discipline)}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${item.starttijd || "—"}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${startgroepLabel}</td>` : ""}
+          <td style="padding:5px 10px;border:1px solid #ddd;">${esc(r.atleet.naam)}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;">${r.teamNaam}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;">${r.pr ? r.pr.resultaat : "—"}</td>
+        </tr>`;
+      });
+    }
+  });
+
+  overzichtHtml += `</tbody></table></div>`;
+
+  document.getElementById("print-view").innerHTML = overzichtHtml;
+  document.getElementById("print-view").style.display = "";
   window.print();
+  // Verberg print-view weer na afdrukken
+  setTimeout(() => {
+    document.getElementById("print-view").style.display = "none";
+    document.getElementById("print-view").innerHTML = "";
+  }, 1000);
 }
 
 // ── Atletiek.nu integratie ────────────────────────────────────

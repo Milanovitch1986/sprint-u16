@@ -6,7 +6,19 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 8] — 2026-04-14
+## [april 2026 — patch 9] — 2026-04-14
+
+### 🔧 UI fix: programmamodal breder, verwijderknop op één regel
+- Programmamodal vergroot naar 780px breed
+- Grid van programmarij uitgebreid naar 5 kolommen zodat alle elementen (discipline, tijd, type, startgroep, verwijderknop) op één regel staan
+
+### ✨ Print: overzicht per onderdeel toegevoegd
+- Na de teamopstellingen volgt bij afdrukken een tabel met alle onderdelen, starttijden, startgroepen, atleten, teams en PRs
+- Lege onderdelen (geen atleet ingevuld) worden ook getoond
+
+---
+
+
 
 ### ✨ Hersteld: startgroepen voor technische onderdelen
 - Tijdschema: bij technische onderdelen verschijnt dropdown Groep A / Groep B
