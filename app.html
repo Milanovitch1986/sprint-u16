@@ -19,6 +19,35 @@
     --radius:    10px;
   }
 
+  /* ── Light mode ── */
+  [data-theme="light"] {
+    --bg:        #f4f6fb;
+    --surface:   #ffffff;
+    --surface2:  #eef1f7;
+    --border:    #d1d8e8;
+    --accent:    #d4880a;
+    --accent2:   #e8383d;
+    --text:      #111318;
+    --muted:     #5a6478;
+    --success:   #16a34a;
+  }
+
+  /* ── Theme knop ── */
+  .theme-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .theme-btn:hover { border-color: var(--accent); }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -620,8 +649,8 @@
   /* ── Programma modal rijen ── */
   .programma-rij {
     display: grid;
-    grid-template-columns: 1fr 100px 80px 36px;
-    gap: 8px; align-items: center;
+    grid-template-columns: 1fr 110px 60px 90px 36px;
+    gap: 6px; align-items: center;
     margin-bottom: 8px;
   }
   .programma-rij select, .programma-rij input {
@@ -631,6 +660,52 @@
     width: 100%;
   }
   .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
+
+  /* ── Homepage ── */
+  .home-logo-sectie {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px 40px;
+    min-height: 45vh;
+    border-bottom: 1px solid var(--border);
+  }
+  .home-logo-svg {
+    width: min(400px, 80vw);
+    height: auto;
+  }
+  .home-notes-sectie {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .note-kaart {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .note-kaart-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .note-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+  }
+  .note-badge.bugfix { background: var(--accent2)22; color: var(--accent2); border-color: var(--accent2)44; }
+  .note-badge.update { background: var(--success)22; color: var(--success); border-color: var(--success)44; }
+  .note-badge.removed { background: var(--muted)22; color: var(--muted); border-color: var(--muted)44; }
 
   /* ── Wedstrijd kaart ── */
   .wedstrijd-card {
@@ -658,10 +733,15 @@
     .onderdeel-rij { border-bottom: 1px solid #eee; break-inside: avoid; }
     .atleet-slot { border: 1px solid #ccc; }
     .slot-punten { display: none !important; }
+    .slot-punten.print-only { display: inline !important; }
+    .startgroep-label { display: none !important; }
     .onderdeel-duur { display: none !important; }
     .programma-type-col { display: none !important; }
     .programma-duur-col { display: none !important; }
     .detail-panel { break-inside: avoid; }
+    #print-view { display: block !important; }
+    #print-view table { width: 100%; border-collapse: collapse; }
+    #print-view td, #print-view th { border: 1px solid #ccc; padding: 5px 10px; font-size: 11px; }
   }
 
   .profiel-input {
@@ -692,10 +772,11 @@
 <body>
 
 <header>
-  <div class="logo">⚡ Sprint <span id="logo-cat">U16</span></div>
+  <div class="logo" onclick="showTab('home')" style="cursor:pointer;">⚡ Sprint <span id="logo-cat">U16</span></div>
   <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
-    <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
+    <button id="tab-home" onclick="showTab('home')">🏠 Home</button>
+    <button id="tab-atleten" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
@@ -708,11 +789,83 @@
       <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
     </svg>
   </button>
-  <button class="sync-btn" onclick="showTab('profiel')" title="Profiel" id="profiel-btn" style="font-size:16px;">👤</button>
+  <div style="position:relative;display:inline-block;">
+    <button class="theme-btn" onclick="toggleThemeMenu()" id="theme-btn" title="Kleurschema wisselen">🌙 Donker ▾</button>
+    <div id="theme-menu" style="display:none;position:absolute;right:0;top:36px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);min-width:140px;z-index:200;box-shadow:0 4px 16px #0006;overflow:hidden;">
+      <div onclick="kiesTheme('dark')"  style="padding:10px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">🌙 Donker</div>
+      <div onclick="kiesTheme('light')" style="padding:10px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">☀️ Licht</div>
+      <div onclick="kiesTheme('system')" style="padding:10px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">💻 Systeem</div>
+    </div>
+  </div>
   <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
 </header>
 
 <main>
+  <!-- HOME TAB -->
+  <div id="view-home" style="display:none;">
+    <!-- Logo sectie -->
+    <div class="home-logo-sectie">
+      <svg class="home-logo-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="276" height="36.629" viewBox="0 0 276 36.629">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rectangle_1521" data-name="Rectangle 1521" width="276" height="36.629" fill="none"/>
+    </clipPath>
+  </defs>
+  <g id="Group_662" data-name="Group 662" transform="translate(0 0)">
+    <rect id="Rectangle_1505" data-name="Rectangle 1505" width="37.346" height="36.628" transform="translate(119.258 0.001)" fill="#1a1818"/>
+    <rect id="Rectangle_1506" data-name="Rectangle 1506" width="37.346" height="36.628" transform="translate(0 0.001)" fill="#1a1818"/>
+    <rect id="Rectangle_1507" data-name="Rectangle 1507" width="37.346" height="36.628" transform="translate(39.753 0.001)" fill="#1a1818"/>
+    <rect id="Rectangle_1508" data-name="Rectangle 1508" width="37.346" height="36.628" transform="translate(79.506 0.001)" fill="#1a1818"/>
+    <rect id="Rectangle_1509" data-name="Rectangle 1509" width="37.346" height="36.628" transform="translate(159.012 0.001)" fill="#1a1818"/>
+    <rect id="Rectangle_1510" data-name="Rectangle 1510" width="37.347" height="36.628" transform="translate(198.763 0.001)" fill="#1a1818"/>
+    <g id="Group_470" data-name="Group 470" transform="translate(0 0)">
+      <g id="Group_469" data-name="Group 469" clip-path="url(#clip-path)">
+        <path id="Path_898" data-name="Path 898" d="M26.425,15.452c-.162-2.027-.949-3.082-3.609-3.407V7.891c2,.034,4.824.483,6.661,2.285a8.043,8.043,0,0,1,2.1,4.891Zm-7.051,5.858c-2.069-.548-6.364-1.7-6.364-6.625a6.112,6.112,0,0,1,3.74-5.8,12.245,12.245,0,0,1,5.181-.995v4.118c-.953,0-3.639.068-3.639,2.25,0,1.514,1.243,1.9,2.753,2.288l3.547.8c3.147.774,7.344,1.836,7.344,6.981,0,5.026-4,7.243-9.088,7.339V27.388c.561-.03,3.78-.124,3.78-2.57,0-1.709-1.547-2.158-2.6-2.446ZM21.965,31.7c-4.988,0-9.415-1.834-9.678-7.754l5.183-.286c.132,1.542.524,3.408,4.461,3.762Z" transform="translate(-2.977 -1.912)" fill="#ffd400"/>
+        <path id="Path_899" data-name="Path 899" d="M71.979,24.548V20.333h1.675a9.038,9.038,0,0,0,2.888-.255,3.181,3.181,0,0,0,2.1-3.093,3.03,3.03,0,0,0-1.117-2.413c-.918-.677-1.772-.7-3.314-.739H71.979V9.686h2.49c2.363.03,4.758.063,6.662,1.443a7.189,7.189,0,0,1,2.69,6.049A7.261,7.261,0,0,1,80.9,23.2c-1.742,1.19-3.479,1.253-6.3,1.351Zm-6.1-14.862h5.252V32.4H65.874Z" transform="translate(-15.96 -2.347)" fill="#ffd400"/>
+        <path id="Path_900" data-name="Path 900" d="M124.165,24.033v-4.12h2.394c1.8,0,4.724-.032,4.724-3.182,0-2.836-2.527-2.766-4.2-2.766h-2.916V9.683h3.7c2.235.033,4.4.067,6.2,1.353a5.875,5.875,0,0,1,2.3,4.921c0,3.539-2.2,5.243-4.135,5.5a3.7,3.7,0,0,1,2.462,1.8c.494.868.56,1.253,1.115,4.662a9.41,9.41,0,0,0,1.674,4.473h-5.513a7.785,7.785,0,0,1-1.145-3.151c-.167-.807-.231-1.672-.4-2.478-.522-2.546-1.741-2.735-3.806-2.735Zm-6.071-14.35h5.215V32.4h-5.215Z" transform="translate(-28.612 -2.346)" fill="#ffd400"/>
+        <rect id="Rectangle_1511" data-name="Rectangle 1511" width="5.216" height="22.714" transform="translate(135.769 7.337)" fill="#ffd400"/>
+        <path id="Path_901" data-name="Path 901" d="M236.386,9.683h5.182V30.726l-4.987-8.236ZM222.74,32.4V11.2l4.987,8.2.23,13Zm0-22.714h5.018L241.568,32.4h-4.919Z" transform="translate(-53.966 -2.346)" fill="#ffd400"/>
+        <path id="Path_902" data-name="Path 902" d="M287.713,9.683h6.1v4.211h-6.1Zm-6.1,0h5.25V32.4h-5.25Zm-6.889,0h6.07v4.211h-6.07Z" transform="translate(-66.56 -2.346)" fill="#ffd400"/>
+        <rect id="Rectangle_1512" data-name="Rectangle 1512" width="37.346" height="36.628" transform="translate(238.653)" fill="#e82717"/>
+        <path id="Path_903" data-name="Path 903" d="M321.05,17.216l3.694-3.626L321.05,9.965l2.463-2.422,3.7,3.626,3.7-3.626,2.467,2.422-3.7,3.626,3.7,3.626-2.467,2.414-3.7-3.625-3.7,3.625Z" transform="translate(-77.784 -1.828)" fill="#fff"/>
+        <rect id="Rectangle_1513" data-name="Rectangle 1513" width="37.346" height="36.628" transform="translate(119.258 0.001)" fill="#1a1818"/>
+        <rect id="Rectangle_1514" data-name="Rectangle 1514" width="37.346" height="36.628" transform="translate(0 0.001)" fill="#1a1818"/>
+        <rect id="Rectangle_1515" data-name="Rectangle 1515" width="37.346" height="36.628" transform="translate(39.753 0.001)" fill="#1a1818"/>
+        <rect id="Rectangle_1516" data-name="Rectangle 1516" width="37.346" height="36.628" transform="translate(79.506 0.001)" fill="#1a1818"/>
+        <rect id="Rectangle_1517" data-name="Rectangle 1517" width="37.346" height="36.628" transform="translate(159.012 0.001)" fill="#1a1818"/>
+        <rect id="Rectangle_1518" data-name="Rectangle 1518" width="37.347" height="36.628" transform="translate(198.763 0.001)" fill="#1a1818"/>
+        <path id="Path_904" data-name="Path 904" d="M26.425,15.452c-.162-2.027-.949-3.082-3.609-3.407V7.891c2,.034,4.824.483,6.661,2.285a8.043,8.043,0,0,1,2.1,4.891Zm-7.051,5.858c-2.069-.548-6.364-1.7-6.364-6.625a6.112,6.112,0,0,1,3.74-5.8,12.245,12.245,0,0,1,5.181-.995v4.118c-.953,0-3.639.068-3.639,2.25,0,1.514,1.243,1.9,2.753,2.288l3.547.8c3.147.774,7.344,1.836,7.344,6.981,0,5.026-4,7.243-9.088,7.339V27.388c.561-.03,3.78-.124,3.78-2.57,0-1.709-1.547-2.158-2.6-2.446ZM21.965,31.7c-4.988,0-9.415-1.834-9.678-7.754l5.183-.286c.132,1.542.524,3.408,4.461,3.762Z" transform="translate(-2.977 -1.912)" fill="#ffd400"/>
+        <path id="Path_905" data-name="Path 905" d="M71.979,24.548V20.333h1.675a9.038,9.038,0,0,0,2.888-.255,3.181,3.181,0,0,0,2.1-3.093,3.03,3.03,0,0,0-1.117-2.413c-.918-.677-1.772-.7-3.314-.739H71.979V9.686h2.49c2.363.03,4.758.063,6.662,1.443a7.189,7.189,0,0,1,2.69,6.049A7.261,7.261,0,0,1,80.9,23.2c-1.742,1.19-3.479,1.253-6.3,1.351Zm-6.1-14.862h5.252V32.4H65.874Z" transform="translate(-15.96 -2.347)" fill="#ffd400"/>
+        <path id="Path_906" data-name="Path 906" d="M124.165,24.033v-4.12h2.394c1.8,0,4.724-.032,4.724-3.182,0-2.836-2.527-2.766-4.2-2.766h-2.916V9.683h3.7c2.235.033,4.4.067,6.2,1.353a5.875,5.875,0,0,1,2.3,4.921c0,3.539-2.2,5.243-4.135,5.5a3.7,3.7,0,0,1,2.462,1.8c.494.868.56,1.253,1.115,4.662a9.41,9.41,0,0,0,1.674,4.473h-5.513a7.785,7.785,0,0,1-1.145-3.151c-.167-.807-.231-1.672-.4-2.478-.522-2.546-1.741-2.735-3.806-2.735Zm-6.071-14.35h5.215V32.4h-5.215Z" transform="translate(-28.612 -2.346)" fill="#ffd400"/>
+        <rect id="Rectangle_1519" data-name="Rectangle 1519" width="5.216" height="22.714" transform="translate(135.769 7.337)" fill="#ffd400"/>
+        <path id="Path_907" data-name="Path 907" d="M236.386,9.683h5.182V30.726l-4.987-8.236ZM222.74,32.4V11.2l4.987,8.2.23,13Zm0-22.714h5.018L241.568,32.4h-4.919Z" transform="translate(-53.966 -2.346)" fill="#ffd400"/>
+        <path id="Path_908" data-name="Path 908" d="M287.713,9.683h6.1v4.211h-6.1Zm-6.1,0h5.25V32.4h-5.25Zm-6.889,0h6.07v4.211h-6.07Z" transform="translate(-66.56 -2.346)" fill="#ffd400"/>
+        <rect id="Rectangle_1520" data-name="Rectangle 1520" width="37.346" height="36.628" transform="translate(238.653)" fill="#e82717"/>
+        <path id="Path_909" data-name="Path 909" d="M332.056,36.442l3.694-3.628-3.694-3.628,2.463-2.419,3.7,3.631,3.7-3.631,2.465,2.419-3.7,3.628,3.7,3.628-2.465,2.413-3.7-3.62-3.7,3.62Z" transform="translate(-80.451 -6.485)" fill="#fff"/>
+        <path id="Path_910" data-name="Path 910" d="M342.492,16.733l3.694-3.623L342.492,9.48l2.461-2.413,3.7,3.624,3.7-3.624,2.466,2.413-3.7,3.631,3.7,3.623-2.466,2.419-3.7-3.624-3.7,3.624Z" transform="translate(-82.979 -1.712)" fill="#fff"/>
+        <path id="Path_911" data-name="Path 911" d="M321.05,17.216l3.694-3.626L321.05,9.965l2.463-2.422,3.7,3.626,3.7-3.626,2.467,2.422-3.7,3.626,3.7,3.626-2.467,2.414-3.7-3.625-3.7,3.625Z" transform="translate(-77.784 -1.828)" fill="#fff"/>
+      </g>
+    </g>
+  </g>
+</svg>
+      <div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Atletiekbeheertool · U16</div>
+    </div>
+
+    <!-- Releasenotes sectie -->
+    <div class="home-notes-sectie">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;">📋 Releasenotes</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" id="btn-archief" style="display:none;" onclick="toggleArchief()">📦 Archief</button>
+          <button class="btn btn-primary btn-sm" id="btn-note-toevoegen" style="display:none;" onclick="openNoteModal()">+ Toevoegen</button>
+        </div>
+      </div>
+      <div id="releasenotes-lijst">
+        <div style="color:var(--muted);font-size:13px;">Laden…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ATLETEN TAB -->
   <div id="view-atleten">
     <div class="page-header">
@@ -1053,7 +1206,7 @@
 
 <!-- ── PROGRAMMA MODAL ── -->
 <div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
-  <div class="modal" style="max-width:640px;max-height:80vh;overflow-y:auto;">
+  <div class="modal" style="max-width:780px;max-height:80vh;overflow-y:auto;width:95vw;">
     <div class="modal-title">Wedstrijdprogramma</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="programma-modal-sub"></div>
 
@@ -1133,6 +1286,29 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="confirmNee">Annuleren</button>
       <button class="btn btn-primary" id="confirmJa">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- RELEASENOTE MODAL -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-title">Releasenote toevoegen</div>
+    <div class="field"><label>Versie</label><input type="text" id="note-versie" placeholder="bijv. april 2026 — patch 9"></div>
+    <div class="field"><label>Titel</label><input type="text" id="note-titel" placeholder="bijv. Startgroepen hersteld"></div>
+    <div class="field">
+      <label>Type</label>
+      <select id="note-type" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;width:100%;font-size:13px;">
+        <option value="feature">✨ Nieuwe feature</option>
+        <option value="bugfix">🐛 Bugfix</option>
+        <option value="update">🔧 Verbetering</option>
+        <option value="removed">🗑️ Verwijderd</option>
+      </select>
+    </div>
+    <div class="field"><label>Beschrijving</label><textarea id="note-beschrijving" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:'Barlow',sans-serif;font-size:13px;resize:vertical;" placeholder="Wat is er veranderd?"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('noteModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="slaaNoteOp()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -1286,16 +1462,17 @@ async function syncAll() {
 
 // ── Tabs ──────────────────────────────────────────────────────
 function showTab(tab) {
-  ["atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
+  ["home","atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
     const el = document.getElementById("view-" + t);
     if (el) el.style.display = t === tab ? "" : "none";
     const tb = document.getElementById("tab-" + t);
     if (tb) tb.classList.toggle("active", t === tab);
   });
-  if (tab === "prestaties")   populateAtleetSelects();
-  if (tab === "wedstrijden")  renderWedstrijden();
-  if (tab === "opstelling")   renderOpstellingWedstrijden();
-  if (tab === "admin")        laadAdmin();
+  if (tab === "home")        laadReleasenotes();
+  if (tab === "prestaties")  populateAtleetSelects();
+  if (tab === "wedstrijden") renderWedstrijden();
+  if (tab === "opstelling")  renderOpstellingWedstrijden();
+  if (tab === "admin")       laadAdmin();
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────
@@ -1450,7 +1627,6 @@ function renderPrestaties() {
       const atl  = atleten.find(a => String(a.id) === aid);
       const naam = atl ? esc(atl.naam) : "Onbekend";
       const accId = `acc-${aid}`;
-      // Eerste atleet standaard open, rest dicht
       const openClass = idx === 0 ? "open" : "";
       return `<div class="detail-panel" style="margin-bottom:8px;">
         <div class="accordeon-header" onclick="toggleAccordeon('${accId}')">
@@ -1477,6 +1653,16 @@ function renderPrestaties() {
       ${renderPrestatieTable(list, true)}
     </div>`;
   }
+}
+
+// ── Accordeon toggle (prestaties overzicht) ──────────────────
+function toggleAccordeon(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById("chev-" + id);
+  if (!body) return;
+  const isOpen = body.classList.contains("open");
+  body.classList.toggle("open", !isOpen);
+  if (chev) chev.classList.toggle("open", !isOpen);
 }
 
 function renderPrestatieTable(rows, showPR = false) {
@@ -1513,16 +1699,6 @@ function renderPrestatieTable(rows, showPR = false) {
       }).join("")}
     </tbody>
   </table></div>`;
-}
-
-// ── Accordeon toggle (prestaties overzicht) ──────────────────
-function toggleAccordeon(id) {
-  const body = document.getElementById(id);
-  const chev = document.getElementById("chev-" + id);
-  if (!body) return;
-  const isOpen = body.classList.contains("open");
-  body.classList.toggle("open", !isOpen);
-  if (chev) chev.classList.toggle("open", !isOpen);
 }
 
 // ── Atleet Modal ──────────────────────────────────────────────
@@ -2503,6 +2679,7 @@ function renderProgrammaOverzicht() {
         <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
         <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
         <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.type === "technisch" ? (p.startgroep ? "Groep " + p.startgroep : "—") : ""}</td>
       </tr>`).join("")}
     </tbody>
   </table></div>`;
@@ -2536,21 +2713,33 @@ function addProgrammaRijMet(p) {
   const discOpties = U16_DISCIPLINES.map(d =>
     `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
   ).join("");
+  const isTechnisch = p.type === "technisch";
   div.innerHTML = `
     <select class="pr-disc" onchange="updateProgrammaType(this)">
       ${discOpties}
     </select>
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
-    <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
+    <span class="pr-type" style="font-size:11px;color:var(--muted);text-align:center;">${p.type||"loop"}</span>
+    <select class="pr-groep" style="display:${isTechnisch ? "" : "none"};font-size:12px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;">
+      <option value="A" ${p.startgroep === "A" || !p.startgroep ? "selected" : ""}>Groep A</option>
+      <option value="B" ${p.startgroep === "B" ? "selected" : ""}>Groep B</option>
+    </select>
     <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
   `;
   lijst.appendChild(div);
+  // Zet de waarde programmatisch voor betrouwbare weergave
+  if (isTechnisch && p.startgroep) {
+    div.querySelector(".pr-groep").value = p.startgroep;
+  }
 }
 
 function updateProgrammaType(sel) {
   const rij = sel.parentElement;
   const disc = U16_DISCIPLINES.find(d => d.naam === sel.value);
-  rij.querySelector(".pr-type").textContent = disc ? disc.type : "";
+  const type = disc ? disc.type : "loop";
+  rij.querySelector(".pr-type").textContent = type;
+  const groepSel = rij.querySelector(".pr-groep");
+  groepSel.style.display = type === "technisch" ? "" : "none";
 }
 
 async function saveProgrammaModal() {
@@ -2560,8 +2749,11 @@ async function saveProgrammaModal() {
   rijen.forEach(rij => {
     const disc = rij.querySelector(".pr-disc").value;
     const tijd = rij.querySelector(".pr-tijd").value;
+    const groepSel = rij.querySelector(".pr-groep");
     const d = U16_DISCIPLINES.find(x => x.naam === disc);
-    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd || null });
+    const type = d ? d.type : "loop";
+    const startgroep = (type === "technisch" && groepSel) ? groepSel.value : null;
+    items.push({ discipline: disc, type, starttijd: tijd || null, startgroep });
   });
   try {
     // Verwijder bestaande programmarijen voor deze wedstrijd/geslacht combo
@@ -2580,7 +2772,8 @@ async function saveProgrammaModal() {
         discipline:   item.discipline,
         type:         item.type,
         starttijd:    item.starttijd,
-        duur:         item.duur
+        duur:         item.duur,
+        startgroep:   item.startgroep || null
       }));
       const { error: insErr } = await sb.from("programma").insert(rows);
       if (insErr) throw insErr;
@@ -2620,9 +2813,13 @@ function renderPloeg(ploeg) {
     const isLoop      = item.type === "loop";
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
-    const maxSlots = isTechnisch ? 2 : 3;
-    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
-    const slots = isEstafette ? 1 : maxSlots;
+    // Technisch: elke rij IS al één startgroep → 1 slot; estafette: 4 lopers
+    const slots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+
+    const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+    const startgroepLabel = isTechnisch && item.startgroep
+      ? `U16-${geslachtCode} - Groep ${item.startgroep}`
+      : "";
 
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
@@ -2646,7 +2843,8 @@ function renderPloeg(ploeg) {
         <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
              onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
           <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
-          ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
+          ${prTekst ? `<span class="slot-punten print-hide">${prTekst}</span>` : ""}
+          ${prTekst ? `<span class="slot-punten print-only" style="display:none;">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
           ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
         </div>`;
@@ -2657,6 +2855,7 @@ function renderPloeg(ploeg) {
         <div>
           <div class="onderdeel-naam">${esc(item.discipline)}</div>
           <div class="onderdeel-tijd">${item.starttijd || "—"}</div>
+          ${startgroepLabel ? `<div class="startgroep-label print-hide" style="font-size:11px;color:var(--accent);margin-top:2px;">${startgroepLabel}</div>` : ""}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
         <div style="grid-column:3;"></div>
@@ -2687,7 +2886,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2715,7 +2914,7 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
     }
@@ -2744,14 +2943,16 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
       const aantalOnderdelen = telOnderdelenAtleet(ploeg, opst, a.id);
       const conflict = checkConflict(ploeg, opst, idx, a.id, item);
       const andereP = zitInAnderePloeg(ploeg, a.id);
-      return { atleet: a, pr, pts, aantalOnderdelen, conflict, andereP };
+      // Check: atleet al in andere startgroep van hetzelfde onderdeel
+      const andereGroep = item.type === "technisch" && zitInAndereStartgroep(ploeg, opst, idx, String(a.id));
+      return { atleet: a, pr, pts, aantalOnderdelen, conflict, andereP, andereGroep };
     })
     .sort((a, b) => b.pts - a.pts);
 
   div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
     kandidaten.map(k => {
-      const dimmed = k.aantalOnderdelen >= 3 || k.conflict || k.andereP;
-      const waarsch = k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      const dimmed = k.aantalOnderdelen >= 3 || k.conflict || k.andereP || k.andereGroep;
+      const waarsch = k.andereGroep ? "al in andere startgroep" : k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
       return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
         onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
@@ -2785,8 +2986,29 @@ function filterSlotKeuze(input) {
   });
 }
 
+// Controleer of atleet al in een andere rij van hetzelfde technische onderdeel zit
+function zitInAndereStartgroep(ploeg, opst, huidigIdx, atleetId) {
+  const huidigDisc = programma[huidigIdx]?.discipline;
+  if (!huidigDisc) return false;
+  return programma.some((item, idx) => {
+    if (idx === huidigIdx) return false;
+    if (item.discipline !== huidigDisc) return false;
+    if (item.type !== "technisch") return false;
+    return String(opst[`${ploeg}_${idx}_0`]) === atleetId;
+  });
+}
+
 function kiesAtleet(ploeg, idx, slotNr, atleetId) {
   if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+  // Blokkeer als atleet al in andere startgroep van hetzelfde onderdeel zit
+  if (atleetId && programma[idx]?.type === "technisch") {
+    const opst = opstellingData[ploeg];
+    if (zitInAndereStartgroep(ploeg, opst, idx, String(atleetId))) {
+      toast("Deze atleet staat al in de andere startgroep van dit onderdeel", "err");
+      document.querySelectorAll(".slot-select").forEach(d => d.remove());
+      return;
+    }
+  }
   const slotKey = `${ploeg}_${idx}_${slotNr}`;
   opstellingData[ploeg][slotKey] = atleetId;
   document.querySelectorAll(".slot-select").forEach(d => d.remove());
@@ -2873,7 +3095,7 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
       const kandidaten = atleten
@@ -2895,6 +3117,16 @@ function genereerOpstelling() {
 
         // Regel: max 3 onderdelen
         if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
+
+        // Regel: bij technisch niet in twee rijen van hetzelfde onderdeel
+        if (isTechnisch) {
+          const al = programma.some((ander, andIdx) => {
+            if (andIdx === idx) return false;
+            if (ander.discipline !== item.discipline || ander.type !== "technisch") return false;
+            return String(opstellingData[ploeg][`${ploeg}_${andIdx}_0`]) === aid;
+          });
+          if (al) continue;
+        }
 
         // Regel: geen tijdconflict binnen 15 min
         if (item.starttijd) {
@@ -2943,7 +3175,82 @@ async function opslaanOpstelling() {
 
 // ── Afdrukken ─────────────────────────────────────────────────
 function printOpstelling() {
+  // Bouw overzicht per onderdeel
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  const wedstrijdNaam = wedstrijd ? wedstrijd.naam : "";
+
+  // Per onderdeel: welke atleten per ploeg
+  let overzichtHtml = `
+    <div style="page-break-before:always;font-family:Arial,sans-serif;font-size:12px;color:black;">
+      <h2 style="font-size:16px;margin-bottom:4px;">Overzicht per onderdeel — ${wedstrijdNaam}</h2>
+      <div style="font-size:11px;color:#666;margin-bottom:16px;">AV Sprint U16-${geslachtCode}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f0f0f0;">
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Onderdeel</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Starttijd</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Startgroep</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Atleet</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Team</th>
+            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">PR</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  programma.forEach((item, idx) => {
+    const startgroepLabel = item.type === "technisch" && item.startgroep
+      ? `U16-${geslachtCode} - Groep ${item.startgroep}` : "—";
+
+    let atleetRijen = [];
+    ploegNamen.forEach(ploeg => {
+      const opst = opstellingData[ploeg] || {};
+      const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
+      const teamNaam = `Team ${ploegNr}`;
+      // 1 slot voor technisch, 1 voor estafette, 3 voor loop
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+      for (let s = 0; s < maxSlots; s++) {
+        const aid = opst[`${ploeg}_${idx}_${s}`];
+        if (!aid) continue;
+        const atleet = atleten.find(a => String(a.id) === String(aid));
+        if (!atleet || atleet.geslacht !== actiefGeslacht) continue;
+        const pr = bestePrestatie(atleet.id, item.discipline);
+        atleetRijen.push({ atleet, teamNaam, pr });
+      }
+    });
+
+    if (!atleetRijen.length) {
+      overzichtHtml += `<tr>
+        <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;">${esc(item.discipline)}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;">${item.starttijd || "—"}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;">${startgroepLabel}</td>
+        <td style="padding:5px 10px;border:1px solid #ddd;color:#999;" colspan="3">— geen atleet —</td>
+      </tr>`;
+    } else {
+      atleetRijen.forEach((r, i) => {
+        overzichtHtml += `<tr style="${i % 2 === 0 ? "" : "background:#fafafa"}">
+          ${i === 0 ? `<td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;" rowspan="${atleetRijen.length}">${esc(item.discipline)}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${item.starttijd || "—"}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${startgroepLabel}</td>` : ""}
+          <td style="padding:5px 10px;border:1px solid #ddd;">${esc(r.atleet.naam)}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;">${r.teamNaam}</td>
+          <td style="padding:5px 10px;border:1px solid #ddd;">${r.pr ? r.pr.resultaat : "—"}</td>
+        </tr>`;
+      });
+    }
+  });
+
+  overzichtHtml += `</tbody></table></div>`;
+
+  document.getElementById("print-view").innerHTML = overzichtHtml;
+  document.getElementById("print-view").style.display = "";
   window.print();
+  // Verberg print-view weer na afdrukken
+  setTimeout(() => {
+    document.getElementById("print-view").style.display = "none";
+    document.getElementById("print-view").innerHTML = "";
+  }, 1000);
 }
 
 // ── Atletiek.nu integratie ────────────────────────────────────
@@ -3534,7 +3841,7 @@ async function exporteerOpstelling() {
     const rijen = [];
 
     // Headerrij
-    rijen.push(["Naam", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", ...disciplines]);
+    rijen.push(["Naam", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", "Startgroep", ...disciplines]);
 
     for (const ploeg of ploegNamen) {
       const opst = opstellingData[ploeg] || {};
@@ -3542,7 +3849,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+        const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3558,16 +3865,29 @@ async function exporteerOpstelling() {
         const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
         const geslachtCode = geslacht === "V" ? "V" : "M";
         const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
+
+        // Bepaal startgroep: zoek de eerste technische rij waaraan deze atleet deelneemt
+        let startgroepWaarde = "";
+        programma.forEach((pItem, pIdx) => {
+          if (pItem.type === "technisch" && pItem.startgroep) {
+            if (String(opst[`${ploeg}_${pIdx}_0`]) === atleetId) {
+              const gc = geslacht === "V" ? "V" : "M";
+              startgroepWaarde = `U16-${gc} - Groep ${pItem.startgroep}`;
+            }
+          }
+        });
+
         const rij = [
           atleet.naam || "",
           atleet.bondsnr || "",
           atleet.geslacht === "V" ? "F" : "M",
           "AV Sprint",
-          teamNaam
+          teamNaam,
+          startgroepWaarde
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
+          const maxSlots = programma[idx].type === "technisch" ? 1 : programma[idx].type === "estafette" ? 4 : 3;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
@@ -3601,6 +3921,7 @@ async function exporteerOpstelling() {
       { wch: 10 }, // Geslacht
       { wch: 16 }, // Vereniging
       { wch: 12 }, // Team
+      { wch: 20 }, // Startgroep
       ...disciplines.map(() => ({ wch: 14 }))
     ];
 
@@ -3612,6 +3933,151 @@ async function exporteerOpstelling() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// ── Light/Dark/Systeem theme ──────────────────────────────────
+const THEME_KEY = "sprint-u16-theme";
+const themeLabels = { dark: "🌙 Donker ▾", light: "☀️ Licht ▾", system: "💻 Systeem ▾" };
+
+function pasThemaToe(theme) {
+  const html = document.documentElement;
+  if (theme === "light") {
+    html.setAttribute("data-theme", "light");
+  } else if (theme === "dark") {
+    html.removeAttribute("data-theme");
+  } else {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (prefersDark) html.removeAttribute("data-theme");
+    else html.setAttribute("data-theme", "light");
+  }
+  const btn = document.getElementById("theme-btn");
+  if (btn) btn.textContent = themeLabels[theme];
+}
+
+function kiesTheme(theme) {
+  localStorage.setItem(THEME_KEY, theme);
+  pasThemaToe(theme);
+  sluitThemeMenu();
+}
+
+function toggleThemeMenu() {
+  const menu = document.getElementById("theme-menu");
+  menu.style.display = menu.style.display === "none" ? "" : "none";
+}
+
+function sluitThemeMenu() {
+  const menu = document.getElementById("theme-menu");
+  if (menu) menu.style.display = "none";
+}
+
+// Sluit menu bij klik buiten
+document.addEventListener("click", function(e) {
+  const btn = document.getElementById("theme-btn");
+  const menu = document.getElementById("theme-menu");
+  if (menu && btn && !menu.contains(e.target) && e.target !== btn) {
+    menu.style.display = "none";
+  }
+});
+
+// Pas thema toe bij laden
+(function() {
+  const opgeslagen = localStorage.getItem(THEME_KEY) || "dark";
+  pasThemaToe(opgeslagen);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if ((localStorage.getItem(THEME_KEY) || "dark") === "system") pasThemaToe("system");
+  });
+})();
+
+// ── Releasenotes ─────────────────────────────────────────────
+let toonArchief = false;
+
+async function laadReleasenotes() {
+  const lijst = document.getElementById("releasenotes-lijst");
+  if (!lijst) return;
+
+  // Admin knoppen tonen
+  if (huidigeProfiel?.rol === "admin") {
+    document.getElementById("btn-note-toevoegen").style.display = "";
+    document.getElementById("btn-archief").style.display = "";
+  }
+
+  // Archiveer noten ouder dan 1 maand automatisch
+  try {
+    const eenMaandGeleden = new Date();
+    eenMaandGeleden.setMonth(eenMaandGeleden.getMonth() - 1);
+    await sb.from("releasenotes")
+      .update({ gearchiveerd: true })
+      .eq("gearchiveerd", false)
+      .lt("gepubliceerd_op", eenMaandGeleden.toISOString());
+  } catch(e) { /* negeer */ }
+
+  try {
+    let query = sb.from("releasenotes")
+      .select("*")
+      .eq("gearchiveerd", toonArchief)
+      .order("gepubliceerd_op", { ascending: false });
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    if (!data || !data.length) {
+      lijst.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">${toonArchief ? "Geen gearchiveerde notes." : "Nog geen releasenotes."}</div>`;
+      return;
+    }
+
+    const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
+
+    lijst.innerHTML = data.map(n => `
+      <div class="note-kaart">
+        <div class="note-kaart-header">
+          <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
+          <strong style="font-size:14px;">${esc(n.titel)}</strong>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
+        </div>
+        ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
+        ${huidigeProfiel?.rol === "admin" && !toonArchief ? `<div style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button></div>` : ""}
+      </div>`).join("");
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout bij laden: ${e.message}</div>`;
+  }
+}
+
+function toggleArchief() {
+  toonArchief = !toonArchief;
+  document.getElementById("btn-archief").textContent = toonArchief ? "📋 Actueel" : "📦 Archief";
+  laadReleasenotes();
+}
+
+function openNoteModal() {
+  document.getElementById("note-versie").value = "";
+  document.getElementById("note-titel").value = "";
+  document.getElementById("note-type").value = "feature";
+  document.getElementById("note-beschrijving").value = "";
+  openModal("noteModal");
+}
+
+async function slaaNoteOp() {
+  const versie      = document.getElementById("note-versie").value.trim();
+  const titel       = document.getElementById("note-titel").value.trim();
+  const type        = document.getElementById("note-type").value;
+  const beschrijving = document.getElementById("note-beschrijving").value.trim();
+  if (!versie || !titel) { toast("Vul versie en titel in", "err"); return; }
+  try {
+    const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving });
+    if (error) throw error;
+    toast("Releasenote opgeslagen ✓");
+    closeModal("noteModal");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function archiveerNote(id) {
+  try {
+    const { error } = await sb.from("releasenotes").update({ gearchiveerd: true }).eq("id", id);
+    if (error) throw error;
+    toast("Gearchiveerd ✓");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
     `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
@@ -3619,6 +4085,7 @@ async function init() {
   if (ok) {
     document.getElementById("tab-profiel").style.display = "";
     await syncAll();
+    showTab("home");
   }
 }
 
