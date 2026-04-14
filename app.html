@@ -33,9 +33,7 @@
   }
 
   /* ── Thema-dropdown ── */
-  .thema-wrapper {
-    position: relative;
-  }
+  .thema-wrapper { position: relative; }
   .thema-dropdown {
     display: none;
     position: absolute;
@@ -154,7 +152,8 @@
   }
 
   /* ── Layout ── */
-  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  main { max-width: 100%; margin: 0 auto; }
+  main > div:not(#view-home) { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
   /* ── Toast ── */
   #toast {
@@ -689,7 +688,193 @@
   }
   .profiel-input:focus { border-color: var(--accent); }
 
-  /* ── Mobile ── */
+  /* ── Homepage ── */
+  #view-home {
+    min-height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+  }
+  .home-hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    background: radial-gradient(ellipse at 50% 60%, #1a1c2240 0%, transparent 70%);
+  }
+  .home-hero svg {
+    max-width: min(500px, 90vw);
+    height: auto;
+    filter: drop-shadow(0 4px 24px rgba(255,212,0,0.15));
+  }
+  .home-releases {
+    flex: 1;
+    background: var(--surface);
+    border-top: 2px solid var(--border);
+    padding: 32px 24px;
+    max-width: 100%;
+  }
+  .home-releases-inner {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .releases-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .releases-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .release-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .release-card:hover { border-color: var(--accent); }
+  .release-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .release-versie {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .release-datum {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+  }
+  .release-type {
+    font-size: 11px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .release-type.feature { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40; }
+  .release-type.bugfix  { background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40; }
+  .release-type.update  { background: #60a5fa20; color: #60a5fa; border: 1px solid #60a5fa40; }
+  .release-titel {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+  .release-body {
+    font-size: 14px;
+    color: #b0b8c8;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .release-download {
+    margin-top: 12px;
+  }
+  .release-download a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 5px 12px;
+    transition: background .2s;
+  }
+  .release-download a:hover { background: var(--accent); color: #000; }
+  .archief-toggle {
+    margin-top: 24px;
+    text-align: center;
+  }
+  .archief-toggle button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 8px 20px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .archief-toggle button:hover { border-color: var(--accent); color: var(--accent); }
+  #archief-sectie { margin-top: 16px; }
+  .archief-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+  }
+  .release-card.gearchiveerd { opacity: .65; }
+  /* Admin release form */
+  #release-form-wrapper {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .release-form-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  .release-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 600px) { .release-form-grid { grid-template-columns: 1fr; } }
+  .rf-input, .rf-select, .rf-textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .rf-input:focus, .rf-select:focus, .rf-textarea:focus { border-color: var(--accent); }
+  .rf-textarea { resize: vertical; min-height: 80px; }
+  .rf-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; display: block; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+
+
   @media (max-width: 600px) {
     header { padding: 0 16px; }
     main   { padding: 16px; }
@@ -703,10 +888,11 @@
 <body>
 
 <header>
-  <div class="logo">⚡ Sprint <span id="logo-cat">U16</span></div>
+  <div class="logo" onclick="showTab('home')" style="cursor:pointer;" title="Terug naar home">⚡ Sprint <span id="logo-cat">U16</span></div>
   <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
-    <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
+    <button id="tab-home" onclick="showTab('home')">🏠 Home</button>
+    <button id="tab-atleten" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
@@ -720,10 +906,10 @@
     </svg>
   </button>
   <div class="thema-wrapper">
-    <button class="sync-btn" id="thema-btn" onclick="toggleThemaDropdown()" title="Weergave" style="font-size:16px;">☀️</button>
+    <button class="sync-btn" id="thema-btn" onclick="toggleThemaDropdown()" title="Weergave" style="font-size:16px;">🌙</button>
     <div class="thema-dropdown" id="thema-dropdown">
-      <div class="thema-optie" id="thema-opt-dark"  onclick="setThema('dark')">🌙 Donker</div>
-      <div class="thema-optie" id="thema-opt-light" onclick="setThema('light')">☀️ Licht</div>
+      <div class="thema-optie" id="thema-opt-dark"   onclick="setThema('dark')">🌙 Donker</div>
+      <div class="thema-optie" id="thema-opt-light"  onclick="setThema('light')">☀️ Licht</div>
       <div class="thema-optie" id="thema-opt-system" onclick="setThema('system')">⚙️ Systeem</div>
     </div>
   </div>
@@ -732,7 +918,102 @@
 </header>
 
 <main>
-  <!-- ATLETEN TAB -->
+  <!-- HOME TAB -->
+  <div id="view-home" style="display:none;">
+    <!-- Bovenste helft: logo -->
+    <div class="home-hero">
+      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 276 36.629">
+        <defs>
+          <clipPath id="clip-path-home">
+            <rect width="276" height="36.629" fill="none"/>
+          </clipPath>
+        </defs>
+        <g clip-path="url(#clip-path-home)">
+          <rect width="37.346" height="36.628" transform="translate(0 0.001)" fill="#1a1818"/>
+          <rect width="37.346" height="36.628" transform="translate(39.753 0.001)" fill="#1a1818"/>
+          <rect width="37.346" height="36.628" transform="translate(79.506 0.001)" fill="#1a1818"/>
+          <rect width="37.346" height="36.628" transform="translate(119.258 0.001)" fill="#1a1818"/>
+          <rect width="37.346" height="36.628" transform="translate(159.012 0.001)" fill="#1a1818"/>
+          <rect width="37.347" height="36.628" transform="translate(198.763 0.001)" fill="#1a1818"/>
+          <rect width="37.346" height="36.628" transform="translate(238.653 0)" fill="#e82717"/>
+          <path d="M26.425,15.452c-.162-2.027-.949-3.082-3.609-3.407V7.891c2,.034,4.824.483,6.661,2.285a8.043,8.043,0,0,1,2.1,4.891Zm-7.051,5.858c-2.069-.548-6.364-1.7-6.364-6.625a6.112,6.112,0,0,1,3.74-5.8,12.245,12.245,0,0,1,5.181-.995v4.118c-.953,0-3.639.068-3.639,2.25,0,1.514,1.243,1.9,2.753,2.288l3.547.8c3.147.774,7.344,1.836,7.344,6.981,0,5.026-4,7.243-9.088,7.339V27.388c.561-.03,3.78-.124,3.78-2.57,0-1.709-1.547-2.158-2.6-2.446ZM21.965,31.7c-4.988,0-9.415-1.834-9.678-7.754l5.183-.286c.132,1.542.524,3.408,4.461,3.762Z" transform="translate(-2.977 -1.912)" fill="#ffd400"/>
+          <path d="M71.979,24.548V20.333h1.675a9.038,9.038,0,0,0,2.888-.255,3.181,3.181,0,0,0,2.1-3.093,3.03,3.03,0,0,0-1.117-2.413c-.918-.677-1.772-.7-3.314-.739H71.979V9.686h2.49c2.363.03,4.758.063,6.662,1.443a7.189,7.189,0,0,1,2.69,6.049A7.261,7.261,0,0,1,80.9,23.2c-1.742,1.19-3.479,1.253-6.3,1.351Zm-6.1-14.862h5.252V32.4H65.874Z" transform="translate(-15.96 -2.347)" fill="#ffd400"/>
+          <path d="M124.165,24.033v-4.12h2.394c1.8,0,4.724-.032,4.724-3.182,0-2.836-2.527-2.766-4.2-2.766h-2.916V9.683h3.7c2.235.033,4.4.067,6.2,1.353a5.875,5.875,0,0,1,2.3,4.921c0,3.539-2.2,5.243-4.135,5.5a3.7,3.7,0,0,1,2.462,1.8c.494.868.56,1.253,1.115,4.662a9.41,9.41,0,0,0,1.674,4.473h-5.513a7.785,7.785,0,0,1-1.145-3.151c-.167-.807-.231-1.672-.4-2.478-.522-2.546-1.741-2.735-3.806-2.735Zm-6.071-14.35h5.215V32.4h-5.215Z" transform="translate(-28.612 -2.346)" fill="#ffd400"/>
+          <rect width="5.216" height="22.714" transform="translate(135.769 7.337)" fill="#ffd400"/>
+          <path d="M236.386,9.683h5.182V30.726l-4.987-8.236ZM222.74,32.4V11.2l4.987,8.2.23,13Zm0-22.714h5.018L241.568,32.4h-4.919Z" transform="translate(-53.966 -2.346)" fill="#ffd400"/>
+          <path d="M287.713,9.683h6.1v4.211h-6.1Zm-6.1,0h5.25V32.4h-5.25Zm-6.889,0h6.07v4.211h-6.07Z" transform="translate(-66.56 -2.346)" fill="#ffd400"/>
+          <path d="M321.05,17.216l3.694-3.626L321.05,9.965l2.463-2.422,3.7,3.626,3.7-3.626,2.467,2.422-3.7,3.626,3.7,3.626-2.467,2.414-3.7-3.625-3.7,3.625Z" transform="translate(-77.784 -1.828)" fill="#fff"/>
+          <path d="M332.056,36.442l3.694-3.628-3.694-3.628,2.463-2.419,3.7,3.631,3.7-3.631,2.465,2.419-3.7,3.628,3.7,3.628-2.465,2.413-3.7-3.62-3.7,3.62Z" transform="translate(-80.451 -6.485)" fill="#fff"/>
+          <path d="M342.492,16.733l3.694-3.623L342.492,9.48l2.461-2.413,3.7,3.624,3.7-3.624,2.466,2.413-3.7,3.631,3.7,3.623-2.466,2.419-3.7-3.624-3.7,3.624Z" transform="translate(-82.979 -1.712)" fill="#fff"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Onderste helft: releasenotes -->
+    <div class="home-releases">
+      <div class="home-releases-inner">
+        <div class="releases-header">
+          <div class="releases-title">Releasenotes</div>
+          <span class="count-badge" id="releases-count">0</span>
+          <!-- Alleen zichtbaar voor admin -->
+          <button class="btn btn-primary btn-sm ml-auto" id="release-add-btn" onclick="toggleReleaseForm()" style="display:none;">+ Toevoegen</button>
+        </div>
+
+        <!-- Admin formulier (verborgen by default) -->
+        <div id="release-form-wrapper" style="display:none;">
+          <div class="release-form-title">Nieuwe releasenote</div>
+          <div class="release-form-grid">
+            <div>
+              <label class="rf-label">Versie (bijv. v1.4)</label>
+              <input class="rf-input" id="rf-versie" placeholder="v1.4" />
+            </div>
+            <div>
+              <label class="rf-label">Type</label>
+              <select class="rf-select" id="rf-type">
+                <option value="feature">✨ Nieuwe functie</option>
+                <option value="bugfix">🐛 Bugfix</option>
+                <option value="update">🔧 Update</option>
+              </select>
+            </div>
+            <div>
+              <label class="rf-label">Titel</label>
+              <input class="rf-input" id="rf-titel" placeholder="Korte omschrijving" />
+            </div>
+            <div>
+              <label class="rf-label">Download-URL (optioneel)</label>
+              <input class="rf-input" id="rf-url" placeholder="https://..." />
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label class="rf-label">Toelichting</label>
+            <textarea class="rf-textarea" id="rf-body" placeholder="Beschrijf wat er nieuw of opgelost is..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-ghost btn-sm" onclick="toggleReleaseForm()">Annuleren</button>
+            <button class="btn btn-primary btn-sm" onclick="saveRelease()">Opslaan</button>
+          </div>
+        </div>
+
+        <!-- Actieve releasenotes -->
+        <div id="releases-lijst">
+          <div class="loading"><div class="spinner"></div> Releasenotes laden…</div>
+        </div>
+
+        <!-- Archief (alleen admin) -->
+        <div id="archief-admin-wrapper" style="display:none;">
+          <div class="archief-toggle">
+            <button onclick="toggleArchief()">📦 Archief tonen / verbergen</button>
+          </div>
+          <div id="archief-sectie" style="display:none;">
+            <div class="archief-label">Archief — ouder dan 1 maand</div>
+            <div id="archief-lijst"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <div id="view-atleten">
     <div class="page-header">
       <div class="page-title">Atleten</div>
@@ -1171,12 +1452,8 @@ function pasThemaToe(keuze) {
   const isDark = keuze === 'dark' ||
     (keuze === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   html.setAttribute('data-theme', isDark ? 'dark' : 'light');
-
-  // Knop-icoon aanpassen
   const btn = document.getElementById('thema-btn');
   if (btn) btn.textContent = isDark ? '🌙' : '☀️';
-
-  // Actieve optie markeren
   ['dark','light','system'].forEach(t => {
     const el = document.getElementById('thema-opt-' + t);
     if (el) el.classList.toggle('actief', t === keuze);
@@ -1197,7 +1474,6 @@ function sluitThemaDropdown() {
   document.getElementById('thema-dropdown').classList.remove('open');
 }
 
-// Sluit dropdown als ergens anders geklikt wordt
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.thema-wrapper')) sluitThemaDropdown();
 });
@@ -1206,7 +1482,6 @@ document.addEventListener('click', function(e) {
 (function() {
   const opgeslagen = localStorage.getItem('sprint-thema') || 'dark';
   pasThemaToe(opgeslagen);
-  // Luister naar systeemwijzigingen
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if ((localStorage.getItem('sprint-thema') || 'dark') === 'system') pasThemaToe('system');
   });
@@ -1352,12 +1627,13 @@ async function syncAll() {
 
 // ── Tabs ──────────────────────────────────────────────────────
 function showTab(tab) {
-  ["atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
+  ["home","atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
     const el = document.getElementById("view-" + t);
     if (el) el.style.display = t === tab ? "" : "none";
     const tb = document.getElementById("tab-" + t);
     if (tb) tb.classList.toggle("active", t === tab);
   });
+  if (tab === "home")        laadReleasenotes();
   if (tab === "prestaties")   populateAtleetSelects();
   if (tab === "wedstrijden")  renderWedstrijden();
   if (tab === "opstelling")   renderOpstellingWedstrijden();
@@ -3656,6 +3932,136 @@ async function exporteerOpstelling() {
   toast("Opstelling geëxporteerd ✓");
 }
 
+// ── Releasenotes ─────────────────────────────────────────────
+let releaseFormOpen = false;
+
+function toggleReleaseForm() {
+  releaseFormOpen = !releaseFormOpen;
+  document.getElementById("release-form-wrapper").style.display = releaseFormOpen ? "" : "none";
+}
+
+function toggleArchief() {
+  const el = document.getElementById("archief-sectie");
+  el.style.display = el.style.display === "none" ? "" : "none";
+}
+
+function releaseTypeLabel(type) {
+  if (type === "feature") return '<span class="release-type feature">✨ Nieuw</span>';
+  if (type === "bugfix")  return '<span class="release-type bugfix">🐛 Bugfix</span>';
+  return '<span class="release-type update">🔧 Update</span>';
+}
+
+function renderReleaseCard(r, isArchief = false) {
+  const datum = new Date(r.gepubliceerd_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+  const downloadLink = r.download_url
+    ? `<div class="release-download"><a href="${esc(r.download_url)}" target="_blank" rel="noopener">⬇️ Download releasenote</a></div>`
+    : "";
+  const adminDelete = huidigeProfiel?.rol === "admin"
+    ? `<button class="btn btn-ghost btn-sm" style="position:absolute;top:12px;right:12px;font-size:11px;padding:3px 8px;" onclick="deleteRelease('${r.id}')">🗑️</button>`
+    : "";
+  return `
+    <div class="release-card${isArchief ? " gearchiveerd" : ""}">
+      ${adminDelete}
+      <div class="release-meta">
+        <span class="release-versie">${esc(r.versie || "")}</span>
+        ${releaseTypeLabel(r.type)}
+        <span class="release-datum">${datum}</span>
+      </div>
+      <div class="release-titel">${esc(r.titel || "")}</div>
+      <div class="release-body">${esc(r.beschrijving || "")}</div>
+      ${downloadLink}
+    </div>`;
+}
+
+async function laadReleasenotes() {
+  const lijst = document.getElementById("releases-lijst");
+  const archiefLijst = document.getElementById("archief-lijst");
+  lijst.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
+
+  // Admin UI tonen
+  const isAdmin = huidigeProfiel?.rol === "admin";
+  document.getElementById("release-add-btn").style.display = isAdmin ? "" : "none";
+  document.getElementById("archief-admin-wrapper").style.display = isAdmin ? "" : "none";
+
+  const eenMaandGeleden = new Date();
+  eenMaandGeleden.setMonth(eenMaandGeleden.getMonth() - 1);
+
+  // Haal alle niet-gearchiveerde noten op
+  const { data: actief, error: e1 } = await sb
+    .from("releasenotes")
+    .select("*")
+    .eq("gearchiveerd", false)
+    .order("gepubliceerd_op", { ascending: false });
+
+  if (e1) { lijst.innerHTML = `<div class="empty-state">Fout: ${esc(e1.message)}</div>`; return; }
+
+  // Automatisch archiveren wat ouder is dan 1 maand
+  const teArchiveren = (actief || []).filter(r => new Date(r.gepubliceerd_op) < eenMaandGeleden).map(r => r.id);
+  if (teArchiveren.length > 0) {
+    await sb.from("releasenotes").update({ gearchiveerd: true }).in("id", teArchiveren);
+  }
+
+  const zichtbaar = (actief || []).filter(r => new Date(r.gepubliceerd_op) >= eenMaandGeleden);
+
+  document.getElementById("releases-count").textContent = zichtbaar.length;
+
+  if (!zichtbaar.length) {
+    lijst.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen recente releasenotes.</div>`;
+  } else {
+    lijst.innerHTML = zichtbaar.map(r => renderReleaseCard(r)).join("");
+  }
+
+  // Archief laden voor admin
+  if (isAdmin) {
+    const { data: archief } = await sb
+      .from("releasenotes")
+      .select("*")
+      .eq("gearchiveerd", true)
+      .order("gepubliceerd_op", { ascending: false });
+    archiefLijst.innerHTML = (archief || []).length
+      ? (archief || []).map(r => renderReleaseCard(r, true)).join("")
+      : `<div style="color:var(--muted);font-size:14px;">Geen gearchiveerde noten.</div>`;
+  }
+}
+
+async function saveRelease() {
+  const versie = document.getElementById("rf-versie").value.trim();
+  const titel  = document.getElementById("rf-titel").value.trim();
+  const type   = document.getElementById("rf-type").value;
+  const body   = document.getElementById("rf-body").value.trim();
+  const url    = document.getElementById("rf-url").value.trim();
+
+  if (!versie || !titel) { toast("Versie en titel zijn verplicht", "err"); return; }
+
+  const { error } = await sb.from("releasenotes").insert({
+    versie,
+    titel,
+    type,
+    beschrijving: body,
+    download_url: url || null,
+    gepubliceerd_op: new Date().toISOString(),
+    gearchiveerd: false
+  });
+
+  if (error) { toast("Fout: " + error.message, "err"); return; }
+
+  // Velden leegmaken
+  ["rf-versie","rf-titel","rf-body","rf-url"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("rf-type").value = "feature";
+  toggleReleaseForm();
+  toast("Releasenote opgeslagen ✓");
+  laadReleasenotes();
+}
+
+async function deleteRelease(id) {
+  const ok = await bevestig("Releasenote verwijderen", "Weet je zeker dat je deze releasenote wilt verwijderen?");
+  if (!ok) return;
+  const { error } = await sb.from("releasenotes").delete().eq("id", id);
+  if (error) { toast("Fout: " + error.message, "err"); return; }
+  toast("Verwijderd ✓");
+  laadReleasenotes();
+}
+
 // ── Init ──────────────────────────────────────────────────────
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
@@ -3664,6 +4070,7 @@ async function init() {
   if (ok) {
     document.getElementById("tab-profiel").style.display = "";
     await syncAll();
+    showTab("home");
   }
 }
 
