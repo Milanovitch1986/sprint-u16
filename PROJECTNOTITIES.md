@@ -11,6 +11,7 @@
 | Hosting | GitHub Pages | Gratis, automatisch via push |
 | Database | Supabase (PostgreSQL) | Gratis tier, ingebouwde auth + RLS |
 | Auth | Supabase Auth + TOTP 2FA | Veilig, verplicht voor alle gebruikers |
+| E-mail | Brevo API via Cloudflare Worker | Uitnodigingen automatisch versturen |
 
 **GitHub repo:** `Milanovitch1986/sprint-u16`
 **Live URL:** `https://milanovitch1986.github.io/sprint-u16/`
@@ -120,17 +121,6 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | `sprint-u16-dashboard.html` | Standalone statusdashboard (Supabase live checks) |
 
 ---
-
----
-
-## 🎨 Thema (dark / light / system)
-
-- Thema-knop (☀️/🌙) in de header naast het profielicoon
-- Drie opties: 🌙 Donker · ☀️ Licht · ⚙️ Systeem
-- "Systeem" volgt automatisch de OS-instelling van het apparaat
-- Keuze opgeslagen in `localStorage` (bewaard na sluiten/herladen)
-- Standaard: Donker (dark first — geen gedragswijziging voor bestaande gebruikers)
-- Light mode kleuren: wit/lichtgrijs achtergrond, zwarte tekst, geel accent (AV Sprint huisstijl)
 
 ## 🗺️ Roadmap (volgend seizoen)
 

@@ -6,27 +6,24 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 6] — 2026-04-14
 
-## [april 2026 — patch 4] — 2026-04-13
+### ✨ Nieuw: automatische e-mail bij uitnodiging
 
-### ✨ Nieuw: Light mode en thema-instelling
+**Wat is er veranderd:**
+- Bij het aanmaken van een uitnodiging wordt nu automatisch een e-mail verstuurd naar het opgegeven adres
+- E-mail bevat een knop "Account aanmaken" met de unieke uitnodigingslink
+- Verzending verloopt via Brevo (e-maildienst) + Cloudflare Worker (`sprint-uitnodiging.milande-maat.workers.dev`)
+- Als de e-mail om technische redenen mislukt, wordt de uitnodiging toch aangemaakt en kan de link handmatig gekopieerd worden via de kopieerknop
 
-**Aanleiding:** AV Sprint Breda huisstijl (zwart, geel, wit) is ook toepasbaar als
-licht thema. Gebruikers kunnen nu kiezen hoe de app er uitziet.
-
-**Wat is toegevoegd:**
-- Volledig licht kleurenschema gebaseerd op de AV Sprint Breda huisstijl
-  (witte achtergrond, lichtgrijze vlakken, zwarte tekst, geel accent)
-- Thema-knop (☀️/🌙) in de header, naast het profielicoon
-- Dropdown met drie opties: 🌙 Donker · ☀️ Licht · ⚙️ Systeem
-- "Systeem" volgt automatisch de dark/light-instelling van het apparaat
-  en reageert ook als de gebruiker die instelling tussentijds wijzigt
-- Keuze wordt opgeslagen in `localStorage` (blijft bewaard na sluiten/herladen)
-- Standaard: Donker (geen gedragsverandering voor bestaande gebruikers)
-
-**Bestanden gewijzigd:** `app.html`
+**Technische details:**
+- `verstuurUitnodiging()` haalt nu het gegenereerde token op via `.select("token").single()`
+- Bouwt de uitnodigingslink en POST-t deze naar de Cloudflare Worker
+- Worker stuurt de e-mail via de Brevo API (`api.brevo.com/v3/smtp/email`)
+- Brevo API key opgeslagen als Secret in Cloudflare Worker (`BREVO_API_KEY`)
 
 ---
+
 ## [april 2026 — patch 3] — 2026-04-09
 
 ### 🗑️ Verwijderd: 60m uit de app
