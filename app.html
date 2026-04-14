@@ -4068,7 +4068,6 @@ async function init() {
     `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
   const ok = await checkAuth();
   if (ok) {
-    document.getElementById("tab-profiel").style.display = "";
     await syncAll();
     showTab("home");
   }
