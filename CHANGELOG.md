@@ -6,7 +6,24 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 9] — 2026-04-14
+## [april 2026 — patch 10] — 2026-04-14
+
+### ✨ Hersteld: homepage met releasenotes
+- Na inloggen opent de app direct op de homepage
+- Bovenste helft: AV Sprint logo gecentreerd
+- Onderste helft: releasenotes uit Supabase (tabel `releasenotes`)
+- Noten ouder dan 1 maand worden automatisch gearchiveerd
+- Admin kan notes toevoegen en handmatig archiveren
+
+### ✨ Hersteld: logo klikbaar → terug naar home
+- Klikken op "⚡ Sprint U16" in de header navigeert terug naar de homepage
+
+### 🐛 Fix: estafette heeft weer 4 atleetslots
+- `maxSlots` voor estafette was per ongeluk op 1 gezet, nu weer 4
+
+---
+
+
 
 ### 🔧 UI fix: programmamodal breder, verwijderknop op één regel
 - Programmamodal vergroot naar 780px breed

@@ -627,6 +627,52 @@
   }
   .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
 
+  /* ── Homepage ── */
+  .home-logo-sectie {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px 40px;
+    min-height: 45vh;
+    border-bottom: 1px solid var(--border);
+  }
+  .home-logo-svg {
+    width: min(400px, 80vw);
+    height: auto;
+  }
+  .home-notes-sectie {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .note-kaart {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .note-kaart-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .note-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+  }
+  .note-badge.bugfix { background: var(--accent2)22; color: var(--accent2); border-color: var(--accent2)44; }
+  .note-badge.update { background: var(--success)22; color: var(--success); border-color: var(--success)44; }
+  .note-badge.removed { background: var(--muted)22; color: var(--muted); border-color: var(--muted)44; }
+
   /* ── Wedstrijd kaart ── */
   .wedstrijd-card {
     background: var(--surface);
@@ -692,10 +738,11 @@
 <body>
 
 <header>
-  <div class="logo">⚡ Sprint <span id="logo-cat">U16</span></div>
+  <div class="logo" onclick="showTab('home')" style="cursor:pointer;">⚡ Sprint <span id="logo-cat">U16</span></div>
   <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
-    <button id="tab-atleten" class="active" onclick="showTab('atleten')">Atleten</button>
+    <button id="tab-home" onclick="showTab('home')">🏠 Home</button>
+    <button id="tab-atleten" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
@@ -720,6 +767,43 @@
 </header>
 
 <main>
+  <!-- HOME TAB -->
+  <div id="view-home" style="display:none;">
+    <!-- Logo sectie -->
+    <div class="home-logo-sectie">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 276 36.6" class="home-logo-svg">
+        <rect width="36" height="36.6" fill="#111"/><rect x="40" width="36" height="36.6" fill="#111"/>
+        <rect x="80" width="36" height="36.6" fill="#111"/><rect x="120" width="36" height="36.6" fill="#111"/>
+        <rect x="160" width="36" height="36.6" fill="#111"/><rect x="200" width="36" height="36.6" fill="#111"/>
+        <rect x="240" width="36" height="36.6" fill="#e82717"/>
+        <text x="18" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">S</text>
+        <text x="58" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">P</text>
+        <text x="98" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">R</text>
+        <text x="138" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">I</text>
+        <text x="178" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">N</text>
+        <text x="218" y="27" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#ffd400" text-anchor="middle">T</text>
+        <text x="250" y="14" font-family="Arial" font-size="11" fill="white" text-anchor="middle">✕</text>
+        <text x="258" y="22" font-family="Arial" font-size="11" fill="white" text-anchor="middle">✕</text>
+        <text x="250" y="30" font-family="Arial" font-size="11" fill="white" text-anchor="middle">✕</text>
+      </svg>
+      <div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Atletiekbeheertool · U16</div>
+    </div>
+
+    <!-- Releasenotes sectie -->
+    <div class="home-notes-sectie">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;">📋 Releasenotes</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" id="btn-archief" style="display:none;" onclick="toggleArchief()">📦 Archief</button>
+          <button class="btn btn-primary btn-sm" id="btn-note-toevoegen" style="display:none;" onclick="openNoteModal()">+ Toevoegen</button>
+        </div>
+      </div>
+      <div id="releasenotes-lijst">
+        <div style="color:var(--muted);font-size:13px;">Laden…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ATLETEN TAB -->
   <div id="view-atleten">
     <div class="page-header">
@@ -1144,6 +1228,29 @@
   </div>
 </div>
 
+<!-- RELEASENOTE MODAL -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-title">Releasenote toevoegen</div>
+    <div class="field"><label>Versie</label><input type="text" id="note-versie" placeholder="bijv. april 2026 — patch 9"></div>
+    <div class="field"><label>Titel</label><input type="text" id="note-titel" placeholder="bijv. Startgroepen hersteld"></div>
+    <div class="field">
+      <label>Type</label>
+      <select id="note-type" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;width:100%;font-size:13px;">
+        <option value="feature">✨ Nieuwe feature</option>
+        <option value="bugfix">🐛 Bugfix</option>
+        <option value="update">🔧 Verbetering</option>
+        <option value="removed">🗑️ Verwijderd</option>
+      </select>
+    </div>
+    <div class="field"><label>Beschrijving</label><textarea id="note-beschrijving" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:'Barlow',sans-serif;font-size:13px;resize:vertical;" placeholder="Wat is er veranderd?"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('noteModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="slaaNoteOp()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1293,16 +1400,17 @@ async function syncAll() {
 
 // ── Tabs ──────────────────────────────────────────────────────
 function showTab(tab) {
-  ["atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
+  ["home","atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
     const el = document.getElementById("view-" + t);
     if (el) el.style.display = t === tab ? "" : "none";
     const tb = document.getElementById("tab-" + t);
     if (tb) tb.classList.toggle("active", t === tab);
   });
-  if (tab === "prestaties")   populateAtleetSelects();
-  if (tab === "wedstrijden")  renderWedstrijden();
-  if (tab === "opstelling")   renderOpstellingWedstrijden();
-  if (tab === "admin")        laadAdmin();
+  if (tab === "home")        laadReleasenotes();
+  if (tab === "prestaties")  populateAtleetSelects();
+  if (tab === "wedstrijden") renderWedstrijden();
+  if (tab === "opstelling")  renderOpstellingWedstrijden();
+  if (tab === "admin")       laadAdmin();
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────
@@ -2623,8 +2731,8 @@ function renderPloeg(ploeg) {
     const isLoop      = item.type === "loop";
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
-    // Technisch: elke rij IS al één startgroep → 1 slot
-    const slots = isEstafette ? 1 : isTechnisch ? 1 : 3;
+    // Technisch: elke rij IS al één startgroep → 1 slot; estafette: 4 lopers
+    const slots = isTechnisch ? 1 : isEstafette ? 4 : 3;
 
     const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
     const startgroepLabel = isTechnisch && item.startgroep
@@ -2696,7 +2804,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2724,7 +2832,7 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
     }
@@ -2905,7 +3013,7 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      const maxSlots = isTechnisch ? 1 : isEstafette ? 1 : 3;
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
       const kandidaten = atleten
@@ -3019,7 +3127,7 @@ function printOpstelling() {
       const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
       const teamNaam = `Team ${ploegNr}`;
       // 1 slot voor technisch, 1 voor estafette, 3 voor loop
-      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
       for (let s = 0; s < maxSlots; s++) {
         const aid = opst[`${ploeg}_${idx}_${s}`];
         if (!aid) continue;
@@ -3659,7 +3767,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
+        const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3697,7 +3805,7 @@ async function exporteerOpstelling() {
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 1 : programma[idx].type === "estafette" ? 1 : 3;
+          const maxSlots = programma[idx].type === "technisch" ? 1 : programma[idx].type === "estafette" ? 4 : 3;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
@@ -3796,6 +3904,98 @@ document.addEventListener("click", function(e) {
   });
 })();
 
+// ── Releasenotes ─────────────────────────────────────────────
+let toonArchief = false;
+
+async function laadReleasenotes() {
+  const lijst = document.getElementById("releasenotes-lijst");
+  if (!lijst) return;
+
+  // Admin knoppen tonen
+  if (huidigeProfiel?.rol === "admin") {
+    document.getElementById("btn-note-toevoegen").style.display = "";
+    document.getElementById("btn-archief").style.display = "";
+  }
+
+  // Archiveer noten ouder dan 1 maand automatisch
+  try {
+    const eenMaandGeleden = new Date();
+    eenMaandGeleden.setMonth(eenMaandGeleden.getMonth() - 1);
+    await sb.from("releasenotes")
+      .update({ gearchiveerd: true })
+      .eq("gearchiveerd", false)
+      .lt("gepubliceerd_op", eenMaandGeleden.toISOString());
+  } catch(e) { /* negeer */ }
+
+  try {
+    let query = sb.from("releasenotes")
+      .select("*")
+      .eq("gearchiveerd", toonArchief)
+      .order("gepubliceerd_op", { ascending: false });
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    if (!data || !data.length) {
+      lijst.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">${toonArchief ? "Geen gearchiveerde notes." : "Nog geen releasenotes."}</div>`;
+      return;
+    }
+
+    const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
+
+    lijst.innerHTML = data.map(n => `
+      <div class="note-kaart">
+        <div class="note-kaart-header">
+          <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
+          <strong style="font-size:14px;">${esc(n.titel)}</strong>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
+        </div>
+        ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
+        ${huidigeProfiel?.rol === "admin" && !toonArchief ? `<div style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button></div>` : ""}
+      </div>`).join("");
+  } catch(e) {
+    lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout bij laden: ${e.message}</div>`;
+  }
+}
+
+function toggleArchief() {
+  toonArchief = !toonArchief;
+  document.getElementById("btn-archief").textContent = toonArchief ? "📋 Actueel" : "📦 Archief";
+  laadReleasenotes();
+}
+
+function openNoteModal() {
+  document.getElementById("note-versie").value = "";
+  document.getElementById("note-titel").value = "";
+  document.getElementById("note-type").value = "feature";
+  document.getElementById("note-beschrijving").value = "";
+  openModal("noteModal");
+}
+
+async function slaaNoteOp() {
+  const versie      = document.getElementById("note-versie").value.trim();
+  const titel       = document.getElementById("note-titel").value.trim();
+  const type        = document.getElementById("note-type").value;
+  const beschrijving = document.getElementById("note-beschrijving").value.trim();
+  if (!versie || !titel) { toast("Vul versie en titel in", "err"); return; }
+  try {
+    const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving });
+    if (error) throw error;
+    toast("Releasenote opgeslagen ✓");
+    closeModal("noteModal");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function archiveerNote(id) {
+  try {
+    const { error } = await sb.from("releasenotes").update({ gearchiveerd: true }).eq("id", id);
+    if (error) throw error;
+    toast("Gearchiveerd ✓");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
     `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
@@ -3803,6 +4003,7 @@ async function init() {
   if (ok) {
     document.getElementById("tab-profiel").style.display = "";
     await syncAll();
+    showTab("home");
   }
 }
 
