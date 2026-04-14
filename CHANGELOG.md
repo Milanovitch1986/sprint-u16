@@ -6,38 +6,21 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 7] — 2026-04-14
+## [april 2026 — patch 8] — 2026-04-14
 
-### 🐛 Fix: registratie + 2FA setup werkt nu correct
+### ✨ Hersteld: startgroepen voor technische onderdelen
+- Tijdschema: bij technische onderdelen verschijnt dropdown Groep A / Groep B
+- Startgroep wordt opgeslagen in Supabase en correct weergegeven na herladen
+- Opstelling: elk technisch onderdeel toont label `U16-M - Groep A` (of V/B)
+- Per technische rij precies 1 atleetslot (elke rij = één startgroep op één tijdstip)
+- Excel: kolom F = Startgroep (`U16-M - Groep A` etc.), onderdelen schuiven rechts
+- Print: startgroeplabel verborgen, PR zichtbaar zoals voorheen
+- Vereist in Supabase: `ALTER TABLE programma ADD COLUMN IF NOT EXISTS startgroep text;`
 
-**Probleem:**
-Na registratie verscheen de fout "2FA instellen mislukt: invalid claim: missing sub claim".
-Oorzaak: Supabase had e-mailbevestiging aan staan, waardoor er na `signUp()` nog geen
-actieve sessie was. De 2FA setup vereist een sessie, vandaar de fout.
-
-**Oplossing:**
-- E-mailbevestiging uitgezet in Supabase (Authentication → Providers → Email → Confirm email: uit)
-- Registratiecode aangepast: gebruiker wordt nu direct uit de `signUp()` response gehaald
-  in plaats van via een aparte `getUser()` call
-- Categorie-koppeling gebruikt nu direct `signUpData.user.id` (betrouwbaarder)
-
----
-
-
-
-### ✨ Nieuw: automatische e-mail bij uitnodiging
-
-**Wat is er veranderd:**
-- Bij het aanmaken van een uitnodiging wordt nu automatisch een e-mail verstuurd naar het opgegeven adres
-- E-mail bevat een knop "Account aanmaken" met de unieke uitnodigingslink
-- Verzending verloopt via Brevo (e-maildienst) + Cloudflare Worker (`sprint-uitnodiging.milande-maat.workers.dev`)
-- Als de e-mail om technische redenen mislukt, wordt de uitnodiging toch aangemaakt en kan de link handmatig gekopieerd worden via de kopieerknop
-
-**Technische details:**
-- `verstuurUitnodiging()` haalt nu het gegenereerde token op via `.select("token").single()`
-- Bouwt de uitnodigingslink en POST-t deze naar de Cloudflare Worker
-- Worker stuurt de e-mail via de Brevo API (`api.brevo.com/v3/smtp/email`)
-- Brevo API key opgeslagen als Secret in Cloudflare Worker (`BREVO_API_KEY`)
+### ✨ Hersteld: light/dark/systeem thema knop
+- Knop in de header om te schakelen tussen 🌙 Donker, ☀️ Licht en 💻 Systeem
+- Bij "Systeem" volgt de app automatisch de voorkeur van het apparaat
+- Keuze wordt opgeslagen in `localStorage` en hersteld na herladen
 
 ---
 

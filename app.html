@@ -19,6 +19,35 @@
     --radius:    10px;
   }
 
+  /* ── Light mode ── */
+  [data-theme="light"] {
+    --bg:        #f4f6fb;
+    --surface:   #ffffff;
+    --surface2:  #eef1f7;
+    --border:    #d1d8e8;
+    --accent:    #d4880a;
+    --accent2:   #e8383d;
+    --text:      #111318;
+    --muted:     #5a6478;
+    --success:   #16a34a;
+  }
+
+  /* ── Theme knop ── */
+  .theme-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .theme-btn:hover { border-color: var(--accent); }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -624,6 +653,8 @@
     .onderdeel-rij { border-bottom: 1px solid #eee; break-inside: avoid; }
     .atleet-slot { border: 1px solid #ccc; }
     .slot-punten { display: none !important; }
+    .slot-punten.print-only { display: inline !important; }
+    .startgroep-label { display: none !important; }
     .onderdeel-duur { display: none !important; }
     .programma-type-col { display: none !important; }
     .programma-duur-col { display: none !important; }
@@ -675,6 +706,7 @@
     </svg>
   </button>
   <button class="sync-btn" onclick="showTab('profiel')" title="Profiel" id="profiel-btn" style="font-size:16px;">👤</button>
+  <button class="theme-btn" onclick="cycleTheme()" id="theme-btn" title="Kleurschema wisselen">🌙 Donker</button>
   <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
 </header>
 
@@ -2448,6 +2480,7 @@ function renderProgrammaOverzicht() {
         <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
         <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
         <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
+        <td style="padding:8px 12px;color:var(--muted);">${p.type === "technisch" ? (p.startgroep ? "Groep " + p.startgroep : "—") : ""}</td>
       </tr>`).join("")}
     </tbody>
   </table></div>`;
@@ -2481,21 +2514,33 @@ function addProgrammaRijMet(p) {
   const discOpties = U16_DISCIPLINES.map(d =>
     `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
   ).join("");
+  const isTechnisch = p.type === "technisch";
   div.innerHTML = `
     <select class="pr-disc" onchange="updateProgrammaType(this)">
       ${discOpties}
     </select>
     <input type="time" class="pr-tijd" value="${p.starttijd||""}" placeholder="Starttijd">
     <span class="pr-type" style="font-size:12px;color:var(--muted);">${p.type||"loop"}</span>
+    <select class="pr-groep" style="display:${isTechnisch ? "" : "none"};font-size:12px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;">
+      <option value="A" ${p.startgroep === "A" || !p.startgroep ? "selected" : ""}>Groep A</option>
+      <option value="B" ${p.startgroep === "B" ? "selected" : ""}>Groep B</option>
+    </select>
     <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
   `;
   lijst.appendChild(div);
+  // Zet de waarde programmatisch voor betrouwbare weergave
+  if (isTechnisch && p.startgroep) {
+    div.querySelector(".pr-groep").value = p.startgroep;
+  }
 }
 
 function updateProgrammaType(sel) {
   const rij = sel.parentElement;
   const disc = U16_DISCIPLINES.find(d => d.naam === sel.value);
-  rij.querySelector(".pr-type").textContent = disc ? disc.type : "";
+  const type = disc ? disc.type : "loop";
+  rij.querySelector(".pr-type").textContent = type;
+  const groepSel = rij.querySelector(".pr-groep");
+  groepSel.style.display = type === "technisch" ? "" : "none";
 }
 
 async function saveProgrammaModal() {
@@ -2505,8 +2550,11 @@ async function saveProgrammaModal() {
   rijen.forEach(rij => {
     const disc = rij.querySelector(".pr-disc").value;
     const tijd = rij.querySelector(".pr-tijd").value;
+    const groepSel = rij.querySelector(".pr-groep");
     const d = U16_DISCIPLINES.find(x => x.naam === disc);
-    items.push({ discipline: disc, type: d ? d.type : "loop", starttijd: tijd || null });
+    const type = d ? d.type : "loop";
+    const startgroep = (type === "technisch" && groepSel) ? groepSel.value : null;
+    items.push({ discipline: disc, type, starttijd: tijd || null, startgroep });
   });
   try {
     // Verwijder bestaande programmarijen voor deze wedstrijd/geslacht combo
@@ -2525,7 +2573,8 @@ async function saveProgrammaModal() {
         discipline:   item.discipline,
         type:         item.type,
         starttijd:    item.starttijd,
-        duur:         item.duur
+        duur:         item.duur,
+        startgroep:   item.startgroep || null
       }));
       const { error: insErr } = await sb.from("programma").insert(rows);
       if (insErr) throw insErr;
@@ -2565,9 +2614,13 @@ function renderPloeg(ploeg) {
     const isLoop      = item.type === "loop";
     const isEstafette = item.type === "estafette";
     const isTechnisch = item.type === "technisch";
-    const maxSlots = isTechnisch ? 2 : 3;
-    // Estafette: 1 team (4 atleten in 1 slot weergegeven als teamslot)
-    const slots = isEstafette ? 1 : maxSlots;
+    // Technisch: elke rij IS al één startgroep → 1 slot
+    const slots = isEstafette ? 1 : isTechnisch ? 1 : 3;
+
+    const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+    const startgroepLabel = isTechnisch && item.startgroep
+      ? `U16-${geslachtCode} - Groep ${item.startgroep}`
+      : "";
 
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
@@ -2591,7 +2644,8 @@ function renderPloeg(ploeg) {
         <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
              onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
           <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
-          ${prTekst ? `<span class="slot-punten">${prTekst}</span>` : ""}
+          ${prTekst ? `<span class="slot-punten print-hide">${prTekst}</span>` : ""}
+          ${prTekst ? `<span class="slot-punten print-only" style="display:none;">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="Tijdconflict">${conflictWaarschuwing}</span>` : ""}
           ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
         </div>`;
@@ -2602,6 +2656,7 @@ function renderPloeg(ploeg) {
         <div>
           <div class="onderdeel-naam">${esc(item.discipline)}</div>
           <div class="onderdeel-tijd">${item.starttijd || "—"}</div>
+          ${startgroepLabel ? `<div class="startgroep-label print-hide" style="font-size:11px;color:var(--accent);margin-top:2px;">${startgroepLabel}</div>` : ""}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
         <div style="grid-column:3;"></div>
@@ -2632,7 +2687,7 @@ function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
     const itemMin = tijdNaarMinuten(item.starttijd);
     if (Math.abs(itemMin - huidigMin) > 15) return false;
     // Kijk of atleet in dit onderdeel zit
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) return true;
     }
@@ -2660,7 +2715,7 @@ function zitInAnderePloeg(huidigePloeg, atleetId) {
 function telOnderdelenAtleet(ploeg, opst, atleetId) {
   let tel = 0;
   programma.forEach((item, idx) => {
-    const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
     for (let s = 0; s < maxSlots; s++) {
       if (String(opst[`${ploeg}_${idx}_${s}`]) === String(atleetId)) tel++;
     }
@@ -2818,7 +2873,7 @@ function genereerOpstelling() {
     programma.forEach((item, idx) => {
       const isTechnisch = item.type === "technisch";
       const isEstafette = item.type === "estafette";
-      const maxSlots = isTechnisch ? 2 : isEstafette ? 1 : 3;
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 1 : 3;
 
       // Rangschik kandidaten op punten — alleen beschikbare atleten
       const kandidaten = atleten
@@ -3409,41 +3464,17 @@ async function verstuurUitnodiging() {
   if (!categorieId) { toast("Kies een categorie", "err"); return; }
   const uid = await getUid();
   try {
-    // Sla uitnodiging op en haal het token op
-    const { data: nieuweUitn, error } = await sb.from("uitnodigingen").insert({
+    const { error } = await sb.from("uitnodigingen").insert({
       email,
       categorie_id:   categorieId,
       aangemaakt_door: uid
-    }).select("token").single();
+    });
     if (error) {
       if (error.code === "23505") { toast("Dit e-mailadres heeft al een uitnodiging", "err"); }
       else throw error;
       return;
     }
-
-    // Bouw de uitnodigingslink
-    const basis = window.location.origin + window.location.pathname.replace("app.html","");
-    const link  = `${basis}index.html?uitnodiging=${nieuweUitn.token}`;
-
-    // Verstuur e-mail via Cloudflare Worker
-    try {
-      const mailResp = await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, link }),
-      });
-      if (mailResp.ok) {
-        toast(`Uitnodiging verstuurd naar ${email} ✓`);
-      } else {
-        const fout = await mailResp.text();
-        console.warn("E-mail mislukt:", fout);
-        toast(`Uitnodiging aangemaakt, maar e-mail mislukt. Gebruik de kopieerknop. (${fout})`, "err");
-      }
-    } catch(mailErr) {
-      console.warn("E-mail fout:", mailErr);
-      toast(`Uitnodiging aangemaakt, maar e-mail mislukt. Gebruik de kopieerknop.`, "err");
-    }
-
+    toast(`Uitnodiging aangemaakt voor ${email} ✓`);
     closeModal("uitnodigingModal");
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
@@ -3503,7 +3534,7 @@ async function exporteerOpstelling() {
     const rijen = [];
 
     // Headerrij
-    rijen.push(["Naam", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", ...disciplines]);
+    rijen.push(["Naam", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", "Startgroep", ...disciplines]);
 
     for (const ploeg of ploegNamen) {
       const opst = opstellingData[ploeg] || {};
@@ -3511,7 +3542,7 @@ async function exporteerOpstelling() {
       // Verzamel alle atleten in deze ploeg
       const atleetInPloeg = new Set();
       programma.forEach((item, idx) => {
-        const maxSlots = item.type === "technisch" ? 2 : item.type === "estafette" ? 1 : 3;
+        const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 1 : 3;
         for (let s = 0; s < maxSlots; s++) {
           const aid = opst[`${ploeg}_${idx}_${s}`];
           if (aid) atleetInPloeg.add(String(aid));
@@ -3527,16 +3558,29 @@ async function exporteerOpstelling() {
         const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
         const geslachtCode = geslacht === "V" ? "V" : "M";
         const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
+
+        // Bepaal startgroep: zoek de eerste technische rij waaraan deze atleet deelneemt
+        let startgroepWaarde = "";
+        programma.forEach((pItem, pIdx) => {
+          if (pItem.type === "technisch" && pItem.startgroep) {
+            if (String(opst[`${ploeg}_${pIdx}_0`]) === atleetId) {
+              const gc = geslacht === "V" ? "V" : "M";
+              startgroepWaarde = `U16-${gc} - Groep ${pItem.startgroep}`;
+            }
+          }
+        });
+
         const rij = [
           atleet.naam || "",
           atleet.bondsnr || "",
           atleet.geslacht === "V" ? "F" : "M",
           "AV Sprint",
-          teamNaam
+          teamNaam,
+          startgroepWaarde
         ];
 
         disciplines.forEach((disc, idx) => {
-          const maxSlots = programma[idx].type === "technisch" ? 2 : programma[idx].type === "estafette" ? 1 : 3;
+          const maxSlots = programma[idx].type === "technisch" ? 1 : programma[idx].type === "estafette" ? 1 : 3;
           let staat = false;
           for (let s = 0; s < maxSlots; s++) {
             if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) { staat = true; break; }
@@ -3570,6 +3614,7 @@ async function exporteerOpstelling() {
       { wch: 10 }, // Geslacht
       { wch: 16 }, // Vereniging
       { wch: 12 }, // Team
+      { wch: 20 }, // Startgroep
       ...disciplines.map(() => ({ wch: 14 }))
     ];
 
@@ -3581,6 +3626,44 @@ async function exporteerOpstelling() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// ── Light/Dark/Systeem theme ──────────────────────────────────
+const THEME_KEY = "sprint-u16-theme";
+const themeVolgorde = ["dark", "light", "system"];
+const themeLabels = { dark: "🌙 Donker", light: "☀️ Licht", system: "💻 Systeem" };
+
+function pasThemaToe(theme) {
+  const html = document.documentElement;
+  if (theme === "light") {
+    html.setAttribute("data-theme", "light");
+  } else if (theme === "dark") {
+    html.removeAttribute("data-theme");
+  } else {
+    // Systeem: volg prefers-color-scheme
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (prefersDark) html.removeAttribute("data-theme");
+    else html.setAttribute("data-theme", "light");
+  }
+  const btn = document.getElementById("theme-btn");
+  if (btn) btn.textContent = themeLabels[theme];
+}
+
+function cycleTheme() {
+  const huidig = localStorage.getItem(THEME_KEY) || "dark";
+  const volgend = themeVolgorde[(themeVolgorde.indexOf(huidig) + 1) % themeVolgorde.length];
+  localStorage.setItem(THEME_KEY, volgend);
+  pasThemaToe(volgend);
+}
+
+// Pas thema toe bij laden
+(function() {
+  const opgeslagen = localStorage.getItem(THEME_KEY) || "dark";
+  pasThemaToe(opgeslagen);
+  // Luister naar systeemwijziging als "system" actief is
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if ((localStorage.getItem(THEME_KEY) || "dark") === "system") pasThemaToe("system");
+  });
+})();
+
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
     `<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div> Verbinden met Supabase…</div>`;
