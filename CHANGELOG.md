@@ -6,16 +6,17 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 8] — 2026-04-15
+## [april 2026 — patch 9] — 2026-04-15
 
-### 🐛 Discuswerpen toegevoegd aan manuele invoer resultaten
+### 🐛 Ontbrekende disciplines toegevoegd aan manuele invoer resultaten
 
-**Wat ontbrak:** Discuswerpen ontbrak in de discipline-keuzelijst bij het handmatig invoeren van een prestatie in de Resultaten-tab.
+**Wat ontbrak:** 150m, 300m, 80m horden, 100m horden en 300m horden ontbraken in de discipline-keuzelijst bij het handmatig invoeren van een prestatie.
 
 **Wat is gewijzigd:**
-- `discuswerpen` toegevoegd als optie in de dropdown (tussen Kogelstoten en Speerwerpen)
-- `updateEenheidField()` bijgewerkt zodat Discuswerpen de juiste eenheid ("m") en label ("Afstand") krijgt
-- PR-logica was al correct: hogere waarde = beter (geen aanpassing nodig)
+- `150m`, `300m`, `80m horden`, `100m horden` en `300m horden` toegevoegd aan de dropdown
+- `updateEenheidField()` bijgewerkt: alle nieuwe disciplines krijgen automatisch eenheid "sec" en label "Tijd (seconden)"
+- PR-logica (`isSneller`) uitgebreid: voor al deze disciplines geldt lager = beter
+- `60m` verwijderd uit de dropdown (niet meer van toepassing bij U16)
 
 ---
 
