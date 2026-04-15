@@ -41,6 +41,12 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Wedstrijdprogramma staat in Wedstrijden-tab (patch 6, april 2026)
+Het wedstrijdprogramma (tijdschema per onderdeel) is verplaatst van de Opstelling-tab naar de Wedstrijden-tab. Op elke wedstrijdkaart staan nu twee knoppen: "✏️ Bewerken" en "📋 Programma". In de Opstelling-tab is het programma nog zichtbaar als overzicht (alleen lezen).
+
+### Tijdconflict-override (patch 6, april 2026)
+Atleten met een tijdconflict (< 15 min tussen twee onderdelen) zijn overschrijfbaar. Ze verschijnen grijs met een waarschuwing. Bij klikken verschijnt een bevestigingsdialoog. Harde blokkades (andere startgroep, andere ploeg, max 3 onderdelen) zijn **niet** overschrijfbaar.
+
 ### eigenaar_id vs categorie_id
 De originele app werkte met `eigenaar_id` (één trainer = één dataset).
 In april 2026 gemigreerd naar `categorie_id` voor gedeelde toegang per categorie.
@@ -132,7 +138,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 ## ✅ Geteste features (april 2026)
 
-Alle features getest en werkend (patch 6 toegevoegd): login, auth guard, atleet CRUD,
+Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
 prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),

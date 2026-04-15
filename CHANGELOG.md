@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 6] — 2026-04-15
+
+### 🔧 Wedstrijdprogramma verplaatst naar Wedstrijden-tab
+
+**Reden:** Het wedstrijdprogramma (tijdschema per onderdeel) hoort logisch bij de wedstrijd zelf, niet bij de opstelling.
+
+**Wat is gewijzigd:**
+- Wedstrijdkaarten in de Wedstrijden-tab hebben nu twee knoppen: **✏️ Bewerken** (wedstrijdgegevens) en **📋 Programma** (tijdschema)
+- De "✏️ Bewerken"-knop voor het programma is verwijderd uit de Opstelling-tab; het overzicht aldaar is alleen nog leesbaar
+- Programma-modal toont nu geslacht-tabs (👦 Jongens / 👧 Meisjes) zodat je per geslacht het programma kunt beheren vanuit de Wedstrijden-tab
+
+### 🗑️ Duur-kolom verwijderd uit programma-overzicht
+
+**Reden:** De tijdsduur per onderdeel is niet relevant voor de gebruiker; de 15-minuten conflictregel werkt intern.
+
+### ✨ Tijdconflict overschrijfbaar als uitzondering
+
+**Reden:** In uitzonderlijke gevallen kan het nodig zijn een atleet in twee onderdelen te zetten die minder dan 15 minuten uit elkaar liggen.
+
+**Hoe het werkt:**
+- Atleten met een tijdconflict verschijnen nog steeds grijs gemarkeerd met "(⚠️ tijdconflict)"
+- Klikken op zo'n atleet toont een bevestigingsdialoog: "Weet je het zeker? Dit is een uitzondering."
+- Na bevestiging wordt de atleet toch ingepland (override)
+- Harde blokkades (andere startgroep, andere ploeg, max 3 onderdelen) zijn **niet** overschrijfbaar
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [april 2026 — patch 3] — 2026-04-09
 
 ### 🗑️ Verwijderd: 60m uit de app

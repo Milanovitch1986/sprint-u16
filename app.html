@@ -1050,7 +1050,6 @@
       <div class="detail-panel" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
           <span>📋 Wedstrijdprogramma</span>
-          <button class="btn btn-ghost btn-sm" style="margin:8px 16px;" onclick="openProgrammaModal()">✏️ Bewerken</button>
         </div>
         <div id="programma-overzicht" style="padding:16px;">
           <div class="empty-state"><div class="icon">📋</div>Nog geen programma ingevoerd.</div>
@@ -1208,7 +1207,11 @@
 <div class="modal-overlay" id="programmaModal" style="align-items:flex-start;padding-top:40px;">
   <div class="modal" style="max-width:780px;max-height:80vh;overflow-y:auto;width:95vw;">
     <div class="modal-title">Wedstrijdprogramma</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="programma-modal-sub"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;" id="programma-modal-sub"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="prog-tab-M" class="btn btn-primary btn-sm" onclick="setProgrammaGeslacht('M')">👦 Jongens</button>
+      <button id="prog-tab-V" class="btn btn-ghost btn-sm" onclick="setProgrammaGeslacht('V')">👧 Meisjes</button>
+    </div>
 
     <div id="programma-items-list"></div>
 
@@ -2533,11 +2536,15 @@ function renderWedstrijden() {
     return;
   }
   grid.innerHTML = wedstrijden.map(w => `
-    <div class="wedstrijd-card" onclick="openWedstrijdModal('${w.id}')">
+    <div class="wedstrijd-card">
       <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
       ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
+        <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
+      </div>
     </div>`).join("");
 }
 
@@ -2602,6 +2609,29 @@ async function deleteWedstrijd() {
     renderWedstrijden();
     toast("Wedstrijd verwijderd");
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Programma vanuit Wedstrijden-tab ─────────────────────────
+// Stelt de actieve wedstrijd in en opent het programma-modal
+// zonder naar de opstelling-tab te gaan.
+async function openProgrammaVanWedstrijd(wedstrijdId) {
+  actiefWedstrijdId = wedstrijdId;
+  // Laad het programma voor deze wedstrijd (standaard geslacht M, of huidig actief)
+  if (!actiefGeslacht) actiefGeslacht = "M";
+  const cid = actieveCategorie?.id;
+  try {
+    const { data, error } = await sb.from("programma").select("*")
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", actiefWedstrijdId)
+      .eq("geslacht", actiefGeslacht)
+      .order("starttijd", { ascending: true });
+    if (error) throw error;
+    programma = data || [];
+  } catch(e) {
+    toast("Fout bij laden programma: " + e.message, "err");
+    return;
+  }
+  openProgrammaModal();
 }
 
 // ── Opstelling scherm ─────────────────────────────────────────
@@ -2707,16 +2737,13 @@ function renderProgrammaOverzicht() {
   el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;">
     <thead><tr>
       <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Onderdeel</th>
-      <th class="programma-type-col" style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Type</th>
       <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Starttijd</th>
-      <th class="programma-duur-col" style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Duur</th>
+      <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;">Startgroep</th>
     </tr></thead>
     <tbody>
       ${programma.map(p => `<tr>
         <td style="padding:8px 12px;font-weight:700;">${esc(p.discipline)}</td>
-        <td class="programma-type-col" style="padding:8px 12px;color:var(--muted);">${p.type}</td>
         <td style="padding:8px 12px;color:var(--accent);font-weight:700;">${p.starttijd||"—"}</td>
-        <td class="programma-duur-col" style="padding:8px 12px;color:var(--muted);">${p.duur||30} min</td>
         <td style="padding:8px 12px;color:var(--muted);">${p.type === "technisch" ? (p.startgroep ? "Groep " + p.startgroep : "—") : ""}</td>
       </tr>`).join("")}
     </tbody>
@@ -2725,10 +2752,14 @@ function renderProgrammaOverzicht() {
 
 // ── Programma Modal ───────────────────────────────────────────
 function openProgrammaModal() {
-  const g = actiefGeslacht === "M" ? "Jongens" : "Meisjes";
   const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
-  document.getElementById("programma-modal-sub").textContent =
-    `${w ? w.naam : ""} — ${g}`;
+  document.getElementById("programma-modal-sub").textContent = w ? w.naam : "";
+
+  // Stel geslacht tabs in
+  const g = actiefGeslacht || "M";
+  actiefGeslacht = g;
+  document.getElementById("prog-tab-M").className = g === "M" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+  document.getElementById("prog-tab-V").className = g === "V" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
 
   const lijst = document.getElementById("programma-items-list");
   lijst.innerHTML = "";
@@ -2738,6 +2769,33 @@ function openProgrammaModal() {
     addProgrammaRij();
   }
   openModal("programmaModal");
+}
+
+// Schakel geslacht in programma modal en herlaad de rijen
+async function setProgrammaGeslacht(g) {
+  actiefGeslacht = g;
+  document.getElementById("prog-tab-M").className = g === "M" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+  document.getElementById("prog-tab-V").className = g === "V" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+  const cid = actieveCategorie?.id;
+  try {
+    const { data, error } = await sb.from("programma").select("*")
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", actiefWedstrijdId)
+      .eq("geslacht", g)
+      .order("starttijd", { ascending: true });
+    if (error) throw error;
+    programma = data || [];
+  } catch(e) {
+    toast("Fout bij laden programma: " + e.message, "err");
+    return;
+  }
+  const lijst = document.getElementById("programma-items-list");
+  lijst.innerHTML = "";
+  if (programma.length) {
+    programma.forEach(p => addProgrammaRijMet(p));
+  } else {
+    addProgrammaRij();
+  }
 }
 
 function addProgrammaRij() {
@@ -2989,11 +3047,20 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
 
   div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
     kandidaten.map(k => {
-      const dimmed = k.aantalOnderdelen >= 3 || k.conflict || k.andereP || k.andereGroep;
-      const waarsch = k.andereGroep ? "al in andere startgroep" : k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "tijdconflict" : "";
+      // Harde blokkade: andere startgroep, andere ploeg, max onderdelen
+      const geblokkeerd = k.andereGroep || k.andereP || k.aantalOnderdelen >= 3;
+      // Zachte waarschuwing: tijdconflict (overschrijfbaar)
+      const dimmed = geblokkeerd || k.conflict;
+      const waarsch = k.andereGroep ? "al in andere startgroep" : k.andereP ? "al in andere ploeg" : k.aantalOnderdelen >= 3 ? "max 3 onderdelen" : k.conflict ? "⚠️ tijdconflict (klik om te overschrijven)" : "";
+      // Bij tijdconflict: onclick vraagt bevestiging; bij blokkade: onclick doet niets
+      const clickHandler = geblokkeerd
+        ? ""
+        : k.conflict
+          ? `onclick="kiesAtleetMetConflict('${ploeg}',${idx},${slotNr},'${k.atleet.id}','${esc(k.atleet.naam)}')"`
+          : `onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')"`;
       return `<div class="slot-select-item ${dimmed ? "dimmed" : ""}"
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
-        onclick="kiesAtleet('${ploeg}',${idx},${slotNr},'${k.atleet.id}')">
+        ${clickHandler}>
         <span>${esc(k.atleet.naam)} ${waarsch ? `<small style="color:var(--accent2)">(${waarsch})</small>` : ""}</span>
         <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${k.pr.resultaat}` : "geen PR"}</span>
       </div>`;
@@ -3055,6 +3122,20 @@ function kiesAtleet(ploeg, idx, slotNr, atleetId) {
   const slotKey = `${ploeg}_${idx}_${slotNr}`;
   opstellingData[ploeg][slotKey] = atleetId;
   document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  renderPloegen();
+}
+
+// Kies atleet ondanks tijdconflict — vraagt eerst bevestiging
+async function kiesAtleetMetConflict(ploeg, idx, slotNr, atleetId, atleetNaam) {
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  const disc = programma[idx]?.discipline || "dit onderdeel";
+  const bevestigd = await bevestig(
+    "Tijdconflict overschrijven",
+    `${atleetNaam} heeft een tijdconflict bij ${disc} (minder dan 15 min tussen twee onderdelen). Wil je dit als uitzondering toch doorzetten?`
+  );
+  if (!bevestigd) return;
+  if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+  opstellingData[ploeg][`${ploeg}_${idx}_${slotNr}`] = atleetId;
   renderPloegen();
 }
 
