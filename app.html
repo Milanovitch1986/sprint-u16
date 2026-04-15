@@ -1046,16 +1046,6 @@
         <div id="beschikbaarheid-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
       </div>
 
-      <!-- Programma sectie -->
-      <div class="detail-panel" style="margin-bottom:24px;">
-        <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>📋 Wedstrijdprogramma</span>
-        </div>
-        <div id="programma-overzicht" style="padding:16px;">
-          <div class="empty-state"><div class="icon">📋</div>Nog geen programma ingevoerd.</div>
-        </div>
-      </div>
-
       <!-- Ploegen sectie -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
@@ -1219,6 +1209,7 @@
 
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('programmaModal')">Annuleren</button>
+      <button class="btn btn-ghost" onclick="printProgramma()">🖨️ Afdrukken</button>
       <button class="btn btn-primary" onclick="saveProgrammaModal()">Opslaan</button>
     </div>
   </div>
@@ -2730,6 +2721,7 @@ async function laadProgrammaEnOpstelling() {
 // ── Programma overzicht ───────────────────────────────────────
 function renderProgrammaOverzicht() {
   const el = document.getElementById("programma-overzicht");
+  if (!el) return; // element bestaat niet meer in de DOM
   if (!programma.length) {
     el.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Nog geen programma. Klik op ✏️ Bewerken.</div>`;
     return;
@@ -2748,6 +2740,56 @@ function renderProgrammaOverzicht() {
       </tr>`).join("")}
     </tbody>
   </table></div>`;
+}
+
+// ── Programma afdrukken ───────────────────────────────────────
+function printProgramma() {
+  const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
+  const wedstrijdNaam = w ? w.naam : "Wedstrijd";
+  const wedstrijdDatum = w && w.datum ? ` · ${formatDate(w.datum)}` : "";
+  const geslachtLabel = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
+
+  if (!programma.length) {
+    toast("Geen programma om af te drukken", "err");
+    return;
+  }
+
+  let html = `
+    <div style="font-family:Arial,sans-serif;font-size:12px;color:black;padding:20px;">
+      <h2 style="font-size:18px;margin-bottom:4px;">${esc(wedstrijdNaam)}${esc(wedstrijdDatum)}</h2>
+      <div style="font-size:12px;color:#555;margin-bottom:4px;">AV Sprint U16 — ${geslachtLabel}</div>
+      <div style="font-size:11px;color:#999;margin-bottom:20px;">Wedstrijdprogramma</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#f0f0f0;">
+            <th style="padding:7px 12px;text-align:left;border:1px solid #ccc;">#</th>
+            <th style="padding:7px 12px;text-align:left;border:1px solid #ccc;">Onderdeel</th>
+            <th style="padding:7px 12px;text-align:left;border:1px solid #ccc;">Starttijd</th>
+            <th style="padding:7px 12px;text-align:left;border:1px solid #ccc;">Type</th>
+            <th style="padding:7px 12px;text-align:left;border:1px solid #ccc;">Startgroep</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${programma.map((p, i) => `
+            <tr style="${i % 2 === 0 ? "" : "background:#fafafa"}">
+              <td style="padding:6px 12px;border:1px solid #ddd;color:#999;">${i + 1}</td>
+              <td style="padding:6px 12px;border:1px solid #ddd;font-weight:700;">${esc(p.discipline)}</td>
+              <td style="padding:6px 12px;border:1px solid #ddd;font-weight:700;">${p.starttijd || "—"}</td>
+              <td style="padding:6px 12px;border:1px solid #ddd;color:#555;">${p.type || "—"}</td>
+              <td style="padding:6px 12px;border:1px solid #ddd;color:#555;">${p.type === "technisch" ? (p.startgroep ? "Groep " + p.startgroep : "—") : "—"}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <div style="margin-top:16px;font-size:10px;color:#aaa;">Afgedrukt op ${new Date().toLocaleDateString("nl-NL")}</div>
+    </div>`;
+
+  document.getElementById("print-view").innerHTML = html;
+  document.getElementById("print-view").style.display = "";
+  window.print();
+  setTimeout(() => {
+    document.getElementById("print-view").style.display = "none";
+    document.getElementById("print-view").innerHTML = "";
+  }, 1000);
 }
 
 // ── Programma Modal ───────────────────────────────────────────

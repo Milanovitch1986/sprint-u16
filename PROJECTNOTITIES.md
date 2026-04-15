@@ -41,11 +41,8 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
-### Wedstrijdprogramma staat in Wedstrijden-tab (patch 6, april 2026)
-Het wedstrijdprogramma (tijdschema per onderdeel) is verplaatst van de Opstelling-tab naar de Wedstrijden-tab. Op elke wedstrijdkaart staan nu twee knoppen: "✏️ Bewerken" en "📋 Programma". In de Opstelling-tab is het programma nog zichtbaar als overzicht (alleen lezen).
-
-### Tijdconflict-override (patch 6, april 2026)
-Atleten met een tijdconflict (< 15 min tussen twee onderdelen) zijn overschrijfbaar. Ze verschijnen grijs met een waarschuwing. Bij klikken verschijnt een bevestigingsdialoog. Harde blokkades (andere startgroep, andere ploeg, max 3 onderdelen) zijn **niet** overschrijfbaar.
+### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
+Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
 
 ### eigenaar_id vs categorie_id
 De originele app werkte met `eigenaar_id` (één trainer = één dataset).

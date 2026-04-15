@@ -6,30 +6,23 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 6] — 2026-04-15
+## [april 2026 — patch 7] — 2026-04-15
 
-### 🔧 Wedstrijdprogramma verplaatst naar Wedstrijden-tab
+### 🗑️ Wedstrijdprogramma-overzicht verwijderd uit Opstelling-tab
 
-**Reden:** Het wedstrijdprogramma (tijdschema per onderdeel) hoort logisch bij de wedstrijd zelf, niet bij de opstelling.
+**Reden:** Het programma is al te bewerken en te bekijken via de Wedstrijden-tab. Het overzicht in de Opstelling-tab was overbodig en verwarrend.
 
-**Wat is gewijzigd:**
-- Wedstrijdkaarten in de Wedstrijden-tab hebben nu twee knoppen: **✏️ Bewerken** (wedstrijdgegevens) en **📋 Programma** (tijdschema)
-- De "✏️ Bewerken"-knop voor het programma is verwijderd uit de Opstelling-tab; het overzicht aldaar is alleen nog leesbaar
-- Programma-modal toont nu geslacht-tabs (👦 Jongens / 👧 Meisjes) zodat je per geslacht het programma kunt beheren vanuit de Wedstrijden-tab
+**Wat is verwijderd:**
+- Het "📋 Wedstrijdprogramma"-paneel in de Opstelling-tab (stap 2) volledig verwijderd
+- `renderProgrammaOverzicht()` is voorzien van een null-check zodat de functie niet crasht
 
-### 🗑️ Duur-kolom verwijderd uit programma-overzicht
-
-**Reden:** De tijdsduur per onderdeel is niet relevant voor de gebruiker; de 15-minuten conflictregel werkt intern.
-
-### ✨ Tijdconflict overschrijfbaar als uitzondering
-
-**Reden:** In uitzonderlijke gevallen kan het nodig zijn een atleet in twee onderdelen te zetten die minder dan 15 minuten uit elkaar liggen.
+### ✨ Wedstrijdprogramma afdrukken vanuit de Wedstrijden-tab
 
 **Hoe het werkt:**
-- Atleten met een tijdconflict verschijnen nog steeds grijs gemarkeerd met "(⚠️ tijdconflict)"
-- Klikken op zo'n atleet toont een bevestigingsdialoog: "Weet je het zeker? Dit is een uitzondering."
-- Na bevestiging wordt de atleet toch ingepland (override)
-- Harde blokkades (andere startgroep, andere ploeg, max 3 onderdelen) zijn **niet** overschrijfbaar
+- In de programma-modal (geopend via "📋 Programma" op een wedstrijdkaart) staat nu een **🖨️ Afdrukken**-knop
+- Het afdruk-overzicht toont: nummer, onderdeel, starttijd, type en startgroep
+- Bovenaan staat de wedstrijdnaam, datum en geslacht (Jongens/Meisjes)
+- Onderaan staat de afdrukdatum
 
 **Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
 
