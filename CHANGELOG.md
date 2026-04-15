@@ -6,27 +6,15 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 4] — 2026-04-14
+## [april 2026 — patch 6] — 2026-04-15
 
-### 🔧 Verbetering: Accordeon-weergave in Prestaties-tab
+### 🔧 Atletenkaartje: club, categorielabel en licentienummer
 
-**Probleem:** Bij het overzicht van alle atleten (geen filtersel) werd een lange
-doorlopende lijst getoond met per atleet een volledige prestatietabel. Dit werd
-onleesbaar naarmate meer records werden toegevoegd.
-
-**Oplossing:** De weergave per atleet is omgezet naar een inklapbare accordeon:
-- Elke atleet heeft een klikbare koptekst met naam en aantal prestaties
-- De tabel is standaard ingeklapt (behalve de eerste atleet, die staat open)
-- Klikken op de koptekst klapt de tabel in of uit (chevron ▼ draait mee)
-- Nieuwe CSS-klassen: `.accordeon-header`, `.accordeon-naam`, `.accordeon-meta`,
-  `.accordeon-chevron`, `.accordeon-body`
-- Nieuwe JS-functie: `toggleAccordeon(id)`
-
-**Niet veranderd:**
-- De weergave als je een specifieke atleet filtert (blijft ongewijzigd)
-- De prestatietabel zelf, inclusief PR-badges
-
-**Bestanden gewijzigd:** `app.html`
+**Wat is gewijzigd:**
+- Club op het kaartje toont altijd **AV Sprint** (was: waarde uit database, die kan variëren)
+- Badge op het kaartje toont nu **categorie + geslacht** (bijv. "U16 Jongen" / "U16 Meisje"), was alleen "Jongen" / "Meisje"
+- Formulierlabel **"Bondsnummer"** hernoemd naar **"Atletiekunie Licentienummer"**
+- Het 🪪-icoontje op het kaartje toont nog steeds het licentienummer uit de database
 
 ---
 
