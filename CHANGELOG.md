@@ -6,18 +6,6 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 6] — 2026-04-15
-
-### 🔧 Atletenkaartje: club, categorielabel en licentienummer
-
-**Wat is gewijzigd:**
-- Club op het kaartje toont altijd **AV Sprint** (was: waarde uit database, die kan variëren)
-- Badge op het kaartje toont nu **categorie + geslacht** (bijv. "U16 Jongen" / "U16 Meisje"), was alleen "Jongen" / "Meisje"
-- Formulierlabel **"Bondsnummer"** hernoemd naar **"Atletiekunie Licentienummer"**
-- Het 🪪-icoontje op het kaartje toont nog steeds het licentienummer uit de database
-
----
-
 ## [april 2026 — patch 3] — 2026-04-09
 
 ### 🗑️ Verwijderd: 60m uit de app

@@ -132,22 +132,8 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 ## ✅ Geteste features (april 2026)
 
-Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
+Alle features getest en werkend (patch 6 toegevoegd): login, auth guard, atleet CRUD,
 prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
-
----
-
-## 📋 Release Notes
-
-### Sprint U16 — april 2026 (patch 4)
-
-**🔧 Accordeon-weergave in Prestaties-tab**
-
-De "alle atleten"-weergave in de Prestaties-tab is omgezet naar een inklapbare
-accordeon. Elke atleet heeft een klikbare koptekst; de tabel klapt pas open
-als je erop klikt. De eerste atleet staat standaard open.
-
-**Bestanden gewijzigd:** `app.html`
