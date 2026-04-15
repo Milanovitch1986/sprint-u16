@@ -41,9 +41,6 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
-### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
-Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
-
 ### eigenaar_id vs categorie_id
 De originele app werkte met `eigenaar_id` (één trainer = één dataset).
 In april 2026 gemigreerd naar `categorie_id` voor gedeelde toegang per categorie.
@@ -140,3 +137,36 @@ prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
+
+---
+
+## 📋 Release notes — patch 6 (april 2026)
+
+### ✨ PDF-import voor wedstrijdprogramma
+
+**Aanleiding:** Handmatig invoeren van een tijdschema (10-15 onderdelen per geslacht)
+is foutgevoelig en tijdrovend. De officiële SPAR Competitie tijdschema's zijn beschikbaar
+als PDF van atletiek.nu, altijd in hetzelfde formaat.
+
+**Hoe werkt het:**
+- Knop "📄 Importeer PDF" op de Wedstrijden-pagina naast "📋 Programma"
+- PDF wordt in de browser gelezen via PDF.js (geen server nodig)
+- Tekst-extractie per pagina, regels worden geparsed op tijdstip + categorie + onderdeel
+- Alleen U16-M en U16-V rijen worden opgenomen; U14 en overige worden genegeerd
+- Startgroepen (groep A / groep B) worden automatisch herkend uit de tekst
+- Preview toont herkende rijen voor beide geslachten vóór opslaan
+- Waarschuwing als er al bestaand programma is (wordt overschreven)
+- Beide geslachten worden in één keer opgeslagen
+
+**Vertaaltabel disciplines (`PDF_DISCIPLINE_VERTALING`):**
+PDF gebruikt verkorte namen ("Hoog", "Ver", "Kogel") die vertaald worden naar
+de volledige app-namen ("Hoogspringen", "Verspringen", "Kogelstoten").
+Niet-U16 onderdelen (60m, 4x60m, 60mH) worden stilzwijgend overgeslagen.
+
+**Niet getest via Supabase:**
+- Lezen en verwijderen van bestaande programmarijen
+- Invoegen van nieuwe rijen inclusief `startgroep` kolom
+- Controleer of `programma` tabel een `startgroep` kolom heeft:
+  ```sql
+  ALTER TABLE programma ADD COLUMN IF NOT EXISTS startgroep text;
+  ```

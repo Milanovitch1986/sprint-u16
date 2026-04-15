@@ -6,25 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 7] — 2026-04-15
+## [april 2026 — patch 6] — 2026-04-15
 
-### 🗑️ Wedstrijdprogramma-overzicht verwijderd uit Opstelling-tab
+### ✨ Nieuw: PDF-import voor wedstrijdprogramma
 
-**Reden:** Het programma is al te bewerken en te bekijken via de Wedstrijden-tab. Het overzicht in de Opstelling-tab was overbodig en verwarrend.
+Het is nu mogelijk om een tijdschema-PDF (SPAR Competitie / atletiek.nu formaat)
+direct te importeren als wedstrijdprogramma, zonder handmatig invoeren.
 
-**Wat is verwijderd:**
-- Het "📋 Wedstrijdprogramma"-paneel in de Opstelling-tab (stap 2) volledig verwijderd
-- `renderProgrammaOverzicht()` is voorzien van een null-check zodat de functie niet crasht
+**Hoe werkt het:**
+- Op de Wedstrijden-pagina staat naast "📋 Programma" een nieuwe knop: "📄 Importeer PDF"
+- Na het kiezen van een PDF wordt de tekst automatisch uitgelezen
+- De app filtert alleen U16-M (jongens) en U16-V (meisjes) rijen
+- Onderdelen, starttijden én startgroepen (A/B) worden automatisch herkend
+- Een preview toont wat gevonden is voor beide geslachten, vóór het opslaan
+- Als er al een programma bestaat: waarschuwing dat het wordt overschreven
+- Bij bevestigen worden jongens én meisjes in één keer opgeslagen
 
-### ✨ Wedstrijdprogramma afdrukken vanuit de Wedstrijden-tab
+**Technische details:**
+- PDF.js (v3.11.174, Mozilla) gebruikt voor tekst-extractie in de browser
+- Vertaaltabel `PDF_DISCIPLINE_VERTALING` vertaalt PDF-namen naar app-namen
+  (bijv. "Hoog" → "Hoogspringen", "Kogel" → "Kogelstoten")
+- Niet-U16 onderdelen (60m, 4x60m, 60mH, U14-onderdelen) worden automatisch overgeslagen
+- Niet-herkende regels worden getoond in de preview maar niet geïmporteerd
+- State: `pdfImportWedstrijdId`, `pdfImportResultaatM`, `pdfImportResultaatV`
+- Nieuwe functies: `openPdfImportModal()`, `verwerkPdfBestand()`, `parseerTijdschema()`,
+  `zoekDisciplineVertaling()`, `toonImportPreview()`, `maakPreviewTabel()`,
+  `controleerBestaandeData()`, `slaImportOp()`, `sluitPdfImportModal()`
 
-**Hoe het werkt:**
-- In de programma-modal (geopend via "📋 Programma" op een wedstrijdkaart) staat nu een **🖨️ Afdrukken**-knop
-- Het afdruk-overzicht toont: nummer, onderdeel, starttijd, type en startgroep
-- Bovenaan staat de wedstrijdnaam, datum en geslacht (Jongens/Meisjes)
-- Onderaan staat de afdrukdatum
-
-**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+**Bestanden gewijzigd:** `app.html`
 
 ---
 

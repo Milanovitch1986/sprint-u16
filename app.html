@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sprint U16 — Atletiek</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --bg:        #0a0c10;
@@ -1211,6 +1212,52 @@
       <button class="btn btn-ghost" onclick="closeModal('programmaModal')">Annuleren</button>
       <button class="btn btn-ghost" onclick="printProgramma()">🖨️ Afdrukken</button>
       <button class="btn btn-primary" onclick="saveProgrammaModal()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PDF IMPORT MODAL ── -->
+<div class="modal-overlay" id="pdfImportModal" style="align-items:flex-start;padding-top:40px;">
+  <div class="modal" style="max-width:720px;max-height:85vh;overflow-y:auto;width:95vw;">
+    <div class="modal-title">📄 Importeer tijdschema uit PDF</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="pdf-import-sub"></div>
+
+    <!-- Stap 1: bestand kiezen -->
+    <div id="pdf-import-stap1">
+      <div style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;"
+           onclick="document.getElementById('pdf-bestand-input').click()"
+           id="pdf-dropzone">
+        <div style="font-size:36px;margin-bottom:8px;">📄</div>
+        <div style="font-weight:600;margin-bottom:4px;">Klik om een PDF te kiezen</div>
+        <div style="font-size:12px;color:var(--muted);">Tijdschema van atletiek.nu / SPAR Competitie</div>
+        <input type="file" id="pdf-bestand-input" accept=".pdf" style="display:none;" onchange="verwerkPdfBestand(this.files[0])">
+      </div>
+      <div id="pdf-laad-status" style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center;display:none;"></div>
+    </div>
+
+    <!-- Stap 2: preview -->
+    <div id="pdf-import-stap2" style="display:none;">
+      <div id="pdf-import-waarschuwing" style="display:none;background:var(--accent2)22;border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <!-- Jongens -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👦 Jongens (U16-M) — <span id="pdf-preview-m-count">0</span> rijen</div>
+          <div id="pdf-preview-m" style="font-size:12px;max-height:300px;overflow-y:auto;"></div>
+        </div>
+        <!-- Meisjes -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👧 Meisjes (U16-V) — <span id="pdf-preview-v-count">0</span> rijen</div>
+          <div id="pdf-preview-v" style="font-size:12px;max-height:300px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <div id="pdf-import-niet-herkend" style="display:none;margin-top:12px;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="sluitPdfImportModal()">Annuleren</button>
+      <button class="btn btn-primary" id="pdf-import-opslaan-btn" style="display:none;" onclick="slaImportOp()">✅ Importeren</button>
     </div>
   </div>
 </div>
@@ -2535,6 +2582,7 @@ function renderWedstrijden() {
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
         <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
       </div>
     </div>`).join("");
 }
@@ -4243,6 +4291,352 @@ async function archiveerNote(id) {
     laadReleasenotes();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
+
+// ── PDF Import ────────────────────────────────────────────────
+
+// PDF.js worker instellen
+if (typeof pdfjsLib !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+// Vertaaltabel: PDF-naam → app discipline-naam
+const PDF_DISCIPLINE_VERTALING = {
+  "hoog":         "Hoogspringen",
+  "hoogspringen": "Hoogspringen",
+  "ver":          "Verspringen",
+  "verspringen":  "Verspringen",
+  "kogel":        "Kogelstoten",
+  "kogelstoten":  "Kogelstoten",
+  "discus":       "Discuswerpen",
+  "discuswerpen": "Discuswerpen",
+  "speer":        "Speerwerpen",
+  "speerwerpen":  "Speerwerpen",
+  "4x100m":       "4x100m",
+  "4x80m":        "4x80m",
+  "4x60m":        null,   // niet U16 — overslaan
+  "100mh":        "100m horden",
+  "100m horden":  "100m horden",
+  "80mh":         "80m horden",
+  "80m horden":   "80m horden",
+  "60mh":         null,   // niet U16
+  "1500m":        "1500m",
+  "150m":         "150m",
+  "100m":         "100m",
+  "800m":         "800m",
+  "600m":         "600m",
+  "300m":         "300m",
+  "200m":         "200m",
+  "80m":          "80m",
+  "60m":          null,   // niet U16
+};
+
+// State voor de import
+let pdfImportWedstrijdId = null;
+let pdfImportResultaatM  = [];
+let pdfImportResultaatV  = [];
+
+function openPdfImportModal(wedstrijdId) {
+  pdfImportWedstrijdId = wedstrijdId;
+  pdfImportResultaatM  = [];
+  pdfImportResultaatV  = [];
+
+  const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
+  document.getElementById("pdf-import-sub").textContent =
+    w ? `Wedstrijd: ${w.naam} — ${formatDate(w.datum)}` : "";
+
+  // Reset naar stap 1
+  document.getElementById("pdf-import-stap1").style.display = "";
+  document.getElementById("pdf-import-stap2").style.display = "none";
+  document.getElementById("pdf-import-opslaan-btn").style.display = "none";
+  document.getElementById("pdf-laad-status").style.display = "none";
+  document.getElementById("pdf-bestand-input").value = "";
+
+  openModal("pdfImportModal");
+}
+
+function sluitPdfImportModal() {
+  closeModal("pdfImportModal");
+}
+
+async function verwerkPdfBestand(bestand) {
+  if (!bestand) return;
+
+  const statusEl = document.getElementById("pdf-laad-status");
+  statusEl.style.display = "";
+  statusEl.textContent = "PDF wordt gelezen…";
+
+  try {
+    // Lees bestand als ArrayBuffer
+    const buffer = await bestand.arrayBuffer();
+
+    // Controleer of PDF.js geladen is
+    if (typeof pdfjsLib === "undefined") {
+      throw new Error("PDF-bibliotheek kon niet worden geladen. Controleer je internetverbinding.");
+    }
+
+    // Laad het PDF-document
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    statusEl.textContent = `PDF geladen (${pdf.numPages} pagina${pdf.numPages > 1 ? "'s" : ""}) — tekst extraheren…`;
+
+    // Extraheer tekst van alle pagina's
+    let volledigeTekst = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pagina    = await pdf.getPage(i);
+      const content   = await pagina.getTextContent();
+      // Plak tekst-items samen; nieuwe regel als y-positie springt
+      let vorigeY = null;
+      for (const item of content.items) {
+        if (vorigeY !== null && Math.abs(item.transform[5] - vorigeY) > 3) {
+          volledigeTekst += "\n";
+        }
+        volledigeTekst += item.str + " ";
+        vorigeY = item.transform[5];
+      }
+      volledigeTekst += "\n";
+    }
+
+    statusEl.textContent = "Onderdelen herkennen…";
+    parseerTijdschema(volledigeTekst);
+
+  } catch(e) {
+    statusEl.textContent = "❌ Fout bij lezen PDF: " + e.message;
+  }
+}
+
+function parseerTijdschema(tekst) {
+  // Splits in regels en verwijder lege regels
+  const regels = tekst.split("\n").map(r => r.trim()).filter(r => r.length > 2);
+
+  const resultaatM    = [];
+  const resultaatV    = [];
+  const nietHerkend   = [];
+
+  // Tijdpatroon: bijv. "11:00u" of "11:00"
+  const tijdRegex = /^(\d{1,2}:\d{2})u?\s+/;
+
+  for (const regel of regels) {
+    const tijdMatch = regel.match(tijdRegex);
+    if (!tijdMatch) continue;
+
+    const starttijd = tijdMatch[1]; // "11:00"
+    const rest      = regel.slice(tijdMatch[0].length).trim();
+
+    // Bepaal geslacht: zoek U16-M of U16-V
+    const isM = /U16-?M\b/i.test(rest);
+    const isV = /U16-?V\b/i.test(rest);
+    if (!isM && !isV) continue; // niet U16, sla over
+
+    // Verwijder de categorie-aanduiding om discipline te isoleren
+    // Bijv. "U16-M - groep A  Speer" → "groep A  Speer"
+    //        "U16-M           4x100m" → "4x100m"
+    let resterend = rest.replace(/U16-?[MV]\b\s*/i, "").trim();
+
+    // Startgroep detecteren: "groep A" of "groep B"
+    let startgroep = null;
+    const groepMatch = resterend.match(/groep\s+([AB])\b/i);
+    if (groepMatch) {
+      startgroep = groepMatch[1].toUpperCase();
+      resterend  = resterend.replace(/groep\s+[AB]\b\s*/i, "").trim();
+    }
+
+    // Het eerste woord (of twee) is de discipline
+    // Verwijder cijfers achteraan (bijv. "Hoog 1", "Hoog 2" → "Hoog")
+    resterend = resterend.replace(/\s+\d+\s*$/, "").trim();
+
+    // Zoek discipline in vertaaltabel (lowercase vergelijken)
+    const disciplineSleutel = resterend.toLowerCase().split(/\s+0\s*atleten/)[0].trim();
+    const appDiscipline     = zoekDisciplineVertaling(disciplineSleutel);
+
+    if (appDiscipline === undefined) {
+      // Niet herkend
+      if (disciplineSleutel.length > 1) {
+        nietHerkend.push(`${starttijd} — "${resterend}" (${isM ? "M" : "V"})`);
+      }
+      continue;
+    }
+    if (appDiscipline === null) continue; // bewust overgeslagen (bijv. 60m)
+
+    // Controleer of discipline bestaat in U16_DISCIPLINES
+    const discDef = U16_DISCIPLINES.find(d => d.naam === appDiscipline);
+    if (!discDef) continue;
+
+    const rij = {
+      discipline: appDiscipline,
+      type:       discDef.type,
+      starttijd:  starttijd,
+      startgroep: startgroep
+    };
+
+    if (isM) resultaatM.push(rij);
+    else     resultaatV.push(rij);
+  }
+
+  // Sorteer op starttijd
+  resultaatM.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
+  resultaatV.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
+
+  pdfImportResultaatM = resultaatM;
+  pdfImportResultaatV = resultaatV;
+
+  toonImportPreview(resultaatM, resultaatV, nietHerkend);
+}
+
+function zoekDisciplineVertaling(sleutel) {
+  // Directe match
+  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(sleutel)) {
+    return PDF_DISCIPLINE_VERTALING[sleutel];
+  }
+  // Probeer eerste woord (bijv. "hoog 1" → "hoog")
+  const eersteWoord = sleutel.split(/\s+/)[0];
+  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(eersteWoord)) {
+    return PDF_DISCIPLINE_VERTALING[eersteWoord];
+  }
+  // Probeer samengestelde sleutels (bijv. "100m horden")
+  for (const [key, val] of Object.entries(PDF_DISCIPLINE_VERTALING)) {
+    if (sleutel.startsWith(key)) return val;
+  }
+  return undefined; // niet herkend
+}
+
+function toonImportPreview(rijM, rijV, nietHerkend) {
+  // Ga naar stap 2
+  document.getElementById("pdf-import-stap1").style.display = "none";
+  document.getElementById("pdf-import-stap2").style.display = "";
+  document.getElementById("pdf-import-opslaan-btn").style.display = "";
+
+  // Tellers
+  document.getElementById("pdf-preview-m-count").textContent = rijM.length;
+  document.getElementById("pdf-preview-v-count").textContent = rijV.length;
+
+  // Tabellen
+  document.getElementById("pdf-preview-m").innerHTML = maakPreviewTabel(rijM);
+  document.getElementById("pdf-preview-v").innerHTML = maakPreviewTabel(rijV);
+
+  // Niet-herkende items
+  const nietEl = document.getElementById("pdf-import-niet-herkend");
+  if (nietHerkend.length) {
+    nietEl.style.display = "";
+    nietEl.innerHTML = `<div style="font-size:12px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:10px 14px;">
+      <strong>Niet herkend (worden overgeslagen):</strong><br>
+      ${nietHerkend.map(n => `• ${n}`).join("<br>")}
+    </div>`;
+  } else {
+    nietEl.style.display = "none";
+  }
+
+  // Waarschuwing als er al data is
+  controleerBestaandeData();
+}
+
+function maakPreviewTabel(rijen) {
+  if (!rijen.length) {
+    return `<div style="color:var(--muted);font-style:italic;padding:8px;">Geen onderdelen gevonden.</div>`;
+  }
+  return `<table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;">
+        <th style="text-align:left;padding:4px 6px;">Tijd</th>
+        <th style="text-align:left;padding:4px 6px;">Onderdeel</th>
+        <th style="text-align:left;padding:4px 6px;">Groep</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rijen.map(r => `
+        <tr style="border-top:1px solid var(--border);">
+          <td style="padding:4px 6px;color:var(--accent);font-weight:600;">${r.starttijd}</td>
+          <td style="padding:4px 6px;">${r.discipline}</td>
+          <td style="padding:4px 6px;color:var(--muted);">${r.startgroep ? "Groep " + r.startgroep : "—"}</td>
+        </tr>`).join("")}
+    </tbody>
+  </table>`;
+}
+
+async function controleerBestaandeData() {
+  const waarschEl = document.getElementById("pdf-import-waarschuwing");
+  const cid = actieveCategorie?.id;
+  try {
+    const { data } = await sb.from("programma").select("geslacht")
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", pdfImportWedstrijdId);
+    if (!data || !data.length) { waarschEl.style.display = "none"; return; }
+
+    const heeftM = data.some(r => r.geslacht === "M");
+    const heeftV = data.some(r => r.geslacht === "V");
+    const delen  = [];
+    if (heeftM) delen.push("jongens");
+    if (heeftV) delen.push("meisjes");
+
+    waarschEl.style.display = "";
+    waarschEl.innerHTML = `⚠️ <strong>Let op:</strong> Er is al een programma opgeslagen voor de ${delen.join(" en ")} van deze wedstrijd. 
+      Als je importeert, wordt dat <strong>overschreven</strong>.`;
+  } catch(e) {
+    waarschEl.style.display = "none";
+  }
+}
+
+async function slaImportOp() {
+  const cid = actieveCategorie?.id;
+  if (!cid || !pdfImportWedstrijdId) return;
+
+  const btn = document.getElementById("pdf-import-opslaan-btn");
+  btn.disabled = true;
+  btn.textContent = "Bezig…";
+
+  try {
+    // Verwijder bestaande programmarijen voor M én V
+    const { error: delErr } = await sb.from("programma").delete()
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", pdfImportWedstrijdId);
+    if (delErr) throw delErr;
+
+    // Bouw rijen voor beide geslachten
+    const rijM = pdfImportResultaatM.map(item => ({
+      categorie_id: cid,
+      wedstrijd_id: pdfImportWedstrijdId,
+      geslacht:     "M",
+      discipline:   item.discipline,
+      type:         item.type,
+      starttijd:    item.starttijd,
+      startgroep:   item.startgroep || null
+    }));
+    const rijV = pdfImportResultaatV.map(item => ({
+      categorie_id: cid,
+      wedstrijd_id: pdfImportWedstrijdId,
+      geslacht:     "V",
+      discipline:   item.discipline,
+      type:         item.type,
+      starttijd:    item.starttijd,
+      startgroep:   item.startgroep || null
+    }));
+
+    const alleRijen = [...rijM, ...rijV];
+    if (alleRijen.length) {
+      const { error: insErr } = await sb.from("programma").insert(alleRijen);
+      if (insErr) throw insErr;
+    }
+
+    // Als de actieve wedstrijd dezelfde is: herlaad het programma
+    if (String(actiefWedstrijdId) === String(pdfImportWedstrijdId)) {
+      const { data } = await sb.from("programma").select("*")
+        .eq("categorie_id", cid)
+        .eq("wedstrijd_id", pdfImportWedstrijdId)
+        .eq("geslacht", actiefGeslacht)
+        .order("starttijd", { ascending: true });
+      programma = data || [];
+      renderProgrammaOverzicht();
+      renderPloegen();
+    }
+
+    closeModal("pdfImportModal");
+    toast(`Programma geïmporteerd ✓ (${rijM.length} jongens · ${rijV.length} meisjes)`);
+  } catch(e) {
+    toast("Fout bij opslaan: " + e.message, "err");
+    btn.disabled = false;
+    btn.textContent = "✅ Importeren";
+  }
+}
+
 
 async function init() {
   document.getElementById("atleten-grid").innerHTML =
