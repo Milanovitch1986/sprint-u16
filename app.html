@@ -976,6 +976,7 @@
         <option value="verspringen">Verspringen</option>
         <option value="hoogspringen">Hoogspringen</option>
         <option value="kogelstoten">Kogelstoten</option>
+        <option value="discuswerpen">Discuswerpen</option>
         <option value="speerwerpen">Speerwerpen</option>
         <option value="4x100m">4×100m estafette</option>
         <option value="overig">Overig</option>
@@ -1884,7 +1885,7 @@ function updateEenheidField() {
     label.textContent = "Afstand / hoogte";
     document.getElementById("f-eenheid").value = "m";
     veld.style.display = "";
-  } else if (["kogelstoten","speerwerpen"].includes(disc)) {
+  } else if (["kogelstoten","discuswerpen","speerwerpen"].includes(disc)) {
     label.textContent = "Afstand";
     document.getElementById("f-eenheid").value = "m";
     veld.style.display = "";

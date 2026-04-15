@@ -6,36 +6,38 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 6] — 2026-04-15
+## [april 2026 — patch 8] — 2026-04-15
 
-### 🔧 Verbetering: Afdrukken opstelling — beide geslachten, apart venster
+### 🐛 Discuswerpen toegevoegd aan manuele invoer resultaten
 
-**Aanleiding:** De afdrukfunctie (🖨️ Afdrukken) toonde alleen het geslacht dat
-op dat moment actief was in de app. Bij het afdrukken moest je twee keer printen
-(eerst jongens, dan meisjes). Bovendien werd de pagina-lay-out van de app zelf
-tijdelijk verstoord door het print-element.
+**Wat ontbrak:** Discuswerpen ontbrak in de discipline-keuzelijst bij het handmatig invoeren van een prestatie in de Resultaten-tab.
 
-**Wat is veranderd:**
+**Wat is gewijzigd:**
+- `discuswerpen` toegevoegd als optie in de dropdown (tussen Kogelstoten en Speerwerpen)
+- `updateEenheidField()` bijgewerkt zodat Discuswerpen de juiste eenheid ("m") en label ("Afstand") krijgt
+- PR-logica was al correct: hogere waarde = beter (geen aanpassing nodig)
 
-- `printOpstelling()` omgebouwd van synchrone functie naar `async`
-- Beide geslachten (M én V) worden nu tegelijk geladen uit Supabase op het moment
-  van afdrukken — ongeacht welk geslacht actief is in de app
-- Er wordt een **apart browservenster** geopend met alleen het afdrukdocument
-  (geen knoppen, geen navigatie, geen app-styling)
-- Het afdrukdocument toont:
-  - Koptekst met wedstrijdnaam, datum, locatie en afdrukdatum
-  - Sectie **Jongens** → per ploeg een tabel (onderdeel · starttijd · startgroep · atleet · PR)
-  - Sectie **Meisjes** → idem
-  - Als een geslacht geen programma heeft, staat er een melding in plaats van een lege tabel
-- Ploegen worden automatisch bepaald op basis van opgeslagen opstellingsdata
-  (als alleen ploeg A bestaat, verschijnt er ook alleen ploeg A)
-- PR-kolom toont de persoonlijk record van de atleet voor dat onderdeel
+---
 
-**Niet getest (vereist live Supabase-sessie):**
-- Daadwerkelijk ophalen van data voor beide geslachten
-- Pop-upvenster gedrag in alle browsers (Safari kan pop-ups blokkeren)
+## [april 2026 — patch 7] — 2026-04-15
 
-**Bestanden gewijzigd:** `app.html`
+### 🗑️ Wedstrijdprogramma-overzicht verwijderd uit Opstelling-tab
+
+**Reden:** Het programma is al te bewerken en te bekijken via de Wedstrijden-tab. Het overzicht in de Opstelling-tab was overbodig en verwarrend.
+
+**Wat is verwijderd:**
+- Het "📋 Wedstrijdprogramma"-paneel in de Opstelling-tab (stap 2) volledig verwijderd
+- `renderProgrammaOverzicht()` is voorzien van een null-check zodat de functie niet crasht
+
+### ✨ Wedstrijdprogramma afdrukken vanuit de Wedstrijden-tab
+
+**Hoe het werkt:**
+- In de programma-modal (geopend via "📋 Programma" op een wedstrijdkaart) staat nu een **🖨️ Afdrukken**-knop
+- Het afdruk-overzicht toont: nummer, onderdeel, starttijd, type en startgroep
+- Bovenaan staat de wedstrijdnaam, datum en geslacht (Jongens/Meisjes)
+- Onderaan staat de afdrukdatum
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
 
 ---
 
