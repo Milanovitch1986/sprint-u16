@@ -969,10 +969,14 @@
     <div class="field">
       <label>Discipline</label>
       <select id="f-discipline" onchange="updateEenheidField()">
-        <option value="60m">60m sprint</option>
         <option value="80m">80m sprint</option>
         <option value="100m">100m sprint</option>
+        <option value="150m">150m</option>
         <option value="200m">200m sprint</option>
+        <option value="300m">300m</option>
+        <option value="80m horden">80m horden</option>
+        <option value="100m horden">100m horden</option>
+        <option value="300m horden">300m horden</option>
         <option value="verspringen">Verspringen</option>
         <option value="hoogspringen">Hoogspringen</option>
         <option value="kogelstoten">Kogelstoten</option>
@@ -1743,7 +1747,7 @@ function renderPrestatieTable(rows, showPR = false) {
     rows.forEach(p => {
       const val = parseFloat(String(p.resultaat).replace(",", "."));
       if (!isNaN(val)) {
-        const isSneller = ["60m","80m","100m","200m","4x100m"].includes(p.discipline);
+        const isSneller = ["60m","80m","100m","150m","200m","300m","80m horden","100m horden","300m horden","4x100m"].includes(p.discipline);
         if (!(p.discipline in prMap)) {
           prMap[p.discipline] = { val, id: p.id };
         } else if (isSneller ? val < prMap[p.discipline].val : val > prMap[p.discipline].val) {
@@ -1875,7 +1879,7 @@ function openPrestatieModal(id = null, defaultAtleetId = null) {
 
 function updateEenheidField() {
   const disc = document.getElementById("f-discipline").value;
-  const sprints = ["60m","80m","100m","200m","4x100m"];
+  const sprints = ["60m","80m","100m","150m","200m","300m","80m horden","100m horden","300m horden","4x100m"];
   const veld = document.getElementById("f-eenheid-field");
   const label = document.getElementById("f-resultaat-label");
   if (sprints.includes(disc)) {
