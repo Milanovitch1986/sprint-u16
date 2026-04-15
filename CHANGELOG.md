@@ -6,20 +6,6 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 9] — 2026-04-15
-
-### 🐛 Ontbrekende disciplines toegevoegd aan manuele invoer resultaten
-
-**Wat ontbrak:** 150m, 300m, 80m horden, 100m horden en 300m horden ontbraken in de discipline-keuzelijst bij het handmatig invoeren van een prestatie.
-
-**Wat is gewijzigd:**
-- `150m`, `300m`, `80m horden`, `100m horden` en `300m horden` toegevoegd aan de dropdown
-- `updateEenheidField()` bijgewerkt: alle nieuwe disciplines krijgen automatisch eenheid "sec" en label "Tijd (seconden)"
-- PR-logica (`isSneller`) uitgebreid: voor al deze disciplines geldt lager = beter
-- `60m` verwijderd uit de dropdown (niet meer van toepassing bij U16)
-
----
-
 ## [april 2026 — patch 7] — 2026-04-15
 
 ### 🗑️ Wedstrijdprogramma-overzicht verwijderd uit Opstelling-tab
