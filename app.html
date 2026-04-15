@@ -2672,9 +2672,9 @@ async function laadProgrammaEnOpstelling() {
       const schoon = {};
       programma.forEach((item, idx) => {
         if (item.type === "technisch") {
-          // Alleen slot 0 overnemen, slot 1+ verwijderen
           const v = data[`${o.ploeg}_${idx}_0`];
           if (v) schoon[`${o.ploeg}_${idx}_0`] = v;
+          // slot 1 bewust NIET overnemen
         } else {
           const maxS = item.type === "estafette" ? 4 : 3;
           for (let s = 0; s < maxS; s++) {
@@ -2862,7 +2862,6 @@ function renderPloeg(ploeg) {
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
       const slotKey = `${ploeg}_${idx}_${s}`;
-      // Veiligheidscheck: sla extra slots over die niet meer toegestaan zijn (bijv. oude data)
       const atleetId = opst[slotKey] || null;
       const atleet   = atleetId ? atleten.find(a => String(a.id) === String(atleetId)) : null;
       let punten = 0;
@@ -3025,19 +3024,19 @@ function filterSlotKeuze(input) {
   });
 }
 
-// Controleer of atleet al in een andere rij van hetzelfde technische onderdeel zit
-// Controleert alle ploegen, zodat een atleet nooit in Groep A én Groep B terecht kan komen
-function zitInAndereStartgroep(ploeg, opst, huidigIdx, atleetId) {
+// Controleer of atleet al in een andere startgroep van hetzelfde technische onderdeel zit.
+// Controleert ALLE ploegen zodat een atleet nooit in Groep A én Groep B voorkomt.
+function zitInAndereStartgroep(huidigePloeg, opst, huidigIdx, atleetId) {
   const huidigDisc = programma[huidigIdx]?.discipline;
   if (!huidigDisc) return false;
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   return ploegNamen.some(p => {
-    const opstP = p === ploeg ? opst : (opstellingData[p] || {});
+    const opstP = p === huidigePloeg ? opst : (opstellingData[p] || {});
     return programma.some((item, idx) => {
-      if (p === ploeg && idx === huidigIdx) return false;
+      if (p === huidigePloeg && idx === huidigIdx) return false; // sla huidige slot over
       if (item.discipline !== huidigDisc) return false;
       if (item.type !== "technisch") return false;
-      return String(opstP[`${p}_${idx}_0`]) === atleetId;
+      return String(opstP[`${p}_${idx}_0`]) === String(atleetId);
     });
   });
 }
@@ -3129,7 +3128,11 @@ async function alleenBeschikbaar(aan) {
 function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   opstellingData = {};
-  const atleetInPloeg = {}; // atleetId → ploeg (over alle ploegen)
+  const atleetInPloeg = {};      // atleetId → ploeg (globaal, over alle ploegen)
+  // Set van "atleetId|discipline" voor technische onderdelen:
+  // een atleet mag per discipline maar in 1 startgroep staan (A of B), niet beide.
+  // Dit is globaal over alle ploegen heen.
+  const technischGeblokkeerd = new Set();
 
   ploegNamen.forEach(ploeg => {
     opstellingData[ploeg] = {};
@@ -3162,19 +3165,9 @@ function genereerOpstelling() {
         // Regel: max 3 onderdelen
         if ((atleetOnderdeelTeller[aid] || 0) >= 3) continue;
 
-        // Regel: bij technisch niet in twee rijen van hetzelfde onderdeel
-        // (controleer in ALLE ploegen, zodat atleet niet in Groep A én Groep B terechtkomt)
-        if (isTechnisch) {
-          const al = ploegNamen.some(p => {
-            const opstP = opstellingData[p] || {};
-            return programma.some((ander, andIdx) => {
-              if (p === ploeg && andIdx === idx) return false;
-              if (ander.discipline !== item.discipline || ander.type !== "technisch") return false;
-              return String(opstP[`${p}_${andIdx}_0`]) === aid;
-            });
-          });
-          if (al) continue;
-        }
+        // Regel: bij technisch mag een atleet maar in 1 startgroep per discipline
+        // (niet in Groep A én Groep B van hetzelfde onderdeel)
+        if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) continue;
 
         // Regel: geen tijdconflict binnen 15 min
         if (item.starttijd) {
@@ -3192,6 +3185,8 @@ function genereerOpstelling() {
         atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
         if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
         atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+        // Blokkeer deze atleet voor andere startgroepen van dezelfde discipline
+        if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
         gevuld++;
       }
     });
