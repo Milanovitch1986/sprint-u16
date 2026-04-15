@@ -3397,83 +3397,281 @@ async function opslaanOpstelling() {
 }
 
 // ── Afdrukken ─────────────────────────────────────────────────
-function printOpstelling() {
-  // Bouw overzicht per onderdeel
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
-  const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
+async function printOpstelling() {
+  const cid = actieveCategorie?.id;
   const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
-  const wedstrijdNaam = wedstrijd ? wedstrijd.naam : "";
+  const wedstrijdNaam  = wedstrijd ? wedstrijd.naam  : "—";
+  const wedstrijdDatum = wedstrijd ? (wedstrijd.datum || "") : "";
+  const wedstrijdLoc   = wedstrijd ? (wedstrijd.locatie || "") : "";
 
-  // Per onderdeel: welke atleten per ploeg
-  let overzichtHtml = `
-    <div style="page-break-before:always;font-family:Arial,sans-serif;font-size:12px;color:black;">
-      <h2 style="font-size:16px;margin-bottom:4px;">Overzicht per onderdeel — ${wedstrijdNaam}</h2>
-      <div style="font-size:11px;color:#666;margin-bottom:16px;">AV Sprint U16-${geslachtCode}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:#f0f0f0;">
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Onderdeel</th>
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Starttijd</th>
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Startgroep</th>
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Atleet</th>
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">Team</th>
-            <th style="padding:6px 10px;text-align:left;border:1px solid #ccc;">PR</th>
-          </tr>
-        </thead>
-        <tbody>`;
+  // Laad programma + opstelling voor BEIDE geslachten uit Supabase
+  let printData = {}; // { M: { programma, opstellingData }, V: { programma, opstellingData } }
+  for (const g of ["M","V"]) {
+    try {
+      const [pRes, oRes] = await Promise.all([
+        sb.from("programma").select("*")
+          .eq("categorie_id", cid)
+          .eq("wedstrijd_id", actiefWedstrijdId)
+          .eq("geslacht", g)
+          .order("starttijd"),
+        sb.from("opstelling").select("*")
+          .eq("categorie_id", cid)
+          .eq("wedstrijd_id", actiefWedstrijdId)
+          .eq("geslacht", g)
+      ]);
+      const prog = pRes.data || [];
+      const opst = {};
+      (oRes.data || []).forEach(o => {
+        const d = o.data || {};
+        const schoon = {};
+        prog.forEach((item, idx) => {
+          if (item.type === "technisch") {
+            const v = d[`${o.ploeg}_${idx}_0`];
+            if (v) schoon[`${o.ploeg}_${idx}_0`] = v;
+          } else {
+            const maxS = item.type === "estafette" ? 4 : 3;
+            for (let s = 0; s < maxS; s++) {
+              const v = d[`${o.ploeg}_${idx}_${s}`];
+              if (v) schoon[`${o.ploeg}_${idx}_${s}`] = v;
+            }
+          }
+        });
+        opst[o.ploeg] = schoon;
+      });
+      printData[g] = { programma: prog, opstellingData: opst };
+    } catch(e) {
+      printData[g] = { programma: [], opstellingData: {} };
+    }
+  }
 
-  programma.forEach((item, idx) => {
-    const startgroepLabel = item.type === "technisch" && item.startgroep
-      ? `U16-${geslachtCode} - Groep ${item.startgroep}` : "—";
+  // Bepaal hoeveel ploegen er zijn voor elk geslacht
+  function ploegNamenVoor(opst) {
+    const gebruikt = new Set(Object.keys(opst));
+    if (gebruikt.has("C")) return ["A","B","C"];
+    if (gebruikt.has("B")) return ["A","B"];
+    if (gebruikt.has("A")) return ["A"];
+    return ["A"]; // fallback: toon altijd minstens 1
+  }
 
-    let atleetRijen = [];
-    ploegNamen.forEach(ploeg => {
-      const opst = opstellingData[ploeg] || {};
-      const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
-      const teamNaam = `Team ${ploegNr}`;
-      // 1 slot voor technisch, 1 voor estafette, 3 voor loop
-      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
-      for (let s = 0; s < maxSlots; s++) {
-        const aid = opst[`${ploeg}_${idx}_${s}`];
-        if (!aid) continue;
-        const atleet = atleten.find(a => String(a.id) === String(aid));
-        if (!atleet || atleet.geslacht !== actiefGeslacht) continue;
-        const pr = bestePrestatie(atleet.id, item.discipline);
-        atleetRijen.push({ atleet, teamNaam, pr });
-      }
+  // Bouw HTML voor één geslacht → één sectie per ploeg (tabel: onderdeel → atleten)
+  function bouwGeslachtHtml(g, data) {
+    const gCode  = g === "V" ? "V" : "M";
+    const gLabel = g === "V" ? "Meisjes" : "Jongens";
+    const { programma: prog, opstellingData: opst } = data;
+    const ploegen = ploegNamenVoor(opst);
+
+    if (!prog.length) return `
+      <div class="sectie-header">${gLabel}</div>
+      <p style="color:#888;font-size:12px;font-style:italic;margin:8px 0 24px;">Geen programma ingevuld voor ${gLabel.toLowerCase()}.</p>`;
+
+    let html = `<div class="sectie-header">${gLabel}</div>`;
+
+    ploegen.forEach(ploeg => {
+      const ploegNr  = {"A":1,"B":2,"C":3}[ploeg] || 1;
+      const teamNaam = `AV Sprint U16-${gCode} — Team ${ploegNr}`;
+      const opD = opst[ploeg] || {};
+
+      html += `
+        <div class="ploeg-blok">
+          <div class="ploeg-titel">${teamNaam}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Onderdeel</th>
+                <th>Starttijd</th>
+                <th>Startgroep</th>
+                <th>Atleet</th>
+                <th>PR</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+      prog.forEach((item, idx) => {
+        const sgLabel = item.type === "technisch" && item.startgroep
+          ? `Groep ${item.startgroep}` : "—";
+        const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+
+        let rijen = [];
+        for (let s = 0; s < maxSlots; s++) {
+          const aid = opD[`${ploeg}_${idx}_${s}`];
+          if (!aid) continue;
+          const atleet = atleten.find(a => String(a.id) === String(aid));
+          if (!atleet) continue;
+          const pr = bestePrestatie(atleet.id, item.discipline);
+          rijen.push({ naam: atleet.naam, pr: pr ? pr.resultaat : "—" });
+        }
+
+        if (!rijen.length) {
+          html += `<tr class="leeg-rij">
+            <td class="discipline-cel">${esc(item.discipline)}</td>
+            <td>${item.starttijd || "—"}</td>
+            <td>${sgLabel}</td>
+            <td colspan="2" style="color:#bbb;font-style:italic;">— niet ingevuld —</td>
+          </tr>`;
+        } else {
+          rijen.forEach((r, i) => {
+            html += `<tr>
+              ${i === 0
+                ? `<td class="discipline-cel" rowspan="${rijen.length}">${esc(item.discipline)}</td>
+                   <td rowspan="${rijen.length}">${item.starttijd || "—"}</td>
+                   <td rowspan="${rijen.length}">${sgLabel}</td>`
+                : ""}
+              <td>${esc(r.naam)}</td>
+              <td class="pr-cel">${r.pr}</td>
+            </tr>`;
+          });
+        }
+      });
+
+      html += `</tbody></table></div>`;
     });
 
-    if (!atleetRijen.length) {
-      overzichtHtml += `<tr>
-        <td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;">${esc(item.discipline)}</td>
-        <td style="padding:5px 10px;border:1px solid #ddd;">${item.starttijd || "—"}</td>
-        <td style="padding:5px 10px;border:1px solid #ddd;">${startgroepLabel}</td>
-        <td style="padding:5px 10px;border:1px solid #ddd;color:#999;" colspan="3">— geen atleet —</td>
-      </tr>`;
-    } else {
-      atleetRijen.forEach((r, i) => {
-        overzichtHtml += `<tr style="${i % 2 === 0 ? "" : "background:#fafafa"}">
-          ${i === 0 ? `<td style="padding:5px 10px;border:1px solid #ddd;font-weight:700;" rowspan="${atleetRijen.length}">${esc(item.discipline)}</td>
-          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${item.starttijd || "—"}</td>
-          <td style="padding:5px 10px;border:1px solid #ddd;" rowspan="${atleetRijen.length}">${startgroepLabel}</td>` : ""}
-          <td style="padding:5px 10px;border:1px solid #ddd;">${esc(r.atleet.naam)}</td>
-          <td style="padding:5px 10px;border:1px solid #ddd;">${r.teamNaam}</td>
-          <td style="padding:5px 10px;border:1px solid #ddd;">${r.pr ? r.pr.resultaat : "—"}</td>
-        </tr>`;
-      });
-    }
-  });
+    return html;
+  }
 
-  overzichtHtml += `</tbody></table></div>`;
+  // Stel het volledige HTML-document samen voor het printvenster
+  const printDatum = new Date().toLocaleDateString("nl-NL", { day:"2-digit", month:"long", year:"numeric" });
+  const jongensSectie = bouwGeslachtHtml("M", printData["M"]);
+  const meijesSectie  = bouwGeslachtHtml("V", printData["V"]);
 
-  document.getElementById("print-view").innerHTML = overzichtHtml;
-  document.getElementById("print-view").style.display = "";
-  window.print();
-  // Verberg print-view weer na afdrukken
-  setTimeout(() => {
-    document.getElementById("print-view").style.display = "none";
-    document.getElementById("print-view").innerHTML = "";
-  }, 1000);
+  const printHtml = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Opstelling — ${wedstrijdNaam}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #111;
+    background: white;
+    padding: 20mm 18mm;
+  }
+  .doc-header {
+    border-bottom: 3px solid #e8383d;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  .club-naam {
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #e8383d;
+    margin-bottom: 4px;
+  }
+  .wedstrijd-titel {
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+  }
+  .wedstrijd-meta {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+  }
+  .print-datum {
+    font-size: 9px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+  .sectie-header {
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: white;
+    background: #222;
+    padding: 5px 10px;
+    margin: 20px 0 0;
+  }
+  .ploeg-blok {
+    margin-bottom: 16px;
+    page-break-inside: avoid;
+  }
+  .ploeg-titel {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #e8383d;
+    background: #fef2f2;
+    border-left: 3px solid #e8383d;
+    padding: 4px 8px;
+    margin: 8px 0 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  thead tr {
+    background: #f5f5f5;
+  }
+  th {
+    padding: 5px 8px;
+    text-align: left;
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #666;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #e8e8e8;
+  }
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    border-right: 1px solid #f0f0f0;
+    vertical-align: top;
+  }
+  td:last-child, th:last-child { border-right: none; }
+  .discipline-cel {
+    font-weight: 700;
+    color: #111;
+    white-space: nowrap;
+  }
+  .pr-cel {
+    color: #555;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .leeg-rij td {
+    color: #ccc;
+    background: #fafafa;
+  }
+  tr:nth-child(even):not(.leeg-rij) { background: #fafffe; }
+  @media print {
+    body { padding: 0; }
+    .sectie-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ploeg-titel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="club-naam">AV Sprint Breda — U16</div>
+    <div class="wedstrijd-titel">${esc(wedstrijdNaam)}</div>
+    <div class="wedstrijd-meta">${[wedstrijdDatum, wedstrijdLoc].filter(Boolean).join(" · ")}</div>
+    <div class="print-datum">Afgedrukt op ${printDatum}</div>
+  </div>
+
+  ${jongensSectie}
+  ${meijesSectie}
+</body>
+</html>`;
+
+  // Open printvenster
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) { toast("Kon geen printvenster openen. Sta pop-ups toe.", "err"); return; }
+  win.document.write(printHtml);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 600);
 }
 
 // ── Atletiek.nu integratie ────────────────────────────────────

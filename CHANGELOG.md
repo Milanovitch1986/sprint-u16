@@ -6,51 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 6b] — 2026-04-15
-
-### 🔧 Verbetering: PDF-import — locatienamen en vraagscherm
-
-**Twee verbeteringen op de PDF-import van patch 6:**
-
-**1. Locatienamen en "X atleten" worden correct genegeerd**
-Het tijdschema bevat per onderdeel soms een locatienaam (bijv. "Hoog 1", "Hoog 2") en het aantal ingeschreven atleten (bijv. "0 atleten"). Deze stonden na de discipline in de PDF-tekst en werden soms als onderdeel herkend. De parser slaat deze nu bewust over: na categorie en startgroep wordt alleen het eerste token als discipline gebruikt; alles daarna (locatie, atleten) wordt genegeerd.
-
-**2. Vraagscherm voor niet-herkende onderdelen**
-Als de parser een onderdeel niet kan herkennen, wordt niet langer stilzwijgend overgeslagen. In plaats daarvan verschijnt een vraagscherm (stap 3) met per niet-herkend item een dropdown: je kiest welk onderdeel bedoeld wordt, of kiest "Overslaan". Daarna verschijnt de normale preview om alles te controleren vóór het opslaan.
-
-**Stroom:**
-PDF kiezen → (vraagscherm bij onduidelijkheden) → preview → importeren
-
-**Bestanden gewijzigd:** `app.html`
-
----
-
 ## [april 2026 — patch 6] — 2026-04-15
 
-### ✨ Nieuw: PDF-import voor wedstrijdprogramma
+### 🔧 Verbetering: Afdrukken opstelling — beide geslachten, apart venster
 
-Het is nu mogelijk om een tijdschema-PDF (SPAR Competitie / atletiek.nu formaat)
-direct te importeren als wedstrijdprogramma, zonder handmatig invoeren.
+**Aanleiding:** De afdrukfunctie (🖨️ Afdrukken) toonde alleen het geslacht dat
+op dat moment actief was in de app. Bij het afdrukken moest je twee keer printen
+(eerst jongens, dan meisjes). Bovendien werd de pagina-lay-out van de app zelf
+tijdelijk verstoord door het print-element.
 
-**Hoe werkt het:**
-- Op de Wedstrijden-pagina staat naast "📋 Programma" een nieuwe knop: "📄 Importeer PDF"
-- Na het kiezen van een PDF wordt de tekst automatisch uitgelezen
-- De app filtert alleen U16-M (jongens) en U16-V (meisjes) rijen
-- Onderdelen, starttijden én startgroepen (A/B) worden automatisch herkend
-- Een preview toont wat gevonden is voor beide geslachten, vóór het opslaan
-- Als er al een programma bestaat: waarschuwing dat het wordt overschreven
-- Bij bevestigen worden jongens én meisjes in één keer opgeslagen
+**Wat is veranderd:**
 
-**Technische details:**
-- PDF.js (v3.11.174, Mozilla) gebruikt voor tekst-extractie in de browser
-- Vertaaltabel `PDF_DISCIPLINE_VERTALING` vertaalt PDF-namen naar app-namen
-  (bijv. "Hoog" → "Hoogspringen", "Kogel" → "Kogelstoten")
-- Niet-U16 onderdelen (60m, 4x60m, 60mH, U14-onderdelen) worden automatisch overgeslagen
-- Niet-herkende regels worden getoond in de preview maar niet geïmporteerd
-- State: `pdfImportWedstrijdId`, `pdfImportResultaatM`, `pdfImportResultaatV`
-- Nieuwe functies: `openPdfImportModal()`, `verwerkPdfBestand()`, `parseerTijdschema()`,
-  `zoekDisciplineVertaling()`, `toonImportPreview()`, `maakPreviewTabel()`,
-  `controleerBestaandeData()`, `slaImportOp()`, `sluitPdfImportModal()`
+- `printOpstelling()` omgebouwd van synchrone functie naar `async`
+- Beide geslachten (M én V) worden nu tegelijk geladen uit Supabase op het moment
+  van afdrukken — ongeacht welk geslacht actief is in de app
+- Er wordt een **apart browservenster** geopend met alleen het afdrukdocument
+  (geen knoppen, geen navigatie, geen app-styling)
+- Het afdrukdocument toont:
+  - Koptekst met wedstrijdnaam, datum, locatie en afdrukdatum
+  - Sectie **Jongens** → per ploeg een tabel (onderdeel · starttijd · startgroep · atleet · PR)
+  - Sectie **Meisjes** → idem
+  - Als een geslacht geen programma heeft, staat er een melding in plaats van een lege tabel
+- Ploegen worden automatisch bepaald op basis van opgeslagen opstellingsdata
+  (als alleen ploeg A bestaat, verschijnt er ook alleen ploeg A)
+- PR-kolom toont de persoonlijk record van de atleet voor dat onderdeel
+
+**Niet getest (vereist live Supabase-sessie):**
+- Daadwerkelijk ophalen van data voor beide geslachten
+- Pop-upvenster gedrag in alle browsers (Safari kan pop-ups blokkeren)
 
 **Bestanden gewijzigd:** `app.html`
 
