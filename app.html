@@ -759,7 +759,7 @@
       <input type="text" id="f-club" value="AV Sprint" readonly style="opacity:0.6;cursor:not-allowed;">
     </div>
     <div class="field">
-      <label>Bondsnummer</label>
+      <label>Atletiekunie Licentienummer</label>
       <input type="text" id="f-bondsnr" placeholder="bijv. 1031577">
     </div>
     <div class="modal-actions">
@@ -1332,6 +1332,25 @@ async function verwijderGeselecteerde() {
   } catch (e) { toast("Fout: " + e.message, "err"); }
 }
 
+// ── Categorie bepalen op basis van geboortejaar ───────────────
+// Pas de tekst "? Jongen" / "? Meisje" hieronder aan als je iets anders wil tonen
+// bij een atleet zonder geboortedatum.
+function bepaalCategorieBadge(geboortedatum, geslacht) {
+  const geslachtLabel = geslacht === "V" ? "Meisje" : "Jongen";
+  if (!geboortedatum) return `? ${geslachtLabel}`;          // ← pas hier de tekst aan
+  const geboortejaar = new Date(geboortedatum).getFullYear();
+  if (isNaN(geboortejaar)) return `? ${geslachtLabel}`;
+  const leeftijdDitJaar = new Date().getFullYear() - geboortejaar;
+  let cat = "";
+  if      (leeftijdDitJaar <= 12) cat = "U12";
+  else if (leeftijdDitJaar <= 14) cat = "U14";
+  else if (leeftijdDitJaar <= 16) cat = "U16";
+  else if (leeftijdDitJaar <= 18) cat = "U18";
+  else if (leeftijdDitJaar <= 20) cat = "U20";
+  else                            cat = "Sen";
+  return `${cat} ${geslachtLabel}`;
+}
+
 // ── Atleten render ────────────────────────────────────────────
 function renderAtleten() {
   const q  = (document.getElementById("atleten-search").value || "").toLowerCase();
@@ -1355,8 +1374,8 @@ function renderAtleten() {
   grid.innerHTML = list.map(a => {
     const initials = (a.naam || "?").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase();
     const gBadge   = a.geslacht === "V" ? "v" : "m";
-    const gLabel   = a.geslacht === "V" ? "Meisje" : "Jongen";
-    const club     = a.club ? `<span>${a.club}</span>` : "";
+    const gLabel   = bepaalCategorieBadge(a.geboortedatum, a.geslacht);
+    const club     = `<span>AV Sprint</span>`;
     const bondsnr  = a.bondsnr ? `<span style="color:var(--muted);font-size:12px;">🪪 ${esc(a.bondsnr)}</span>` : "";
     const cnt      = prestaties.filter(p => String(p.atleetId) === String(a.id)).length;
     const isSel    = geselecteerd.has(String(a.id));
