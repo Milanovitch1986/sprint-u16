@@ -6,6 +6,25 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 6b] — 2026-04-15
+
+### 🔧 Verbetering: PDF-import — locatienamen en vraagscherm
+
+**Twee verbeteringen op de PDF-import van patch 6:**
+
+**1. Locatienamen en "X atleten" worden correct genegeerd**
+Het tijdschema bevat per onderdeel soms een locatienaam (bijv. "Hoog 1", "Hoog 2") en het aantal ingeschreven atleten (bijv. "0 atleten"). Deze stonden na de discipline in de PDF-tekst en werden soms als onderdeel herkend. De parser slaat deze nu bewust over: na categorie en startgroep wordt alleen het eerste token als discipline gebruikt; alles daarna (locatie, atleten) wordt genegeerd.
+
+**2. Vraagscherm voor niet-herkende onderdelen**
+Als de parser een onderdeel niet kan herkennen, wordt niet langer stilzwijgend overgeslagen. In plaats daarvan verschijnt een vraagscherm (stap 3) met per niet-herkend item een dropdown: je kiest welk onderdeel bedoeld wordt, of kiest "Overslaan". Daarna verschijnt de normale preview om alles te controleren vóór het opslaan.
+
+**Stroom:**
+PDF kiezen → (vraagscherm bij onduidelijkheden) → preview → importeren
+
+**Bestanden gewijzigd:** `app.html`
+
+---
+
 ## [april 2026 — patch 6] — 2026-04-15
 
 ### ✨ Nieuw: PDF-import voor wedstrijdprogramma

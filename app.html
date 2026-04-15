@@ -1255,8 +1255,17 @@
       <div id="pdf-import-niet-herkend" style="display:none;margin-top:12px;"></div>
     </div>
 
+    <!-- Stap 3: vraagscherm voor niet-herkende onderdelen -->
+    <div id="pdf-import-stap3" style="display:none;">
+      <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--muted);">
+        De volgende onderdelen zijn niet automatisch herkend. Kies per onderdeel wat er bedoeld wordt, of kies "Overslaan" om het te negeren.
+      </div>
+      <div id="pdf-vraagscherm-lijst"></div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="sluitPdfImportModal()">Annuleren</button>
+      <button class="btn btn-ghost" id="pdf-import-terug-btn" style="display:none;" onclick="pdfImportTerug()">← Terug</button>
       <button class="btn btn-primary" id="pdf-import-opslaan-btn" style="display:none;" onclick="slaImportOp()">✅ Importeren</button>
     </div>
   </div>
@@ -4300,46 +4309,56 @@ if (typeof pdfjsLib !== "undefined") {
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
-// Vertaaltabel: PDF-naam → app discipline-naam
+// Vertaaltabel: PDF-naam (lowercase) → app discipline-naam
+// null = bewust overgeslagen (niet-U16 onderdeel)
 const PDF_DISCIPLINE_VERTALING = {
-  "hoog":         "Hoogspringen",
-  "hoogspringen": "Hoogspringen",
-  "ver":          "Verspringen",
-  "verspringen":  "Verspringen",
-  "kogel":        "Kogelstoten",
-  "kogelstoten":  "Kogelstoten",
-  "discus":       "Discuswerpen",
-  "discuswerpen": "Discuswerpen",
-  "speer":        "Speerwerpen",
-  "speerwerpen":  "Speerwerpen",
-  "4x100m":       "4x100m",
-  "4x80m":        "4x80m",
-  "4x60m":        null,   // niet U16 — overslaan
-  "100mh":        "100m horden",
-  "100m horden":  "100m horden",
-  "80mh":         "80m horden",
-  "80m horden":   "80m horden",
-  "60mh":         null,   // niet U16
-  "1500m":        "1500m",
-  "150m":         "150m",
-  "100m":         "100m",
-  "800m":         "800m",
-  "600m":         "600m",
-  "300m":         "300m",
-  "200m":         "200m",
-  "80m":          "80m",
-  "60m":          null,   // niet U16
+  "hoog":          "Hoogspringen",
+  "hoogspringen":  "Hoogspringen",
+  "ver":           "Verspringen",
+  "verspringen":   "Verspringen",
+  "kogel":         "Kogelstoten",
+  "kogelstoten":   "Kogelstoten",
+  "discus":        "Discuswerpen",
+  "discuswerpen":  "Discuswerpen",
+  "speer":         "Speerwerpen",
+  "speerwerpen":   "Speerwerpen",
+  "4x100m":        "4x100m",
+  "4x80m":         "4x80m",
+  "4x60m":         null,
+  "100mh":         "100m horden",
+  "100m horden":   "100m horden",
+  "100mhorden":    "100m horden",
+  "80mh":          "80m horden",
+  "80m horden":    "80m horden",
+  "80mhorden":     "80m horden",
+  "60mh":          null,
+  "60m horden":    null,
+  "1500m":         "1500m",
+  "150m":          "150m",
+  "100m":          "100m",
+  "800m":          "800m",
+  "600m":          "600m",
+  "300m":          "300m",
+  "200m":          "200m",
+  "80m":           "80m",
+  "60m":           null,
 };
 
+// Bekende locatienamen die na de discipline kunnen staan — worden genegeerd
+// bijv. "Hoog 1", "Hoog 2" → locatie van hoogspringmat
+const PDF_LOCATIE_PATRONEN = /^(hoog\s*\d+|ver\s*\d+|baan\s*\d+|sector\s*\d+|\d+\s*atleten.*)$/i;
+
 // State voor de import
-let pdfImportWedstrijdId = null;
-let pdfImportResultaatM  = [];
-let pdfImportResultaatV  = [];
+let pdfImportWedstrijdId  = null;
+let pdfImportResultaatM   = [];
+let pdfImportResultaatV   = [];
+let pdfImportNietHerkend  = []; // [{starttijd, tekst, geslacht}]
 
 function openPdfImportModal(wedstrijdId) {
   pdfImportWedstrijdId = wedstrijdId;
   pdfImportResultaatM  = [];
   pdfImportResultaatV  = [];
+  pdfImportNietHerkend = [];
 
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
   document.getElementById("pdf-import-sub").textContent =
@@ -4348,7 +4367,9 @@ function openPdfImportModal(wedstrijdId) {
   // Reset naar stap 1
   document.getElementById("pdf-import-stap1").style.display = "";
   document.getElementById("pdf-import-stap2").style.display = "none";
+  document.getElementById("pdf-import-stap3").style.display = "none";
   document.getElementById("pdf-import-opslaan-btn").style.display = "none";
+  document.getElementById("pdf-import-terug-btn").style.display = "none";
   document.getElementById("pdf-laad-status").style.display = "none";
   document.getElementById("pdf-bestand-input").value = "";
 
@@ -4359,6 +4380,12 @@ function sluitPdfImportModal() {
   closeModal("pdfImportModal");
 }
 
+function pdfImportTerug() {
+  document.getElementById("pdf-import-stap3").style.display = "none";
+  document.getElementById("pdf-import-stap2").style.display = "";
+  document.getElementById("pdf-import-terug-btn").style.display = "none";
+}
+
 async function verwerkPdfBestand(bestand) {
   if (!bestand) return;
 
@@ -4367,33 +4394,37 @@ async function verwerkPdfBestand(bestand) {
   statusEl.textContent = "PDF wordt gelezen…";
 
   try {
-    // Lees bestand als ArrayBuffer
     const buffer = await bestand.arrayBuffer();
 
-    // Controleer of PDF.js geladen is
     if (typeof pdfjsLib === "undefined") {
       throw new Error("PDF-bibliotheek kon niet worden geladen. Controleer je internetverbinding.");
     }
 
-    // Laad het PDF-document
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
     const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
     statusEl.textContent = `PDF geladen (${pdf.numPages} pagina${pdf.numPages > 1 ? "'s" : ""}) — tekst extraheren…`;
 
-    // Extraheer tekst van alle pagina's
+    // Extraheer tekst per pagina, items gegroepeerd per y-positie (= per regel)
     let volledigeTekst = "";
     for (let i = 1; i <= pdf.numPages; i++) {
-      const pagina    = await pdf.getPage(i);
-      const content   = await pagina.getTextContent();
-      // Plak tekst-items samen; nieuwe regel als y-positie springt
-      let vorigeY = null;
+      const pagina  = await pdf.getPage(i);
+      const content = await pdf.getPage(i).then(p => p.getTextContent());
+      // Groepeer items op y-positie (afgerond op 1 decimaal) zodat items
+      // op dezelfde regel als één regel worden samengevoegd
+      const regelMap = new Map();
       for (const item of content.items) {
-        if (vorigeY !== null && Math.abs(item.transform[5] - vorigeY) > 3) {
-          volledigeTekst += "\n";
-        }
-        volledigeTekst += item.str + " ";
-        vorigeY = item.transform[5];
+        const y = Math.round(item.transform[5] * 10) / 10;
+        if (!regelMap.has(y)) regelMap.set(y, []);
+        regelMap.get(y).push({ x: item.transform[4], tekst: item.str });
       }
-      volledigeTekst += "\n";
+      // Sorteer y van hoog naar laag (pagina-volgorde), x van links naar rechts
+      const gesorteerdeY = [...regelMap.keys()].sort((a, b) => b - a);
+      for (const y of gesorteerdeY) {
+        const items = regelMap.get(y).sort((a, b) => a.x - b.x);
+        volledigeTekst += items.map(i => i.tekst).join(" ").trim() + "\n";
+      }
     }
 
     statusEl.textContent = "Onderdelen herkennen…";
@@ -4401,131 +4432,180 @@ async function verwerkPdfBestand(bestand) {
 
   } catch(e) {
     statusEl.textContent = "❌ Fout bij lezen PDF: " + e.message;
+    console.error("PDF fout:", e);
   }
 }
 
 function parseerTijdschema(tekst) {
-  // Splits in regels en verwijder lege regels
   const regels = tekst.split("\n").map(r => r.trim()).filter(r => r.length > 2);
 
-  const resultaatM    = [];
-  const resultaatV    = [];
-  const nietHerkend   = [];
+  const resultaatM   = [];
+  const resultaatV   = [];
+  const nietHerkend  = [];
 
-  // Tijdpatroon: bijv. "11:00u" of "11:00"
   const tijdRegex = /^(\d{1,2}:\d{2})u?\s+/;
 
   for (const regel of regels) {
     const tijdMatch = regel.match(tijdRegex);
     if (!tijdMatch) continue;
 
-    const starttijd = tijdMatch[1]; // "11:00"
+    const starttijd = tijdMatch[1];
     const rest      = regel.slice(tijdMatch[0].length).trim();
 
-    // Bepaal geslacht: zoek U16-M of U16-V
     const isM = /U16-?M\b/i.test(rest);
     const isV = /U16-?V\b/i.test(rest);
-    if (!isM && !isV) continue; // niet U16, sla over
+    if (!isM && !isV) continue;
 
-    // Verwijder de categorie-aanduiding om discipline te isoleren
-    // Bijv. "U16-M - groep A  Speer" → "groep A  Speer"
-    //        "U16-M           4x100m" → "4x100m"
-    let resterend = rest.replace(/U16-?[MV]\b\s*/i, "").trim();
+    // Verwijder categorie-aanduiding (bijv. "U16-M - groep A" of "U16-V")
+    let resterend = rest.replace(/U16-?[MV]\b\s*[-–]?\s*/i, "").trim();
 
-    // Startgroep detecteren: "groep A" of "groep B"
+    // Startgroep detecteren
     let startgroep = null;
-    const groepMatch = resterend.match(/groep\s+([AB])\b/i);
+    const groepMatch = resterend.match(/\bgroep\s+([AB])\b/i);
     if (groepMatch) {
       startgroep = groepMatch[1].toUpperCase();
-      resterend  = resterend.replace(/groep\s+[AB]\b\s*/i, "").trim();
+      resterend  = resterend.replace(/\bgroep\s+[AB]\b\s*[-–]?\s*/i, "").trim();
     }
 
-    // Het eerste woord (of twee) is de discipline
-    // Verwijder cijfers achteraan (bijv. "Hoog 1", "Hoog 2" → "Hoog")
-    resterend = resterend.replace(/\s+\d+\s*$/, "").trim();
+    // Verwijder "X atleten" aan het einde (bijv. "0 atleten", "12 atleten")
+    resterend = resterend.replace(/\s*\d+\s*atleten.*$/i, "").trim();
 
-    // Zoek discipline in vertaaltabel (lowercase vergelijken)
-    const disciplineSleutel = resterend.toLowerCase().split(/\s+0\s*atleten/)[0].trim();
-    const appDiscipline     = zoekDisciplineVertaling(disciplineSleutel);
+    // Splits op meerdere spaties: eerste token is discipline, rest is locatie
+    // bijv. "Hoog   Hoog 1" → discipline="Hoog", locatie="Hoog 1"
+    // bijv. "100mH" → discipline="100mH", locatie=""
+    const tokens = resterend.split(/\s{2,}/).map(t => t.trim()).filter(Boolean);
+    const disciplineTekst = tokens[0] || "";
+    // tokens[1] en verder = locatienaam, die we negeren
+
+    if (!disciplineTekst) continue;
+
+    const sleutel     = disciplineTekst.toLowerCase().replace(/\s+/g, " ").trim();
+    const appDiscipline = zoekDisciplineVertaling(sleutel);
+
+    if (appDiscipline === null) continue; // bewust overgeslagen
 
     if (appDiscipline === undefined) {
-      // Niet herkend
-      if (disciplineSleutel.length > 1) {
-        nietHerkend.push(`${starttijd} — "${resterend}" (${isM ? "M" : "V"})`);
+      // Écht niet herkend — toevoegen aan vraaglijst
+      // Dedupliceer: zelfde tekst+geslacht maar andere starttijd = apart item
+      const bestaatAl = nietHerkend.find(
+        n => n.tekst === disciplineTekst && n.geslacht === (isM ? "M" : "V") &&
+             n.starttijd === starttijd
+      );
+      if (!bestaatAl) {
+        nietHerkend.push({
+          starttijd,
+          tekst:     disciplineTekst,
+          geslacht:  isM ? "M" : "V",
+          startgroep
+        });
       }
       continue;
     }
-    if (appDiscipline === null) continue; // bewust overgeslagen (bijv. 60m)
 
-    // Controleer of discipline bestaat in U16_DISCIPLINES
     const discDef = U16_DISCIPLINES.find(d => d.naam === appDiscipline);
     if (!discDef) continue;
 
-    const rij = {
-      discipline: appDiscipline,
-      type:       discDef.type,
-      starttijd:  starttijd,
-      startgroep: startgroep
-    };
-
+    const rij = { discipline: appDiscipline, type: discDef.type, starttijd, startgroep };
     if (isM) resultaatM.push(rij);
     else     resultaatV.push(rij);
   }
 
-  // Sorteer op starttijd
   resultaatM.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
   resultaatV.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
 
-  pdfImportResultaatM = resultaatM;
-  pdfImportResultaatV = resultaatV;
+  pdfImportResultaatM  = resultaatM;
+  pdfImportResultaatV  = resultaatV;
+  pdfImportNietHerkend = nietHerkend;
 
-  toonImportPreview(resultaatM, resultaatV, nietHerkend);
+  if (nietHerkend.length > 0) {
+    toonVraagscherm(resultaatM, resultaatV, nietHerkend);
+  } else {
+    toonImportPreview(resultaatM, resultaatV);
+  }
 }
 
 function zoekDisciplineVertaling(sleutel) {
-  // Directe match
-  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(sleutel)) {
-    return PDF_DISCIPLINE_VERTALING[sleutel];
-  }
-  // Probeer eerste woord (bijv. "hoog 1" → "hoog")
+  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(sleutel)) return PDF_DISCIPLINE_VERTALING[sleutel];
   const eersteWoord = sleutel.split(/\s+/)[0];
-  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(eersteWoord)) {
-    return PDF_DISCIPLINE_VERTALING[eersteWoord];
-  }
-  // Probeer samengestelde sleutels (bijv. "100m horden")
+  if (PDF_DISCIPLINE_VERTALING.hasOwnProperty(eersteWoord)) return PDF_DISCIPLINE_VERTALING[eersteWoord];
   for (const [key, val] of Object.entries(PDF_DISCIPLINE_VERTALING)) {
     if (sleutel.startsWith(key)) return val;
   }
-  return undefined; // niet herkend
+  return undefined;
 }
 
-function toonImportPreview(rijM, rijV, nietHerkend) {
-  // Ga naar stap 2
+// ── Stap 3: vraagscherm voor niet-herkende onderdelen ─────────
+function toonVraagscherm(rijM, rijV, nietHerkend) {
   document.getElementById("pdf-import-stap1").style.display = "none";
+  document.getElementById("pdf-import-stap2").style.display = "none";
+  document.getElementById("pdf-import-stap3").style.display = "";
+  document.getElementById("pdf-import-opslaan-btn").style.display = "";
+  document.getElementById("pdf-import-terug-btn").style.display = "";
+
+  const discOpties = U16_DISCIPLINES.map(d =>
+    `<option value="${d.naam}">${d.naam}</option>`
+  ).join("");
+
+  const lijst = document.getElementById("pdf-vraagscherm-lijst");
+  lijst.innerHTML = nietHerkend.map((item, idx) => `
+    <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="flex:0 0 auto;">
+        <span style="color:var(--accent);font-weight:700;">${item.starttijd}</span>
+        <span style="color:var(--muted);font-size:12px;margin-left:6px;">${item.geslacht === "M" ? "👦 Jongens" : "👧 Meisjes"}${item.startgroep ? " · Groep " + item.startgroep : ""}</span>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <span style="font-weight:600;color:var(--accent2);">"${item.tekst}"</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Niet herkend — wat bedoel je?</div>
+      </div>
+      <select id="vraag-disc-${idx}" style="flex:0 0 auto;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;">
+        <option value="__overslaan__">— Overslaan —</option>
+        ${discOpties}
+      </select>
+    </div>
+  `).join("");
+}
+
+function verwerkVraagschermAntwoorden() {
+  // Verwerk de keuzes uit het vraagscherm en voeg toe aan resultaatM/V
+  pdfImportNietHerkend.forEach((item, idx) => {
+    const sel = document.getElementById(`vraag-disc-${idx}`);
+    if (!sel) return;
+    const gekozen = sel.value;
+    if (gekozen === "__overslaan__") return;
+
+    const discDef = U16_DISCIPLINES.find(d => d.naam === gekozen);
+    if (!discDef) return;
+
+    const rij = {
+      discipline: gekozen,
+      type:       discDef.type,
+      starttijd:  item.starttijd,
+      startgroep: item.startgroep || null
+    };
+
+    if (item.geslacht === "M") pdfImportResultaatM.push(rij);
+    else pdfImportResultaatV.push(rij);
+  });
+
+  // Hersorteren
+  pdfImportResultaatM.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
+  pdfImportResultaatV.sort((a, b) => a.starttijd.localeCompare(b.starttijd));
+}
+
+// ── Stap 2: preview ───────────────────────────────────────────
+function toonImportPreview(rijM, rijV) {
+  document.getElementById("pdf-import-stap1").style.display = "none";
+  document.getElementById("pdf-import-stap3").style.display = "none";
   document.getElementById("pdf-import-stap2").style.display = "";
   document.getElementById("pdf-import-opslaan-btn").style.display = "";
+  document.getElementById("pdf-import-terug-btn").style.display = "none";
 
-  // Tellers
   document.getElementById("pdf-preview-m-count").textContent = rijM.length;
   document.getElementById("pdf-preview-v-count").textContent = rijV.length;
-
-  // Tabellen
   document.getElementById("pdf-preview-m").innerHTML = maakPreviewTabel(rijM);
   document.getElementById("pdf-preview-v").innerHTML = maakPreviewTabel(rijV);
+  document.getElementById("pdf-import-niet-herkend").style.display = "none";
 
-  // Niet-herkende items
-  const nietEl = document.getElementById("pdf-import-niet-herkend");
-  if (nietHerkend.length) {
-    nietEl.style.display = "";
-    nietEl.innerHTML = `<div style="font-size:12px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:10px 14px;">
-      <strong>Niet herkend (worden overgeslagen):</strong><br>
-      ${nietHerkend.map(n => `• ${n}`).join("<br>")}
-    </div>`;
-  } else {
-    nietEl.style.display = "none";
-  }
-
-  // Waarschuwing als er al data is
   controleerBestaandeData();
 }
 
@@ -4560,22 +4640,27 @@ async function controleerBestaandeData() {
       .eq("categorie_id", cid)
       .eq("wedstrijd_id", pdfImportWedstrijdId);
     if (!data || !data.length) { waarschEl.style.display = "none"; return; }
-
     const heeftM = data.some(r => r.geslacht === "M");
     const heeftV = data.some(r => r.geslacht === "V");
     const delen  = [];
     if (heeftM) delen.push("jongens");
     if (heeftV) delen.push("meisjes");
-
     waarschEl.style.display = "";
-    waarschEl.innerHTML = `⚠️ <strong>Let op:</strong> Er is al een programma opgeslagen voor de ${delen.join(" en ")} van deze wedstrijd. 
-      Als je importeert, wordt dat <strong>overschreven</strong>.`;
+    waarschEl.innerHTML = `⚠️ <strong>Let op:</strong> Er is al een programma opgeslagen voor de ${delen.join(" en ")} van deze wedstrijd. Als je importeert, wordt dat <strong>overschreven</strong>.`;
   } catch(e) {
     waarschEl.style.display = "none";
   }
 }
 
 async function slaImportOp() {
+  // Als we nog in het vraagscherm zitten: eerst antwoorden verwerken, dan preview tonen
+  const stap3Zichtbaar = document.getElementById("pdf-import-stap3").style.display !== "none";
+  if (stap3Zichtbaar) {
+    verwerkVraagschermAntwoorden();
+    toonImportPreview(pdfImportResultaatM, pdfImportResultaatV);
+    return;
+  }
+
   const cid = actieveCategorie?.id;
   if (!cid || !pdfImportWedstrijdId) return;
 
@@ -4584,13 +4669,11 @@ async function slaImportOp() {
   btn.textContent = "Bezig…";
 
   try {
-    // Verwijder bestaande programmarijen voor M én V
     const { error: delErr } = await sb.from("programma").delete()
       .eq("categorie_id", cid)
       .eq("wedstrijd_id", pdfImportWedstrijdId);
     if (delErr) throw delErr;
 
-    // Bouw rijen voor beide geslachten
     const rijM = pdfImportResultaatM.map(item => ({
       categorie_id: cid,
       wedstrijd_id: pdfImportWedstrijdId,
@@ -4616,7 +4699,6 @@ async function slaImportOp() {
       if (insErr) throw insErr;
     }
 
-    // Als de actieve wedstrijd dezelfde is: herlaad het programma
     if (String(actiefWedstrijdId) === String(pdfImportWedstrijdId)) {
       const { data } = await sb.from("programma").select("*")
         .eq("categorie_id", cid)
