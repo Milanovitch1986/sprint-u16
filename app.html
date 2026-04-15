@@ -992,9 +992,14 @@
       <label id="f-resultaat-label">Resultaat</label>
       <input type="text" id="f-resultaat" placeholder="bijv. 7.45">
     </div>
-    <div class="field" id="f-eenheid-field" style="display:none;">
+    <div class="field" id="f-eenheid-field">
       <label>Eenheid</label>
-      <input type="text" id="f-eenheid" placeholder="sec / m / cm">
+      <select id="f-eenheid">
+        <option value="sec">sec (seconden)</option>
+        <option value="m">m (meter)</option>
+        <option value="cm">cm (centimeter)</option>
+        <option value="min">min (minuten)</option>
+      </select>
     </div>
 
     <div class="modal-actions">
@@ -1868,37 +1873,37 @@ function openPrestatieModal(id = null, defaultAtleetId = null) {
       sel.value = p.atleetId;
       document.getElementById("f-discipline").value = p.discipline || "100m";
       document.getElementById("f-resultaat").value  = p.resultaat  || "";
-      document.getElementById("f-eenheid").value    = p.eenheid    || "";
+      updateEenheidField(); // stel standaard eenheid in op basis van discipline
+      // Overschrijf daarna met de opgeslagen eenheid (als die een geldige optie is)
+      if (p.eenheid) document.getElementById("f-eenheid").value = p.eenheid;
     }
   } else {
     if (defaultAtleetId) sel.value = defaultAtleetId;
     document.getElementById("f-discipline").value = "100m";
     document.getElementById("f-resultaat").value  = "";
+    updateEenheidField();
   }
-  updateEenheidField();
   openModal("prestatieModal");
 }
 
 function updateEenheidField() {
   const disc = document.getElementById("f-discipline").value;
   const sprints = ["60m","80m","100m","150m","200m","300m","800m","1500m","80m horden","100m horden","300m horden","4x100m"];
-  const veld = document.getElementById("f-eenheid-field");
   const label = document.getElementById("f-resultaat-label");
+  const eenheidSel = document.getElementById("f-eenheid");
+
   if (sprints.includes(disc)) {
-    label.textContent = "Tijd (seconden)";
-    document.getElementById("f-eenheid").value = "sec";
-    veld.style.display = "none";
+    label.textContent = "Tijd";
+    eenheidSel.value = "sec";
   } else if (["verspringen","hoogspringen"].includes(disc)) {
     label.textContent = "Afstand / hoogte";
-    document.getElementById("f-eenheid").value = "m";
-    veld.style.display = "";
+    eenheidSel.value = "m";
   } else if (["kogelstoten","discuswerpen","speerwerpen"].includes(disc)) {
     label.textContent = "Afstand";
-    document.getElementById("f-eenheid").value = "m";
-    veld.style.display = "";
+    eenheidSel.value = "m";
   } else {
     label.textContent = "Resultaat";
-    veld.style.display = "";
+    eenheidSel.value = "sec";
   }
 }
 
