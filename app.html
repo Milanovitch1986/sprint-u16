@@ -1576,20 +1576,25 @@ async function verwijderGeselecteerde() {
 // ── Categorie bepalen op basis van geboortejaar ───────────────
 function bepaalCategorieBadge(geboortedatum, geslacht) {
   const geslachtLabel = geslacht === "V" ? "Meisje" : "Jongen";
-  if (!geboortedatum) return `? ${geslachtLabel}`;
+  const catNaam = actieveCategorie?.naam || "?";
+
+  if (!geboortedatum) return `${catNaam} ${geslachtLabel}`;
   const geboortejaar = new Date(geboortedatum).getFullYear();
-  if (isNaN(geboortejaar)) return `? ${geslachtLabel}`;
+  if (isNaN(geboortejaar)) return `${catNaam} ${geslachtLabel}`;
+
+  // Bereken de 'echte' leeftijdscategorie puur voor de ⚠️-check
   const leeftijdDitJaar = new Date().getFullYear() - geboortejaar;
-  let cat = "";
-  if      (leeftijdDitJaar <= 12) cat = "U12";
-  else if (leeftijdDitJaar <= 14) cat = "U14";
-  else if (leeftijdDitJaar <= 16) cat = "U16";
-  else if (leeftijdDitJaar <= 18) cat = "U18";
-  else if (leeftijdDitJaar <= 20) cat = "U20";
-  else                            cat = "Sen";
-  // Waarschuw als atleet niet in de juiste categorie zit voor de actieve omgeving
-  const afwijkend = (actieveCategorie?.naam === "U16" && cat !== "U16") ? " ⚠️" : "";
-  return `${cat} ${geslachtLabel}${afwijkend}`;
+  let catBerekend = "";
+  if      (leeftijdDitJaar <= 12) catBerekend = "U12";
+  else if (leeftijdDitJaar <= 14) catBerekend = "U14";
+  else if (leeftijdDitJaar <= 16) catBerekend = "U16";
+  else if (leeftijdDitJaar <= 18) catBerekend = "U18";
+  else if (leeftijdDitJaar <= 20) catBerekend = "U20";
+  else                            catBerekend = "Sen";
+
+  // Toon ⚠️ als geboortejaar niet overeenkomt met de actieve categorie
+  const afwijkend = (catNaam !== catBerekend) ? " ⚠️" : "";
+  return `${catNaam} ${geslachtLabel}${afwijkend}`;
 }
 
 // ── Atleten render ────────────────────────────────────────────

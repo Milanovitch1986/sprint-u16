@@ -6,6 +6,16 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 9] — 2026-04-16
+
+### 🐛 Bugfix: Categoriebadge toont altijd de actieve categorie
+
+**Probleem:** De badge op atletenkaartjes (bijv. "U14 Jongen") werd herberekend op basis van het geboortejaar van de atleet, in plaats van de naam van de actieve app-categorie te gebruiken. Atleten geboren in 2011 of 2012 kregen daardoor "U14" te zien, ook al zitten ze in de U16-categorie.
+
+**Oplossing:** `bepaalCategorieBadge()` toont nu altijd de naam van de actieve categorie (bijv. "U16 Jongen"). De ⚠️-waarschuwing blijft zichtbaar als het geboortejaar van de atleet niet overeenkomt met de categorie.
+
+---
+
 ## [april 2026 — patch 8] — 2026-04-16
 
 ### 🐛 Bugfix: Puntentelling houdt nu rekening met telregel per onderdeel
