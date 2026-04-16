@@ -1582,15 +1582,18 @@ function bepaalCategorieBadge(geboortedatum, geslacht) {
   const geboortejaar = new Date(geboortedatum).getFullYear();
   if (isNaN(geboortejaar)) return `${catNaam} ${geslachtLabel}`;
 
-  // Bereken de 'echte' leeftijdscategorie puur voor de ⚠️-check
-  const leeftijdDitJaar = new Date().getFullYear() - geboortejaar;
+  // Bereken de 'echte' leeftijdscategorie op basis van geboortejaar (kalenderjaar-systeem)
+  // Atletiek gebruikt het verschil tussen huidig jaar en geboortejaar (niet de werkelijke leeftijd)
+  // U16 = jaarVerschil 15 of 14 (bijv. in 2026: geboren 2011 of 2012)
+  const huidigJaar = new Date().getFullYear();
+  const jaarVerschil = huidigJaar - geboortejaar;
   let catBerekend = "";
-  if      (leeftijdDitJaar <= 12) catBerekend = "U12";
-  else if (leeftijdDitJaar <= 14) catBerekend = "U14";
-  else if (leeftijdDitJaar <= 16) catBerekend = "U16";
-  else if (leeftijdDitJaar <= 18) catBerekend = "U18";
-  else if (leeftijdDitJaar <= 20) catBerekend = "U20";
-  else                            catBerekend = "Sen";
+  if      (jaarVerschil <= 11) catBerekend = "U12";
+  else if (jaarVerschil <= 13) catBerekend = "U14";
+  else if (jaarVerschil <= 15) catBerekend = "U16";
+  else if (jaarVerschil <= 17) catBerekend = "U18";
+  else if (jaarVerschil <= 19) catBerekend = "U20";
+  else                         catBerekend = "Sen";
 
   // Toon ⚠️ als geboortejaar niet overeenkomt met de actieve categorie
   const afwijkend = (catNaam !== catBerekend) ? " ⚠️" : "";
