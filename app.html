@@ -1701,7 +1701,7 @@ function renderPrestaties() {
     cont.innerHTML = `<div class="detail-panel">
       ${naam ? `<div class="detail-header">
         <div class="detail-avatar">${naam.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}</div>
-        <div><div class="detail-name">${naam}</div><div class="detail-sub">${atl.club||""}</div></div>
+        <div><div class="detail-name">${naam}</div><div class="detail-sub">${bepaalCategorieBadge(atl.geboortedatum, atl.geslacht)}</div></div>
         <button class="btn btn-ghost btn-sm ml-auto" onclick="openAtleetModal('${atleetId}')">✏️ Bewerken</button>
       </div>` : ""}
       ${renderPrestatieTable(list, true)}
