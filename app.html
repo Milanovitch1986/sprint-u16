@@ -3193,7 +3193,11 @@ function renderPloegen() {
 
 function renderPloeg(ploeg) {
   const opst = opstellingData[ploeg] || {};
-  let totalePunten = 0;
+
+  // Verzamel punten per discipline voor correcte puntentelling:
+  // Loop: beste 2 atleten tellen mee; Technisch: beste 1 telt mee; Estafette: alles telt.
+  // puntePerDiscipline = { disciplineNaam: { type: "loop"|"technisch"|"estafette", puntenLijst: [n, n, ...] } }
+  const puntePerDiscipline = {};
 
   const rijen = programma.map((item, idx) => {
     const isLoop      = item.type === "loop";
@@ -3207,6 +3211,11 @@ function renderPloeg(ploeg) {
       ? `U16-${geslachtCode} - Groep ${item.startgroep}`
       : "";
 
+    // Initialiseer verzameling voor deze discipline als die nog niet bestaat
+    if (!puntePerDiscipline[item.discipline]) {
+      puntePerDiscipline[item.discipline] = { type: item.type, puntenLijst: [] };
+    }
+
     let slotsHtml = "";
     for (let s = 0; s < slots; s++) {
       const slotKey = `${ploeg}_${idx}_${s}`;
@@ -3218,7 +3227,8 @@ function renderPloeg(ploeg) {
       if (atleet) {
         const pr = bestePrestatie(atleet.id, item.discipline);
         if (pr) punten = berekenPunten(item.discipline, pr.resultaat, actiefGeslacht);
-        totalePunten += punten;
+        // Verzamel punten per discipline (nog niet optellen — dat doen we na alle rijen)
+        puntePerDiscipline[item.discipline].puntenLijst.push(punten);
         conflictWaarschuwing = checkConflict(ploeg, opst, idx, atleetId, item) ? "⚠️" : "";
       }
 
@@ -3252,6 +3262,17 @@ function renderPloeg(ploeg) {
         <div></div>
       </div>`;
   }).join("");
+
+  // Bereken totaalpunten met de juiste telregel per discipline:
+  // - Loop: sorteer punten hoog→laag, tel beste 2 op
+  // - Technisch: sorteer punten hoog→laag, tel beste 1 op
+  // - Estafette: tel alle punten op
+  let totalePunten = 0;
+  for (const disc of Object.values(puntePerDiscipline)) {
+    const gesorteerd = [...disc.puntenLijst].sort((a, b) => b - a);
+    const maxTelt = disc.type === "technisch" ? 1 : disc.type === "loop" ? 2 : gesorteerd.length;
+    totalePunten += gesorteerd.slice(0, maxTelt).reduce((som, p) => som + p, 0);
+  }
 
   const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
   const geslachtCode = actiefGeslacht === "V" ? "V" : "M";

@@ -41,17 +41,6 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
-### Prestaties — datamodel en weergave (patch 8, april 2026)
-- Resultaten worden opgeslagen en weergegeven in World Athletics standaard: punt als decimaalteken, lange afstand als `m:ss.hh`
-- Eenheid wordt automatisch bepaald op basis van discipline: `sec` (sprintnummers), `min` (800m/1500m), `m` (veld/werp)
-- De "Prestatie invoeren"-modal is een bulk-invoer per atleet: alle 12 onderdelen (geslachtsspecifiek) tegelijk
-- Jongens: 100m, 100mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
-- Meisjes: 80m, 80mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
-- Bij opslaan worden bestaande PRs voor dat onderdeel eerst verwijderd, dan opnieuw ingevoegd
-
-### 15-minuten conflictregel (patch 8, april 2026)
-De harde blokkering op tijdconflicten (< 15 min) is vervangen door een ⚠️-waarschuwing met tooltip. De atleet kan nog steeds worden ingepland, maar de trainer ziet duidelijk het conflict en kan bewust beslissen.
-
 ### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
 Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
 
@@ -122,6 +111,16 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 - INT kapt naar beneden af (geen afronding)
 - Jongens en meisjes gebruiken dezelfde constanten bij U16
 
+### Telregel per onderdeel (spelregel)
+
+| Type | Max opstellen | Telt mee voor punten |
+|------|--------------|----------------------|
+| Looponderdelen | 3 atleten | Beste 2 |
+| Technische onderdelen | 2 atleten (via Groep A + B) | Beste 1 |
+| Estafette | 4 lopers | Alle punten |
+
+De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past bovenstaande selectie toe vóór het optellen van het ploeg-totaal.
+
 ---
 
 ## 📁 Projectbestanden
@@ -144,12 +143,10 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 ---
 
-## ✅ Geteste features (april 2026, patch 8)
+## ✅ Geteste features (april 2026)
 
 Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
-prestatie CRUD (bulk-invoer per atleet), wedstrijd CRUD, programma, beschikbaarheid, opstelling,
+prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
-Nieuw in patch 8: bulk PR-invoer, Excel PR-export, tijdconflict-waarschuwing,
-World Athletics resultatenformaat, eenheden bij prestaties.

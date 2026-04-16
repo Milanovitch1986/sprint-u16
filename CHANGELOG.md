@@ -8,42 +8,20 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ## [april 2026 — patch 8] — 2026-04-16
 
-### 🐛 Bugfix: Modal sluit bij tekst selecteren
-De prestatiemodal sloot wanneer je tekst probeerde te selecteren in een invoerveld. Opgelost door een `mousedown`-check: de modal sluit nu alleen als de muisknop ook op de achtergrond was ingedrukt (niet als je tekst in een veld selecteert).
+### 🐛 Bugfix: Puntentelling houdt nu rekening met telregel per onderdeel
 
-### 🐛 Bugfix: Dropdown-atleet niet actief bij "Prestatie invoeren"
-De "Prestatie invoeren"-knop in de prestaties-tab opende de modal altijd op de bovenste atleet, ook als je al een atleet had geselecteerd in de dropdown. De knop leest nu de geselecteerde atleet uit de dropdown en geeft die door aan de modal.
+**Probleem:** De `~X pts`-weergave per ploeg telde de punten van **alle** opgestelde atleten op, terwijl de officiële spelregel bepaalt:
+- **Looponderdelen:** alleen de **beste 2** atleten tellen mee (van de 3 opgestelde)
+- **Technische onderdelen:** alleen de **beste 1** atleet telt mee (ook al kunnen er via Groep A en Groep B twee atleten opstaan over twee programmarijen)
+- **Estafette:** alle punten tellen mee (ongewijzigd)
 
-### 🔧 Verbetering: Categorieweergave op atletenkaartjes
-De categorie op kaartjes werd soms verkeerd berekend (U14, U18, e.d.). De logica is gecorrigeerd: huidig jaar − geboortejaar = leeftijdscategorie. Atleten die niet in U16 thuishoren (geboortejaar ≠ 2011/2012) krijgen een ⚠️-markering op hun kaartje.
+**Oplossing:** In `renderPloeg()` worden punten nu per discipline **verzameld** in plaats van direct opgeteld. Na het doorlopen van alle programmarijen wordt per discipline de juiste selectie gemaakt:
+- Puntenlijst per discipline sorteren hoog→laag
+- Technisch: eerste 1 nemen; Loop: eerste 2 nemen; Estafette: alles
 
-### 🔧 Verbetering: Uniform resultatenformaat (World Athletics standaard)
-Prestaties worden nu altijd opgeslagen en weergegeven in het internationaal gebruikte formaat:
-- Sprintnummers: punt als decimaalteken, bijv. `10.84`
-- Lange afstand: `m:ss.hh`, bijv. `2:14.69`
-- Veld/werp: punt als decimaalteken, bijv. `1.50`
-Invoer mag nog steeds in alle formats (komma, punt, diverse scheidingstekens) — de app normaliseert automatisch.
-
-### 🔧 Verbetering: Eenheid achter prestatie
-Achter elke prestatie staat nu de juiste eenheid: `sec` voor sprintnummers, `min` voor lange loopnummers, `m` voor werp- en springnummers.
-
-### 🔧 Verbetering: 15-minuten restrictie vervangen door waarschuwing
-De blokkering waarmee atleten niet op twee onderdelen binnen 15 minuten konden worden ingepland, is vervangen. Een atleet kan nu alsnog worden ingepland, maar krijgt een ⚠️-icoon met een tooltip die het conflict uitlegt (welk onderdeel, welke tijd, hoeveel minuten verschil).
-
-### ✨ Nieuw: Alle PR's tegelijk invoeren per atleet
-De "Prestatie invoeren"-modal toont nu alle onderdelen voor de geselecteerde atleet in één scherm, gefilterd op geslacht:
-- **Jongens:** 100m, 100mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
-- **Meisjes:** 80m, 80mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
-Bestaande PR's zijn alvast ingevuld en overschrijfbaar. Lege velden worden overgeslagen.
-
-### 🔧 Verbetering: Console-snippets voor releasenotes hersteld
-Na elke ontwikkeling wordt weer een kant-en-klare snippet meegeleverd die je in de browserconsole van de live app plakt om de releasenote automatisch op te slaan in Supabase.
-
-### ✨ Nieuw: Excel-export van alle PR's
-Nieuwe knop "📥 PRs exporteren (.xlsx)" in de prestaties-tab. Exporteert een Excel-bestand met:
-- Kolom 1: naam atleet
-- Kolommen 2–15: één kolom per onderdeel (vaste volgorde)
-- Lege cel als atleet geen PR heeft op dat onderdeel
+**Technische details:**
+- Groepeert op `item.discipline` (naam), zodat Groep A en Groep B van bijv. "Verspringen" samen worden beschouwd
+- `maxSlots` per rij is **niet** gewijzigd (technisch blijft 1, loop blijft 3)
 
 **Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
 
