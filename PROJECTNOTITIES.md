@@ -41,6 +41,20 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Prestaties — datamodel en weergave (patch 8, april 2026)
+- Resultaten worden opgeslagen en weergegeven in World Athletics standaard: punt als decimaalteken, lange afstand als `m:ss.hh`
+- Eenheid wordt automatisch bepaald op basis van discipline: `sec` (sprintnummers), `min` (800m/1500m), `m` (veld/werp)
+- De "Prestatie invoeren"-modal is een bulk-invoer per atleet: alle 12 onderdelen (geslachtsspecifiek) tegelijk
+- Jongens: 100m, 100mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
+- Meisjes: 80m, 80mh, 150m, 300m, 300mh, 800m, 1500m, hoogspringen, verspringen, speerwerpen, discuswerpen, kogelstoten
+- Bij opslaan worden bestaande PRs voor dat onderdeel eerst verwijderd, dan opnieuw ingevoegd
+
+### 15-minuten conflictregel (patch 8, april 2026)
+De harde blokkering op tijdconflicten (< 15 min) is vervangen door een ⚠️-waarschuwing met tooltip. De atleet kan nog steeds worden ingepland, maar de trainer ziet duidelijk het conflict en kan bewust beslissen.
+
+### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
+Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
+
 ### eigenaar_id vs categorie_id
 De originele app werkte met `eigenaar_id` (één trainer = één dataset).
 In april 2026 gemigreerd naar `categorie_id` voor gedeelde toegang per categorie.
@@ -64,13 +78,6 @@ Na eerste login moet admin-rol handmatig worden ingesteld:
 ```sql
 UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.com';
 ```
-
-### Afdrukfunctie — apart printvenster (patch 6, april 2026)
-`printOpstelling()` is omgebouwd naar async en opent een apart browservenster
-(`window.open`) met een zelfstandig HTML-document. Beide geslachten worden
-tegelijk geladen uit Supabase op het moment van klikken.
-**Let op:** sommige browsers (met name Safari op iPhone/iPad) blokkeren pop-ups
-standaard. Zorg dat pop-ups zijn toegestaan voor de app-URL.
 
 ---
 
@@ -137,10 +144,12 @@ standaard. Zorg dat pop-ups zijn toegestaan voor de app-URL.
 
 ---
 
-## ✅ Geteste features (april 2026)
+## ✅ Geteste features (april 2026, patch 8)
 
 Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
-prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
+prestatie CRUD (bulk-invoer per atleet), wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
+Nieuw in patch 8: bulk PR-invoer, Excel PR-export, tijdconflict-waarschuwing,
+World Athletics resultatenformaat, eenheden bij prestaties.
