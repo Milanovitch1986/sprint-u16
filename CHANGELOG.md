@@ -10,9 +10,17 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ### 🐛 Bugfix: Categoriebadge toont altijd de actieve categorie
 
-**Probleem:** De badge op atletenkaartjes (bijv. "U14 Jongen") werd herberekend op basis van het geboortejaar van de atleet, in plaats van de naam van de actieve app-categorie te gebruiken. Atleten geboren in 2011 of 2012 kregen daardoor "U14" te zien, ook al zitten ze in de U16-categorie.
+**Probleem 1:** De badge op atletenkaartjes (bijv. "U14 Jongen") werd herberekend op basis van het geboortejaar van de atleet, in plaats van de naam van de actieve app-categorie te gebruiken. Atleten geboren in 2011 of 2012 kregen daardoor "U14" te zien, ook al zitten ze in de U16-categorie.
 
-**Oplossing:** `bepaalCategorieBadge()` toont nu altijd de naam van de actieve categorie (bijv. "U16 Jongen"). De ⚠️-waarschuwing blijft zichtbaar als het geboortejaar van de atleet niet overeenkomt met de categorie.
+**Probleem 2:** De `detail-sub` in de grote atletenkaart op de Prestaties-tab toonde de clubnaam (`atl.club`) in plaats van de categoriebadge. Bij 45 atleten stond bovendien een categorie-label (bijv. "U14 jongens") als clubnaam opgeslagen in de database.
+
+**Probleem 3:** De ⚠️-waarschuwing klopte niet — de categoriebepaling gebruikte de werkelijke leeftijd in plaats van het atletiek-kalenderjaar-systeem.
+
+**Oplossingen:**
+- `bepaalCategorieBadge()` toont nu altijd de naam van de actieve categorie (bijv. "U16 Jongen")
+- `detail-sub` in de Prestaties-tab toont nu ook de categoriebadge via `bepaalCategorieBadge()`
+- Categoriebepaling voor de ⚠️-check gebruikt nu het verschil tussen huidig jaar en geboortejaar (kalenderjaar-systeem): U16 = jaarVerschil 14 of 15
+- Database opgeschoond via SQL: `club`-veld van 45 atleten gezet van categorie-label naar `AV Sprint`
 
 ---
 

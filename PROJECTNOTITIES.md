@@ -41,6 +41,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Categoriebadge op basis van kalenderjaar (patch 9, april 2026)
+De badge op atletenkaartjes en de Prestaties-tab toont altijd de naam van de actieve categorie (bijv. "U16 Jongen"). De ⚠️-waarschuwing verschijnt als het geboortejaar van een atleet niet overeenkomt met de actieve categorie.
+
+Categoriebepaling gebruikt het **atletiek-kalenderjaar-systeem**: `huidigJaar - geboortejaar` bepaalt de categorie, niet de werkelijke leeftijd. In 2026: U16 = geboren in 2011 (verschil 15) of 2012 (verschil 14).
+
+Database opgeschoond: 45 atleten hadden een categorie-label (bijv. "U14 jongens") als clubnaam. Opgelost via SQL UPDATE naar `AV Sprint`.
+
+
 ### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
 Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
 
