@@ -4,16 +4,47 @@
 Alle wijzigingen worden hier bijgehouden, nieuwste bovenaan.
 Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
-## [april 2026 — patch 9] — 2026-04-17
+---
 
-### ✨ Nieuw: Importknop in Prestaties tab + Excel-opmaak verbeterd
+## [april 2026 — patch 10] — 2026-04-17
 
-**Wijzigingen:**
-1. **Importknop in Prestaties tab** — Dezelfde Excel-importfunctie die al beschikbaar was in de Atleten tab is nu ook toegankelijk via de Prestaties tab (knop: 📥 Excel importeren).
-2. **Dikgedrukte titelrij in PR-export** — De bovenste rij met kolomtitels in de geëxporteerde PR-Excel is nu dikgedrukt.
-3. **Lichtrode markering lege PR-cellen** — Cellen zonder PR-waarde worden lichtrood gemarkeerd in de export. Zodra een prestatie is gevuld, verdwijnt de markering automatisch bij de volgende export.
+### 📱 Verbetering: Mobielvriendelijke weergave (iPhone/tablet)
 
-**Bestanden gewijzigd:** , , 
+**Wat is verbeterd:**
+- **Header:** logo en knoppen op één rij; navigatietabs worden een horizontaal scrollbare strip direct onder de header
+- **Navigatieknoppen:** minimale hoogte van 44px (Apple-richtlijn voor aantikbaarheid), scrollen zonder zichtbare scrollbar
+- **Knoppen (`.btn`):** groter en makkelijker aan te tikken op touchscreens
+- **Zoekbalk:** invoer en filter stapelen verticaal in plaats van naast elkaar
+- **Invoervelden:** font-size 16px om automatisch inzoomen op iOS te voorkomen
+- **Atletenkaartjes:** één kolom op smal scherm (was meerdere kolommen)
+- **Modals:** volle breedte met kleine marge, scrollbaar bij lange inhoud
+- **Toast-melding:** volle breedte onderaan op mobiel
+- **Tabellen:** horizontaal scrollbaar via `.table-wrap`
+- **Opstelling-tab:** onderdeel-rij wordt verticaal gestapeld — onderdeel-naam bovenaan, atleet-slots eronder. Hierdoor is direct duidelijk welke atleten bij welk onderdeel horen, zonder verwarrende verticale centrering
+
+**Technisch:**
+- Eén `@media (max-width: 768px)`-blok vervangt de minimale vorige media query
+- Alle stijlen gelden **alleen** op schermen smaller dan 768px — de pc-versie is volledig ongewijzigd
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
+## [april 2026 — patch 9] — 2026-04-16
+
+### 🐛 Bugfix: Categoriebadge toont altijd de actieve categorie
+
+**Probleem 1:** De badge op atletenkaartjes (bijv. "U14 Jongen") werd herberekend op basis van het geboortejaar van de atleet, in plaats van de naam van de actieve app-categorie te gebruiken. Atleten geboren in 2011 of 2012 kregen daardoor "U14" te zien, ook al zitten ze in de U16-categorie.
+
+**Probleem 2:** De `detail-sub` in de grote atletenkaart op de Prestaties-tab toonde de clubnaam (`atl.club`) in plaats van de categoriebadge. Bij 45 atleten stond bovendien een categorie-label (bijv. "U14 jongens") als clubnaam opgeslagen in de database.
+
+**Probleem 3:** De ⚠️-waarschuwing klopte niet — de categoriebepaling gebruikte de werkelijke leeftijd in plaats van het atletiek-kalenderjaar-systeem.
+
+**Oplossingen:**
+- `bepaalCategorieBadge()` toont nu altijd de naam van de actieve categorie (bijv. "U16 Jongen")
+- `detail-sub` in de Prestaties-tab toont nu ook de categoriebadge via `bepaalCategorieBadge()`
+- Categoriebepaling voor de ⚠️-check gebruikt nu het verschil tussen huidig jaar en geboortejaar (kalenderjaar-systeem): U16 = jaarVerschil 14 of 15
+- Database opgeschoond via SQL: `club`-veld van 45 atleten gezet van categorie-label naar `AV Sprint`
 
 ---
 

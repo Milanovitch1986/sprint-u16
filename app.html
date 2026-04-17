@@ -862,6 +862,23 @@
       left: 12px;
       text-align: center;
     }
+
+    /* Opstelling: onderdeel-rij wordt verticaal gestapeld op mobiel.
+       Onderdeel-naam staat bovenaan, slots eronder — geen verwarrende centrering */
+    .onderdeel-rij {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      padding: 12px 14px;
+    }
+    .onderdeel-naam {
+      font-size: 15px;
+      padding-top: 0;
+    }
+    .atleet-slot {
+      width: 100%;
+    }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1002,10 +1019,6 @@
       <div class="page-title">Prestaties</div>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="exporteerPRsExcel()">📥 PRs exporteren (.xlsx)</button>
-        <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer atletenlijst (.xlsx)">
-          📥 Excel importeren
-          <input type="file" id="xlsxImportInputPrestaties" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
-        </label>
         <button class="btn btn-primary" onclick="openPrestatieModal(null, document.getElementById('prestatie-atleet-filter').value || null)">+ Prestatie invoeren</button>
       </div>
     </div>
@@ -2212,25 +2225,8 @@ async function exporteerPRsExcel() {
   // Kolombreedte
   ws["!cols"] = [{ wch: 25 }, ...ALLE_DISCIPLINES.map(() => ({ wch: 12 }))];
 
-  // ── Stijlen: titelrij dikgedrukt + lege cellen lichtrood ──────
-  for (let r = 0; r < rijen.length; r++) {
-    for (let c = 0; c < rijen[r].length; c++) {
-      const celAdres = XLSX.utils.encode_cell({ r, c });
-      if (!ws[celAdres]) ws[celAdres] = { t: "z", v: "" };
-      if (!ws[celAdres].s) ws[celAdres].s = {};
-
-      if (r === 0) {
-        // Titelrij: dikgedrukt
-        ws[celAdres].s.font = { bold: true };
-      } else if (c > 0 && (rijen[r][c] === "" || rijen[r][c] == null)) {
-        // Lege PR-cel (niet de naamkolom): lichtrode achtergrond
-        ws[celAdres].s.fill = { patternType: "solid", fgColor: { rgb: "FFCCCC" } };
-      }
-    }
-  }
-
   XLSX.utils.book_append_sheet(wb, ws, "PR Overzicht");
-  XLSX.writeFile(wb, `PR_overzicht_${new Date().toISOString().slice(0,10)}.xlsx`, { bookType: "xlsx", cellStyles: true });
+  XLSX.writeFile(wb, `PR_overzicht_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast("PR's geëxporteerd ✓");
 }
 
