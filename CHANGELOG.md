@@ -6,7 +6,7 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 12] — 2026-04-17
+## [april 2026 — patch 13] — 2026-04-17
 
 ### 🐛 Bugfix: Dropdown atleetkeuze afgeknipt bij laatste onderdelen
 
