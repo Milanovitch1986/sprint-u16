@@ -147,7 +147,7 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 - [ ] Meerdere trainers per categorie uitnodigen en testen
 - [ ] Categorieën U14 en U18/U20 activeren
 - [ ] Excel-import testen met meerdere trainers
-- [ ] Mobiele weergave verbeteren (optioneel)
+- [x] Mobiele weergave verbeteren — patch 10, april 2026 (`@media max-width: 768px`)
 
 ---
 

@@ -760,12 +760,108 @@
   .profiel-input:focus { border-color: var(--accent); }
 
   /* ── Mobile ── */
-  @media (max-width: 600px) {
-    header { padding: 0 16px; }
-    main   { padding: 16px; }
-    .page-header { gap: 8px; }
-    nav button { padding: 7px 10px; font-size: 13px; }
-    .modal { padding: 20px; }
+  @media (max-width: 768px) {
+
+    /* Header: logo + iconen op één rij, nav eronder als scrollbare strip */
+    header {
+      padding: 0 12px;
+      height: auto;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 10px;
+      padding-bottom: 0;
+    }
+    .logo { font-size: 20px; }
+    #categorie-switcher { order: 3; }
+
+    /* Sync, theme en uitloggen knop rechts op eerste rij */
+    .sync-btn { width: 36px; height: 36px; }
+
+    /* Nav wordt een scrollbare horizontale strip onder de eerste rij */
+    nav {
+      order: 99;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 4px;
+      padding: 8px 0 10px 0;
+      /* Verberg scrollbar maar behoud scrollgedrag */
+      scrollbar-width: none;
+    }
+    nav::-webkit-scrollbar { display: none; }
+    nav button {
+      flex-shrink: 0;
+      padding: 10px 14px;
+      font-size: 13px;
+      min-height: 44px; /* Apple-richtlijn: minimaal 44px aantikbaar */
+      white-space: nowrap;
+    }
+
+    /* Main content iets minder padding */
+    main { padding: 14px; }
+
+    /* Page headers wrappen netjes */
+    .page-header {
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .page-title { font-size: 22px; }
+
+    /* Knoppen iets groter voor vingers */
+    .btn {
+      padding: 11px 16px;
+      font-size: 14px;
+      min-height: 44px;
+    }
+    .btn-sm {
+      padding: 8px 12px;
+      font-size: 12px;
+      min-height: 38px;
+    }
+
+    /* Zoekbalk: invoer en select stapelen verticaal */
+    .search-bar {
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-bar input,
+    .search-bar select {
+      width: 100%;
+      font-size: 16px; /* Voorkomt automatisch inzoomen op iOS */
+    }
+
+    /* Formulier-invoervelden volle breedte en goed leesbaar */
+    input, select, textarea {
+      font-size: 16px !important; /* Voorkomt automatisch inzoomen op iOS */
+    }
+
+    /* Tabellen horizontaal scrollbaar */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Kaartjes grid: één kolom op smal scherm */
+    .grid {
+      grid-template-columns: 1fr;
+    }
+
+    /* Modals: volle breedte met kleine marge */
+    .modal {
+      padding: 20px 16px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* Toast onderaan, volle breedte */
+    #toast {
+      bottom: 12px;
+      right: 12px;
+      left: 12px;
+      text-align: center;
+    }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
