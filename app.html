@@ -1153,7 +1153,7 @@
         <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
       </div>
 
-      <div id="ploegen-container" style="padding-bottom: 260px;"></div>
+      <div id="ploegen-container" style="padding-bottom: 32px;"></div>
     </div>
   </div>
 
@@ -3533,6 +3533,16 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
   el.style.position = "relative";
   el.appendChild(div);
   div.querySelector(".slot-select-search").focus();
+
+  // Flip omhoog als dropdown buiten het venster valt
+  const dropRect = div.getBoundingClientRect();
+  const margin = 24; // minimale vrije ruimte onder de dropdown
+  if (dropRect.bottom + margin > window.innerHeight) {
+    div.style.top = "auto";
+    div.style.bottom = "100%";
+    div.style.marginTop = "0";
+    div.style.marginBottom = "4px";
+  }
 
   // Sluit bij klik buiten
   setTimeout(() => {
