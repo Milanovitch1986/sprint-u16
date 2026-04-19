@@ -2774,10 +2774,24 @@ function getCelTekst(ws, rijNr, kolNr) {
 // Invoer kan zijn: "11" / "15,5" / "15.5" / "3:00,0" / "6:30,0" / "2:14,69"
 function parseerExcelTijd(tekst) {
   if (!tekst) return null;
-  // Normaliseer: komma als decimaalteken → punt, maar NIET de dubbele punt in mm:ss
   const s = tekst.trim();
 
-  // Patroon: m:ss,d of m:ss.d  (lange afstand)
+  // Patroon 1: SheetJS geeft tijdcellen terug als "MMSS.h" (bijv. "0300.0", "0630.0", "0227.4")
+  // Dit zijn 4 cijfers vóór de punt: MM = minuten, SS = seconden, .h = tienden
+  const mmss = s.match(/^(\d{2})(\d{2})[,.](\d+)$/);
+  if (mmss) {
+    const mins = parseInt(mmss[1], 10);
+    const secs = parseInt(mmss[2], 10);
+    const honderd = mmss[3].padEnd(2, "0").slice(0, 2);
+    if (mins > 0) {
+      return `${mins}:${String(secs).padStart(2,"0")}.${honderd}`;
+    } else {
+      // minuten = 0 → gewoon seconden (sprint die als tijdcel is opgeslagen)
+      return `${secs}.${honderd}`;
+    }
+  }
+
+  // Patroon 2: m:ss,d of m:ss.d  (bijv. "3:00,0" of "2:14.69")
   const metDubbelpunt = s.match(/^(\d+):(\d{1,2})[,.](\d+)$/);
   if (metDubbelpunt) {
     const mins = parseInt(metDubbelpunt[1], 10);
@@ -2786,7 +2800,7 @@ function parseerExcelTijd(tekst) {
     return `${mins}:${String(secs).padStart(2,"0")}.${honderd}`;
   }
 
-  // Patroon: m:ss  (zonder decimalen, bijv. "3:00")
+  // Patroon 3: m:ss zonder decimalen (bijv. "3:00")
   const metDubbelpuntGeen = s.match(/^(\d+):(\d{1,2})$/);
   if (metDubbelpuntGeen) {
     const mins = parseInt(metDubbelpuntGeen[1], 10);
@@ -2794,7 +2808,7 @@ function parseerExcelTijd(tekst) {
     return `${mins}:${String(secs).padStart(2,"0")}.00`;
   }
 
-  // Gewoon getal: 11 / 15,5 / 19.08
+  // Patroon 4: gewoon getal — 11 / 15,5 / 19.08 (sprint in seconden)
   const num = parseFloat(s.replace(",", "."));
   if (!isNaN(num) && num > 0) {
     return num.toFixed(2);
