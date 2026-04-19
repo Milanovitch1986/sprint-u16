@@ -1019,6 +1019,10 @@
       <div class="page-title">Prestaties</div>
       <div class="ml-auto" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="exporteerPRsExcel()">📥 PRs exporteren (.xlsx)</button>
+        <label class="btn btn-ghost" style="cursor:pointer;" title="Importeer PR-overzicht (.xlsx)">
+          📊 PR-overzicht importeren
+          <input type="file" id="prOverzichtInput" accept=".xlsx" style="display:none;" onchange="openPROverzichtImport(this)">
+        </label>
         <button class="btn btn-primary" onclick="openPrestatieModal(null, document.getElementById('prestatie-atleet-filter').value || null)">+ Prestatie invoeren</button>
       </div>
     </div>
@@ -1428,6 +1432,44 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="confirmNee">Annuleren</button>
       <button class="btn btn-primary" id="confirmJa">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- PR-OVERZICHT IMPORT MODAL -->
+<div class="modal-overlay" id="prOverzichtModal">
+  <div class="modal" style="max-width:720px;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-title" id="prImportTitel">PR-overzicht importeren</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="prImportSub">Stap 1 van 3 — Bestand verwerken</div>
+
+    <!-- Stap 1: verwerken (laden indicator) -->
+    <div id="prImport-stap1" style="text-align:center;padding:32px 0;">
+      <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+      <div style="font-size:14px;color:var(--muted);">Bestand wordt verwerkt…</div>
+    </div>
+
+    <!-- Stap 2: review per atleet -->
+    <div id="prImport-stap2" style="display:none;overflow-y:auto;flex:1;">
+      <!-- Niet-herkende atleten -->
+      <div id="prImport-onbekend" style="display:none;margin-bottom:16px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;margin-bottom:8px;color:var(--accent2);">⚠️ Atleten niet herkend — koppel handmatig</div>
+        <div id="prImport-onbekend-lijst"></div>
+      </div>
+      <!-- Alle rijen met PR-vergelijking -->
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;margin-bottom:8px;">📋 PR's per atleet</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Vink aan welke PR's je wilt importeren. Bij bestaande PR's zie je de huidige waarde erbij.</div>
+      <div id="prImport-tabel"></div>
+    </div>
+
+    <!-- Stap 3: resultaat -->
+    <div id="prImport-stap3" style="display:none;text-align:center;padding:24px 0;">
+      <div style="font-size:40px;margin-bottom:12px;">✅</div>
+      <div id="prImport-resultaat" style="font-size:15px;font-weight:600;"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:12px;flex-shrink:0;">
+      <button class="btn btn-ghost" onclick="closePRImportModal()">Sluiten</button>
+      <button class="btn btn-primary" id="prImport-opslaan-btn" style="display:none;" onclick="slaaPROverzichtOp()">✅ Geselecteerde importeren</button>
     </div>
   </div>
 </div>
@@ -2706,6 +2748,333 @@ async function verwerkPRSheet(rows) {
   }
 
   return `✓ ${nieuweAtleten} atleet(en) · ${verbeterd} PR('s) vervangen · ${nieuw} nieuw toegevoegd`;
+}
+
+// ── PR-overzicht import (breed formaat: atleet in kolom A, disciplines als kolomtitels) ──
+
+// Kolom A = naam, rij 1 = discipline-headers, cellen = waarden
+// Tijden staan als Excel-decimaal (fractie van een dag) → × 86400 = seconden
+
+// Mapping kolomtitels uit het PR-overzicht Excel naar app-discipline namen
+const PR_KOLOM_MAP = {
+  "80m":           "80m",
+  "80m horden":    "80m horden",
+  "100m":          "100m",
+  "100m horden":   "100m horden",
+  "150m":          "150m",
+  "200m":          "200m",
+  "300m":          "300m",
+  "300m horden":   "300m horden",
+  "600m":          "600m",
+  "800m":          "800m",
+  "1500m":         "1500m",
+  "hoogspringen":  "Hoogspringen",
+  "verspringen":   "Verspringen",
+  "speerwerpen":   "Speerwerpen",
+  "discuswerpen":  "Discuswerpen",
+  "kogelstoten":   "Kogelstoten",
+  "4x100m":        "4x100m",
+  "4x80m":         "4x80m",
+};
+
+// Disciplines waarbij de waarde een Excel-tijddecimaal is (geen meters)
+const PR_TIJD_KOLOMMEN = new Set([
+  "80m","80m horden","100m","100m horden","150m","200m",
+  "300m","300m horden","600m","800m","1500m","4x100m","4x80m"
+]);
+
+// Zet Excel-tijddecimaal om naar leesbare string (bijv. "11.84" of "2:14.69")
+function excelTijdNaarString(decimaal, disc) {
+  const secTotaal = decimaal * 86400;
+  const mins = Math.floor(secTotaal / 60);
+  const secs = secTotaal - mins * 60;
+  const secsStr = secs.toFixed(2).padStart(5, "0"); // bijv. "11.84" of "09.32"
+  if (mins > 0) {
+    return `${mins}:${secsStr}`;
+  } else {
+    return secsStr;
+  }
+}
+
+// Globale variabele voor import-data
+let prImportData = null; // { rijen: [{naam, disciplines:[{disc,waarde,huidigePR}]}], onbekend:[naam] }
+
+async function openPROverzichtImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = "";
+
+  // Laad SheetJS
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // Toon modal in stap-1 staat
+  document.getElementById("prImport-stap1").style.display = "";
+  document.getElementById("prImport-stap2").style.display = "none";
+  document.getElementById("prImport-stap3").style.display = "none";
+  document.getElementById("prImport-opslaan-btn").style.display = "none";
+  document.getElementById("prImportSub").textContent = "Stap 1 van 3 — Bestand verwerken…";
+  openModal("prOverzichtModal");
+
+  // Lees Excel
+  const buf = await file.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: "array", cellDates: false });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+  if (rows.length < 2) {
+    toast("Bestand lijkt leeg", "err");
+    closeModal("prOverzichtModal");
+    return;
+  }
+
+  // Verwerk header: kolomindex → discipline naam in app
+  const header = rows[0];
+  const kolommen = []; // [{idx, disc, isTijd}]
+  for (let i = 1; i < header.length; i++) {
+    const raw = String(header[i]).trim().toLowerCase();
+    const disc = PR_KOLOM_MAP[raw];
+    if (disc) {
+      kolommen.push({ idx: i, disc, isTijd: PR_TIJD_KOLOMMEN.has(raw) });
+    }
+  }
+
+  if (!kolommen.length) {
+    toast("Geen herkenbare discipline-kolommen gevonden", "err");
+    closeModal("prOverzichtModal");
+    return;
+  }
+
+  // Verwerk rijen
+  const gevondenRijen = []; // { excelNaam, atleet (of null), disciplines: [{disc, waarde, huidigePR}] }
+  const onbekend = []; // excelNamen die niet gematcht zijn
+
+  for (const row of rows.slice(1)) {
+    const excelNaam = String(row[0] || "").trim();
+    if (!excelNaam) continue;
+
+    // Match atleet op naam (case-insensitive)
+    const atleet = atleten.find(a => a.naam.trim().toLowerCase() === excelNaam.toLowerCase()) || null;
+
+    // Verzamel disciplines met waarden
+    const disciplines = [];
+    for (const kol of kolommen) {
+      const rawVal = row[kol.idx];
+      if (rawVal === "" || rawVal === null || rawVal === undefined) continue;
+
+      let waarde;
+      if (kol.isTijd) {
+        const num = parseFloat(rawVal);
+        if (isNaN(num) || num <= 0) continue;
+        waarde = excelTijdNaarString(num, kol.disc);
+      } else {
+        const num = parseFloat(String(rawVal).replace(",", "."));
+        if (isNaN(num) || num <= 0) continue;
+        waarde = num.toFixed(2);
+      }
+
+      // Zoek huidige PR
+      let huidigePR = null;
+      if (atleet) {
+        huidigePR = bestePrestatie(atleet.id, kol.disc);
+      }
+
+      disciplines.push({ disc: kol.disc, waarde, huidigePR, isTijd: kol.isTijd });
+    }
+
+    if (!disciplines.length) continue; // Atleet heeft geen waarden — overslaan
+
+    gevondenRijen.push({ excelNaam, atleet, disciplines });
+    if (!atleet) onbekend.push(excelNaam);
+  }
+
+  prImportData = { rijen: gevondenRijen, kolommen };
+  renderPRImportStap2(onbekend);
+}
+
+function renderPRImportStap2(onbekend) {
+  document.getElementById("prImport-stap1").style.display = "none";
+  document.getElementById("prImport-stap2").style.display = "";
+  document.getElementById("prImport-opslaan-btn").style.display = "";
+  document.getElementById("prImportSub").textContent = "Stap 2 van 3 — Controleer en selecteer";
+
+  // Niet-herkende atleten sectie
+  const onbekendDiv = document.getElementById("prImport-onbekend");
+  const onbekendLijst = document.getElementById("prImport-onbekend-lijst");
+  if (onbekend.length) {
+    onbekendDiv.style.display = "";
+    onbekendLijst.innerHTML = onbekend.map(naam => {
+      const opties = atleten.map(a =>
+        `<option value="${a.id}">${esc(a.naam)}</option>`
+      ).join("");
+      return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;min-width:160px;color:var(--text);">${esc(naam)}</span>
+          <select id="koppel-${esc(naam)}" style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px;" onchange="updateKoppeling('${esc(naam)}')">
+            <option value="">— Overslaan —</option>
+            ${opties}
+          </select>
+        </div>`;
+    }).join("");
+  } else {
+    onbekendDiv.style.display = "none";
+  }
+
+  // Tabel met alle atleten en PR's
+  const tabelDiv = document.getElementById("prImport-tabel");
+  if (!prImportData.rijen.length) {
+    tabelDiv.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen bruikbare rijen gevonden in het bestand.</div>`;
+    return;
+  }
+
+  tabelDiv.innerHTML = prImportData.rijen.map((rij, rijIdx) => {
+    const atleetNaam = rij.atleet ? rij.atleet.naam : `<span style="color:var(--accent2);">${esc(rij.excelNaam)} ⚠️ niet gekoppeld</span>`;
+    const prRijen = rij.disciplines.map((d, dIdx) => {
+      const checkId = `pr-check-${rijIdx}-${dIdx}`;
+      const huidig = d.huidigePR
+        ? `<span style="color:var(--muted);font-size:12px;">huidig: ${formateerResultaatWeergave(d.huidigePR.resultaat, d.disc)}</span>`
+        : `<span style="color:var(--success);font-size:12px;">nieuw ✨</span>`;
+
+      // Bepaal of dit een verbetering is t.o.v. huidig PR
+      let verbeterLabel = "";
+      if (d.huidigePR) {
+        const nieuweWaarde = parseResultaat(d.waarde);
+        const oudeWaarde = parseResultaat(d.huidigePR.resultaat);
+        if (nieuweWaarde !== null && oudeWaarde !== null) {
+          const beter = d.isTijd ? nieuweWaarde < oudeWaarde : nieuweWaarde > oudeWaarde;
+          const slechter = d.isTijd ? nieuweWaarde > oudeWaarde : nieuweWaarde < oudeWaarde;
+          if (beter) verbeterLabel = `<span style="color:var(--success);font-size:11px;margin-left:4px;">▲ PR verbeterd</span>`;
+          else if (slechter) verbeterLabel = `<span style="color:var(--accent2);font-size:11px;margin-left:4px;">▼ lager dan huidig</span>`;
+          else verbeterLabel = `<span style="color:var(--muted);font-size:11px;margin-left:4px;">= gelijk</span>`;
+        }
+      }
+
+      // Standaard aangevinkt: altijd aangevinkt (gebruiker kan uitvinken)
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)22;">
+          <input type="checkbox" id="${checkId}" data-rij="${rijIdx}" data-disc="${dIdx}" checked style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
+          <label for="${checkId}" style="flex:1;font-size:13px;cursor:pointer;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span style="min-width:130px;font-weight:600;">${esc(d.disc)}</span>
+            <span style="color:var(--accent);font-weight:700;">${esc(d.waarde)}</span>
+            ${huidig}
+            ${verbeterLabel}
+          </label>
+        </div>`;
+    }).join("");
+
+    return `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;" id="rij-blok-${rijIdx}">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;margin-bottom:10px;">${typeof atleetNaam === "string" ? atleetNaam : rij.excelNaam}</div>
+        ${prRijen}
+      </div>`;
+  }).join("");
+}
+
+function updateKoppeling(excelNaam) {
+  const select = document.getElementById(`koppel-${excelNaam}`);
+  const atleetId = select ? select.value : "";
+  const rij = prImportData.rijen.find(r => r.excelNaam === excelNaam);
+  if (!rij) return;
+
+  if (atleetId) {
+    rij.atleet = atleten.find(a => String(a.id) === String(atleetId)) || null;
+  } else {
+    rij.atleet = null;
+  }
+
+  // Herrender alleen de bloktitel van die rij
+  const rijIdx = prImportData.rijen.indexOf(rij);
+  const blok = document.getElementById(`rij-blok-${rijIdx}`);
+  if (blok) {
+    const titelEl = blok.querySelector("div");
+    if (rij.atleet) {
+      titelEl.textContent = rij.atleet.naam;
+      titelEl.style.color = "";
+    } else {
+      titelEl.innerHTML = `<span style="color:var(--accent2);">${esc(rij.excelNaam)} ⚠️ overgeslagen</span>`;
+    }
+  }
+}
+
+async function slaaPROverzichtOp() {
+  if (!prImportData) return;
+
+  let toegevoegd = 0, overschreven = 0, overgeslagen = 0;
+  const vandaag = new Date().toISOString().split("T")[0];
+
+  for (let rijIdx = 0; rijIdx < prImportData.rijen.length; rijIdx++) {
+    const rij = prImportData.rijen[rijIdx];
+    if (!rij.atleet) { overgeslagen++; continue; }
+
+    for (let dIdx = 0; dIdx < rij.disciplines.length; dIdx++) {
+      const check = document.getElementById(`pr-check-${rijIdx}-${dIdx}`);
+      if (!check || !check.checked) { overgeslagen++; continue; }
+
+      const d = rij.disciplines[dIdx];
+      const eenheid = d.isTijd ? "sec" : "m";
+
+      try {
+        if (d.huidigePR) {
+          // Verwijder oud PR en voeg nieuw toe
+          await sb.from("prestaties").delete().eq("id", d.huidigePR.id).eq("categorie_id", actieveCategorie.id);
+          prestaties = prestaties.filter(p => String(p.id) !== String(d.huidigePR.id));
+          const { data, error } = await sb.from("prestaties").insert({
+            categorie_id: actieveCategorie.id,
+            atleet_id: rij.atleet.id,
+            discipline: d.disc,
+            resultaat: d.waarde,
+            eenheid,
+            datum: vandaag,
+            locatie: "Import",
+            notities: `Overschreven via PR-overzicht import (was: ${d.huidigePR.resultaat})`
+          }).select().single();
+          if (error) throw error;
+          prestaties.push({ ...data, atleetId: data.atleet_id });
+          overschreven++;
+        } else {
+          // Nieuw PR
+          const { data, error } = await sb.from("prestaties").insert({
+            categorie_id: actieveCategorie.id,
+            atleet_id: rij.atleet.id,
+            discipline: d.disc,
+            resultaat: d.waarde,
+            eenheid,
+            datum: vandaag,
+            locatie: "Import",
+            notities: "Geïmporteerd via PR-overzicht import"
+          }).select().single();
+          if (error) throw error;
+          prestaties.push({ ...data, atleetId: data.atleet_id });
+          toegevoegd++;
+        }
+      } catch(e) {
+        console.warn("Fout bij opslaan PR", d.disc, rij.atleet.naam, e.message);
+        overgeslagen++;
+      }
+    }
+  }
+
+  // Toon resultaat
+  document.getElementById("prImport-stap2").style.display = "none";
+  document.getElementById("prImport-stap3").style.display = "";
+  document.getElementById("prImport-opslaan-btn").style.display = "none";
+  document.getElementById("prImportSub").textContent = "Stap 3 van 3 — Klaar";
+  document.getElementById("prImport-resultaat").textContent =
+    `✓ ${toegevoegd} nieuw · ${overschreven} overschreven · ${overgeslagen} overgeslagen`;
+
+  renderPrestaties();
+  populateAtleetSelects();
+}
+
+function closePRImportModal() {
+  closeModal("prOverzichtModal");
+  prImportData = null;
 }
 
 // ── Gedeelde hulpfuncties voor import ─────────────────────────
