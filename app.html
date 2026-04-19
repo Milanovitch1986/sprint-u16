@@ -3058,12 +3058,20 @@ function updateKoppeling(excelNaam) {
 async function slaaPROverzichtOp() {
   if (!prImportData) return;
 
-  let toegevoegd = 0, overschreven = 0, overgeslagen = 0;
-  const vandaag = new Date().toISOString().split("T")[0];
+  // Knop direct uitschakelen zodat dubbele klik niet mogelijk is
+  const opslaanBtn = document.getElementById("prImport-opslaan-btn");
+  opslaanBtn.disabled = true;
+  opslaanBtn.textContent = "Bezig…";
 
+  const vandaag = new Date().toISOString().split("T")[0];
+  const teVerwijderenIds = [];  // bestaande PR-IDs die overschreven worden
+  const nieuweRijen = [];       // alle te inserteren rijen
+  let overschreven = 0, toegevoegd = 0, overgeslagen = 0;
+
+  // Stap 1: verzamel alles wat aangevinkt is
   for (let rijIdx = 0; rijIdx < prImportData.rijen.length; rijIdx++) {
     const rij = prImportData.rijen[rijIdx];
-    if (!rij.atleet) { overgeslagen++; continue; }
+    if (!rij.atleet) { overgeslagen += rij.disciplines.length; continue; }
 
     for (let dIdx = 0; dIdx < rij.disciplines.length; dIdx++) {
       const check = document.getElementById(`pr-check-${rijIdx}-${dIdx}`);
@@ -3072,51 +3080,67 @@ async function slaaPROverzichtOp() {
       const d = rij.disciplines[dIdx];
       const eenheid = d.isTijd ? "sec" : "m";
 
-      try {
-        if (d.huidigePR) {
-          // Verwijder oud PR en voeg nieuw toe
-          await sb.from("prestaties").delete().eq("id", d.huidigePR.id).eq("categorie_id", actieveCategorie.id);
-          prestaties = prestaties.filter(p => String(p.id) !== String(d.huidigePR.id));
-          const { data, error } = await sb.from("prestaties").insert({
-            categorie_id: actieveCategorie.id,
-            atleet_id: rij.atleet.id,
-            discipline: d.disc,
-            resultaat: d.waarde,
-            eenheid,
-            datum: vandaag,
-            locatie: "Import",
-            notities: `Overschreven via PR-overzicht import (was: ${d.huidigePR.resultaat})`
-          }).select().single();
-          if (error) throw error;
-          prestaties.push({ ...data, atleetId: data.atleet_id });
-          overschreven++;
-        } else {
-          // Nieuw PR
-          const { data, error } = await sb.from("prestaties").insert({
-            categorie_id: actieveCategorie.id,
-            atleet_id: rij.atleet.id,
-            discipline: d.disc,
-            resultaat: d.waarde,
-            eenheid,
-            datum: vandaag,
-            locatie: "Import",
-            notities: "Geïmporteerd via PR-overzicht import"
-          }).select().single();
-          if (error) throw error;
-          prestaties.push({ ...data, atleetId: data.atleet_id });
-          toegevoegd++;
-        }
-      } catch(e) {
-        console.warn("Fout bij opslaan PR", d.disc, rij.atleet.naam, e.message);
-        overgeslagen++;
+      if (d.huidigePR) {
+        teVerwijderenIds.push(String(d.huidigePR.id));
+        nieuweRijen.push({
+          categorie_id: actieveCategorie.id,
+          atleet_id: rij.atleet.id,
+          discipline: d.disc,
+          resultaat: d.waarde,
+          eenheid,
+          datum: vandaag,
+          locatie: "Import",
+          notities: `Overschreven via PR-overzicht import (was: ${d.huidigePR.resultaat})`
+        });
+        overschreven++;
+      } else {
+        nieuweRijen.push({
+          categorie_id: actieveCategorie.id,
+          atleet_id: rij.atleet.id,
+          discipline: d.disc,
+          resultaat: d.waarde,
+          eenheid,
+          datum: vandaag,
+          locatie: "Import",
+          notities: "Geïmporteerd via PR-overzicht import"
+        });
+        toegevoegd++;
       }
     }
+  }
+
+  try {
+    // Stap 2: verwijder oude PRs in één aanroep
+    if (teVerwijderenIds.length) {
+      const { error: delErr } = await sb.from("prestaties")
+        .delete()
+        .eq("categorie_id", actieveCategorie.id)
+        .in("id", teVerwijderenIds);
+      if (delErr) throw delErr;
+      teVerwijderenIds.forEach(id => {
+        prestaties = prestaties.filter(p => String(p.id) !== id);
+      });
+    }
+
+    // Stap 3: insert alle nieuwe rijen in batches van 50
+    const batchSize = 50;
+    for (let i = 0; i < nieuweRijen.length; i += batchSize) {
+      const batch = nieuweRijen.slice(i, i + batchSize);
+      const { data, error } = await sb.from("prestaties").insert(batch).select();
+      if (error) throw error;
+      (data || []).forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
+    }
+  } catch(e) {
+    toast("Fout bij opslaan: " + e.message, "err");
+    opslaanBtn.disabled = false;
+    opslaanBtn.textContent = "✅ Geselecteerde importeren";
+    return;
   }
 
   // Toon resultaat
   document.getElementById("prImport-stap2").style.display = "none";
   document.getElementById("prImport-stap3").style.display = "";
-  document.getElementById("prImport-opslaan-btn").style.display = "none";
+  opslaanBtn.style.display = "none";
   document.getElementById("prImportSub").textContent = "Stap 3 van 3 — Klaar";
   document.getElementById("prImport-resultaat").textContent =
     `✓ ${toegevoegd} nieuw · ${overschreven} overschreven · ${overgeslagen} overgeslagen`;
