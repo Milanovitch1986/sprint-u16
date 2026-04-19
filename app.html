@@ -2753,7 +2753,55 @@ async function verwerkPRSheet(rows) {
 // ── PR-overzicht import (breed formaat: atleet in kolom A, disciplines als kolomtitels) ──
 
 // Kolom A = naam, rij 1 = discipline-headers, cellen = waarden
-// Tijden staan als Excel-decimaal (fractie van een dag) → × 86400 = seconden
+// Tijden in het PR-overzicht Excel staan als:
+//   - Gewone getallen voor sprints: 11, 15.5, 19.08  (= seconden)
+//   - mm:ss,0 cellen voor lange afstand: 3:00,0 / 6:30,0  (SheetJS leest dit als decimaalbreuk)
+// Strategie: gebruik de geformatteerde celtekst (cel.w) als die beschikbaar is,
+// en val terug op de numerieke waarde voor gewone getallen.
+
+// Haal de geformatteerde celtekst op uit de SheetJS worksheet
+// adres bijv. "B2" voor rij 2, kolom 2
+function getCelTekst(ws, rijNr, kolNr) {
+  // rijNr en kolNr zijn 0-gebaseerd; SheetJS gebruikt A1-notatie
+  const addr = XLSX.utils.encode_cell({ r: rijNr, c: kolNr });
+  const cel = ws[addr];
+  if (!cel) return "";
+  // cel.w = geformatteerde tekst (bijv. "3:00,0"), cel.v = numerieke waarde
+  return cel.w !== undefined ? String(cel.w) : String(cel.v !== undefined ? cel.v : "");
+}
+
+// Zet een tijdstring uit Excel om naar het app-formaat (ss.hh of m:ss.hh)
+// Invoer kan zijn: "11" / "15,5" / "15.5" / "3:00,0" / "6:30,0" / "2:14,69"
+function parseerExcelTijd(tekst) {
+  if (!tekst) return null;
+  // Normaliseer: komma als decimaalteken → punt, maar NIET de dubbele punt in mm:ss
+  const s = tekst.trim();
+
+  // Patroon: m:ss,d of m:ss.d  (lange afstand)
+  const metDubbelpunt = s.match(/^(\d+):(\d{1,2})[,.](\d+)$/);
+  if (metDubbelpunt) {
+    const mins = parseInt(metDubbelpunt[1], 10);
+    const secs = parseInt(metDubbelpunt[2], 10);
+    const honderd = metDubbelpunt[3].padEnd(2, "0").slice(0, 2);
+    return `${mins}:${String(secs).padStart(2,"0")}.${honderd}`;
+  }
+
+  // Patroon: m:ss  (zonder decimalen, bijv. "3:00")
+  const metDubbelpuntGeen = s.match(/^(\d+):(\d{1,2})$/);
+  if (metDubbelpuntGeen) {
+    const mins = parseInt(metDubbelpuntGeen[1], 10);
+    const secs = parseInt(metDubbelpuntGeen[2], 10);
+    return `${mins}:${String(secs).padStart(2,"0")}.00`;
+  }
+
+  // Gewoon getal: 11 / 15,5 / 19.08
+  const num = parseFloat(s.replace(",", "."));
+  if (!isNaN(num) && num > 0) {
+    return num.toFixed(2);
+  }
+
+  return null;
+}
 
 // Mapping kolomtitels uit het PR-overzicht Excel naar app-discipline namen
 const PR_KOLOM_MAP = {
@@ -2783,18 +2831,7 @@ const PR_TIJD_KOLOMMEN = new Set([
   "300m","300m horden","600m","800m","1500m","4x100m","4x80m"
 ]);
 
-// Zet Excel-tijddecimaal om naar leesbare string (bijv. "11.84" of "2:14.69")
-function excelTijdNaarString(decimaal, disc) {
-  const secTotaal = decimaal * 86400;
-  const mins = Math.floor(secTotaal / 60);
-  const secs = secTotaal - mins * 60;
-  const secsStr = secs.toFixed(2).padStart(5, "0"); // bijv. "11.84" of "09.32"
-  if (mins > 0) {
-    return `${mins}:${secsStr}`;
-  } else {
-    return secsStr;
-  }
-}
+
 
 // Globale variabele voor import-data
 let prImportData = null; // { rijen: [{naam, disciplines:[{disc,waarde,huidigePR}]}], onbekend:[naam] }
@@ -2822,7 +2859,7 @@ async function openPROverzichtImport(input) {
   document.getElementById("prImportSub").textContent = "Stap 1 van 3 — Bestand verwerken…";
   openModal("prOverzichtModal");
 
-  // Lees Excel
+  // Lees Excel — bewaar worksheet zodat we per cel de geformatteerde tekst (cel.w) kunnen lezen
   const buf = await file.arrayBuffer();
   const wb  = XLSX.read(buf, { type: "array", cellDates: false });
   const ws  = wb.Sheets[wb.SheetNames[0]];
@@ -2870,9 +2907,11 @@ async function openPROverzichtImport(input) {
 
       let waarde;
       if (kol.isTijd) {
-        const num = parseFloat(rawVal);
-        if (isNaN(num) || num <= 0) continue;
-        waarde = excelTijdNaarString(num, kol.disc);
+        // Gebruik de geformatteerde celtekst (bijv. "3:00,0" of "11") voor tijden
+        const rijNrInSheet = rows.indexOf(row); // 0-gebaseerd inclusief headerrij
+        const celTekst = getCelTekst(ws, rijNrInSheet, kol.idx);
+        waarde = parseerExcelTijd(celTekst || String(rawVal));
+        if (!waarde) continue;
       } else {
         const num = parseFloat(String(rawVal).replace(",", "."));
         if (isNaN(num) || num <= 0) continue;
