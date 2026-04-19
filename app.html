@@ -2922,18 +2922,20 @@ async function openPROverzichtImport(input) {
 
       let waarde;
       if (kol.isTijd) {
-        // Gebruik de geformatteerde celtekst (bijv. "0630.0" of "11") voor tijden
-        const celTekst = getCelTekst(ws, rijNrInSheet, kol.idx);
-        waarde = parseerExcelTijd(celTekst);
-        if (!waarde) {
-          // Fallback: bereken via decimaalbreuk (× 86400 = seconden)
-          const sec = parseFloat(String(rawVal).replace(",", ".")) * 86400;
-          if (!isNaN(sec) && sec > 0) {
-            const mins = Math.floor(sec / 60);
-            const secs = sec - mins * 60;
-            const secsStr = secs.toFixed(2).padStart(5, "0");
-            waarde = mins > 0 ? `${mins}:${secsStr}` : secsStr;
-          } else continue;
+        // Tijden: rawVal is óf een gewoon getal (≥1, bijv. 11 of 15.5 sec)
+        // óf een Excel-tijddecimaal (<1, bijv. 0.004513 voor 6:30)
+        const num = parseFloat(String(rawVal).replace(",", "."));
+        if (isNaN(num) || num <= 0) continue;
+        if (num >= 1) {
+          // Gewoon getal: al in seconden
+          waarde = num.toFixed(2);
+        } else {
+          // Decimaalbreuk × 86400 = seconden
+          const sec = num * 86400;
+          const mins = Math.floor(sec / 60);
+          const secs = sec - mins * 60;
+          const secsStr = secs.toFixed(2).padStart(5, "0");
+          waarde = mins > 0 ? `${mins}:${secsStr}` : secsStr;
         }
       } else {
         const num = parseFloat(String(rawVal).replace(",", "."));
