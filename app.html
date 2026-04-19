@@ -3075,11 +3075,9 @@ async function slaaPROverzichtOp() {
   opslaanBtn.textContent = "Bezig…";
 
   const vandaag = new Date().toISOString().split("T")[0];
-  const teVerwijderenIds = [];  // bestaande PR-IDs die overschreven worden
-  const nieuweRijen = [];       // alle te inserteren rijen
   let overschreven = 0, toegevoegd = 0, overgeslagen = 0;
 
-  // Stap 1: verzamel alles wat aangevinkt is
+  // Verwerk per atleet per discipline: eerst verwijderen, dan invoegen
   for (let rijIdx = 0; rijIdx < prImportData.rijen.length; rijIdx++) {
     const rij = prImportData.rijen[rijIdx];
     if (!rij.atleet) { overgeslagen += rij.disciplines.length; continue; }
@@ -3089,20 +3087,31 @@ async function slaaPROverzichtOp() {
       if (!check || !check.checked) { overgeslagen++; continue; }
 
       const d = rij.disciplines[dIdx];
-      // Bepaal eenheid op basis van discipline (zelfde logica als handmatig invoeren)
       let eenheid;
       if (isMiddellangeAfstandDiscipline(d.disc)) eenheid = "min";
       else if (d.isTijd) eenheid = "sec";
       else eenheid = "m";
 
-      if (d.huidigePR) {
-        // Verwijder ALLE bestaande rijen voor deze atleet+discipline (niet alleen de beste)
-        const alleBestaande = prestaties.filter(p =>
-          String(p.atleetId) === String(rij.atleet.id) &&
-          p.discipline.trim().toLowerCase() === d.disc.trim().toLowerCase()
+      try {
+        // Verwijder ALLE bestaande rijen voor deze atleet+discipline via gerichte query
+        const { error: delErr } = await sb.from("prestaties")
+          .delete()
+          .eq("categorie_id", actieveCategorie.id)
+          .eq("atleet_id", rij.atleet.id)
+          .eq("discipline", d.disc);
+        if (delErr) throw delErr;
+
+        // Verwijder ook lokaal uit cache
+        prestaties = prestaties.filter(p =>
+          !(String(p.atleetId) === String(rij.atleet.id) &&
+            p.discipline.trim().toLowerCase() === d.disc.trim().toLowerCase())
         );
-        alleBestaande.forEach(p => teVerwijderenIds.push(String(p.id)));
-        nieuweRijen.push({
+
+        // Voeg nieuwe PR in
+        const notitie = d.huidigePR
+          ? `Overschreven via PR-overzicht import (was: ${d.huidigePR.resultaat})`
+          : "Geïmporteerd via PR-overzicht import";
+        const { data, error: insErr } = await sb.from("prestaties").insert({
           categorie_id: actieveCategorie.id,
           atleet_id: rij.atleet.id,
           discipline: d.disc,
@@ -3110,51 +3119,17 @@ async function slaaPROverzichtOp() {
           eenheid,
           datum: vandaag,
           locatie: "Import",
-          notities: `Overschreven via PR-overzicht import (was: ${d.huidigePR.resultaat})`
-        });
-        overschreven++;
-      } else {
-        nieuweRijen.push({
-          categorie_id: actieveCategorie.id,
-          atleet_id: rij.atleet.id,
-          discipline: d.disc,
-          resultaat: d.waarde,
-          eenheid,
-          datum: vandaag,
-          locatie: "Import",
-          notities: "Geïmporteerd via PR-overzicht import"
-        });
-        toegevoegd++;
+          notities: notitie
+        }).select().single();
+        if (insErr) throw insErr;
+        prestaties.push({ ...data, atleetId: data.atleet_id });
+        if (d.huidigePR) overschreven++; else toegevoegd++;
+
+      } catch(e) {
+        console.error("Fout bij", rij.atleet.naam, d.disc, e.message);
+        overgeslagen++;
       }
     }
-  }
-
-  try {
-    // Stap 2: verwijder alle bestaande PRs voor die atleet+discipline (niet alleen de beste)
-    if (teVerwijderenIds.length) {
-      const { error: delErr } = await sb.from("prestaties")
-        .delete()
-        .eq("categorie_id", actieveCategorie.id)
-        .in("id", teVerwijderenIds);
-      if (delErr) throw delErr;
-      teVerwijderenIds.forEach(id => {
-        prestaties = prestaties.filter(p => String(p.id) !== id);
-      });
-    }
-
-    // Stap 3: insert alle nieuwe rijen in batches van 50
-    const batchSize = 50;
-    for (let i = 0; i < nieuweRijen.length; i += batchSize) {
-      const batch = nieuweRijen.slice(i, i + batchSize);
-      const { data, error } = await sb.from("prestaties").insert(batch).select();
-      if (error) throw error;
-      (data || []).forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
-    }
-  } catch(e) {
-    toast("Fout bij opslaan: " + e.message, "err");
-    opslaanBtn.disabled = false;
-    opslaanBtn.textContent = "✅ Geselecteerde importeren";
-    return;
   }
 
   // Toon resultaat
