@@ -3081,7 +3081,12 @@ async function slaaPROverzichtOp() {
       const eenheid = d.isTijd ? "sec" : "m";
 
       if (d.huidigePR) {
-        teVerwijderenIds.push(String(d.huidigePR.id));
+        // Verwijder ALLE bestaande rijen voor deze atleet+discipline (niet alleen de beste)
+        const alleBestaande = prestaties.filter(p =>
+          String(p.atleetId) === String(rij.atleet.id) &&
+          p.discipline.trim().toLowerCase() === d.disc.trim().toLowerCase()
+        );
+        alleBestaande.forEach(p => teVerwijderenIds.push(String(p.id)));
         nieuweRijen.push({
           categorie_id: actieveCategorie.id,
           atleet_id: rij.atleet.id,
@@ -3110,7 +3115,7 @@ async function slaaPROverzichtOp() {
   }
 
   try {
-    // Stap 2: verwijder oude PRs in één aanroep
+    // Stap 2: verwijder alle bestaande PRs voor die atleet+discipline (niet alleen de beste)
     if (teVerwijderenIds.length) {
       const { error: delErr } = await sb.from("prestaties")
         .delete()
