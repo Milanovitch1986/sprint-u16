@@ -3089,7 +3089,11 @@ async function slaaPROverzichtOp() {
       if (!check || !check.checked) { overgeslagen++; continue; }
 
       const d = rij.disciplines[dIdx];
-      const eenheid = d.isTijd ? "sec" : "m";
+      // Bepaal eenheid op basis van discipline (zelfde logica als handmatig invoeren)
+      let eenheid;
+      if (isMiddellangeAfstandDiscipline(d.disc)) eenheid = "min";
+      else if (d.isTijd) eenheid = "sec";
+      else eenheid = "m";
 
       if (d.huidigePR) {
         // Verwijder ALLE bestaande rijen voor deze atleet+discipline (niet alleen de beste)
