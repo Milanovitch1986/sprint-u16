@@ -1153,6 +1153,7 @@
           <option value="3" selected>3 ploegen</option>
         </select>
         <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
+        <button class="btn btn-ghost" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
         <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
         <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
         <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
@@ -4266,6 +4267,154 @@ function genereerOpstelling() {
 
   renderPloegen();
   toast("Opstelling gegenereerd ✓");
+}
+
+// ── Aanvullen (behoudt handmatige keuzes, vult lege slots in) ─────────────────
+function aanvullenOpstelling() {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+
+  // Bouw de huidige staat op uit opstellingData (wat al ingevuld is)
+  const atleetInPloeg = {};           // atleetId → ploeg
+  const technischGeblokkeerd = new Set(); // "atleetId|discipline"
+
+  // Herstel per-ploeg tellers vanuit de bestaande opstelling
+  const atleetOnderdeelTellerPerPloeg = {}; // ploeg → { atleetId → teller }
+  const atleetIngeplandPerPloeg = {};       // ploeg → { atleetId → [{idx, starttijd}] }
+
+  ploegNamen.forEach(ploeg => {
+    const opst = opstellingData[ploeg] || {};
+    atleetOnderdeelTellerPerPloeg[ploeg] = {};
+    atleetIngeplandPerPloeg[ploeg] = {};
+
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette  = item.type === "estafette";
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+      for (let s = 0; s < maxSlots; s++) {
+        const aid = opst[`${ploeg}_${idx}_${s}`];
+        if (!aid) continue;
+        // Registreer in welke ploeg deze atleet zit
+        atleetInPloeg[String(aid)] = ploeg;
+        // Onderdeel-teller
+        atleetOnderdeelTellerPerPloeg[ploeg][String(aid)] =
+          (atleetOnderdeelTellerPerPloeg[ploeg][String(aid)] || 0) + 1;
+        // Ingepland (voor tijdconflict-check)
+        if (!atleetIngeplandPerPloeg[ploeg][String(aid)]) atleetIngeplandPerPloeg[ploeg][String(aid)] = [];
+        atleetIngeplandPerPloeg[ploeg][String(aid)].push({ idx, starttijd: item.starttijd });
+        // Technisch geblokkeerd
+        if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
+      }
+    });
+  });
+
+  // Helper: probeer een atleet toe te wijzen — zelfde regels als genereerOpstelling
+  function probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland) {
+    const item = programma[idx];
+    const isTechnisch = item.type === "technisch";
+    const isEstafette  = item.type === "estafette";
+    const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+    if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+
+    let gevuld = 0;
+    for (let s = 0; s < maxSlots; s++) {
+      if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
+    }
+    if (gevuld >= maxSlots) return false;
+    if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) return false;
+    if ((atleetOnderdeelTeller[aid] || 0) >= 3) return false;
+    if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) return false;
+    if (item.starttijd) {
+      const hMin = tijdNaarMinuten(item.starttijd);
+      const conflict = (atleetIngepland[aid] || []).some(ingepland => {
+        if (!ingepland.starttijd) return false;
+        return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
+      });
+      if (conflict) return false;
+    }
+    for (let s = 0; s < maxSlots; s++) {
+      if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`] === aid) return false;
+    }
+    opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
+    atleetInPloeg[aid] = ploeg;
+    atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
+    if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
+    atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+    if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
+    return true;
+  }
+
+  ploegNamen.forEach(ploeg => {
+    if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
+    const atleetOnderdeelTeller = atleetOnderdeelTellerPerPloeg[ploeg];
+    const atleetIngepland = atleetIngeplandPerPloeg[ploeg];
+
+    const beschikbareAtleten = atleten.filter(
+      a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
+    );
+
+    function maakKandidaten(idx) {
+      const item = programma[idx];
+      return beschikbareAtleten
+        .map(a => {
+          const pr  = bestePrestatie(a.id, item.discipline);
+          const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+          return { atleet: a, pts, teller: atleetOnderdeelTeller[String(a.id)] || 0 };
+        })
+        .sort((a, b) => a.teller - b.teller || b.pts - a.pts);
+    }
+
+    // Ronde 1: vul lege slots in
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette  = item.type === "estafette";
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+      let gevuld = 0;
+      for (let s = 0; s < maxSlots; s++) {
+        if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
+      }
+      if (gevuld >= maxSlots) return; // al vol
+      const kandidaten = maakKandidaten(idx);
+      for (const k of kandidaten) {
+        if (gevuld >= maxSlots) break;
+        if (probeerToewijzen(ploeg, idx, String(k.atleet.id), atleetOnderdeelTeller, atleetIngepland)) {
+          gevuld++;
+        }
+      }
+    });
+
+    // Ronde 2: extra kans voor atleten met maar 1 onderdeel
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette  = item.type === "estafette";
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+      let gevuld = 0;
+      for (let s = 0; s < maxSlots; s++) {
+        if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
+      }
+      if (gevuld >= maxSlots) return;
+      const kandidaten = beschikbareAtleten
+        .filter(a => {
+          const aid = String(a.id);
+          if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) return false;
+          return (atleetOnderdeelTeller[aid] || 0) === 1;
+        })
+        .map(a => {
+          const pr  = bestePrestatie(a.id, item.discipline);
+          const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
+          return { atleet: a, pts };
+        })
+        .sort((a, b) => b.pts - a.pts);
+      for (const k of kandidaten) {
+        if (gevuld >= maxSlots) break;
+        if (probeerToewijzen(ploeg, idx, String(k.atleet.id), atleetOnderdeelTeller, atleetIngepland)) {
+          gevuld++;
+        }
+      }
+    });
+  });
+
+  renderPloegen();
+  toast("Opstelling aangevuld ✓");
 }
 
 // ── Opslaan ───────────────────────────────────────────────────
