@@ -159,6 +159,7 @@
   #toast.show { opacity: 1; transform: translateY(0); }
   #toast.ok   { border-color: var(--success); }
   #toast.err  { border-color: var(--accent2); }
+  #toast.warn { border-color: #f59e0b; color: #f59e0b; }
 
   /* ── Cards grid ── */
   .grid {
@@ -1607,12 +1608,12 @@ async function getUid() {
 }
 
 // ── Toast ─────────────────────────────────────────────────────
-function toast(msg, type = "ok") {
+function toast(msg, type = "ok", duur = 3000) {
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.className = "show " + type;
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.className = ""; }, 3000);
+  el._t = setTimeout(() => { el.className = ""; }, duur);
 }
 
 // ── Sync ──────────────────────────────────────────────────────
@@ -4122,36 +4123,33 @@ function genereerOpstelling() {
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
   opstellingData = {};
   const atleetInPloeg = {};      // atleetId → ploeg (globaal, over alle ploegen)
-  // Set van "atleetId|discipline" voor technische onderdelen:
-  // een atleet mag per discipline maar in 1 startgroep staan (A of B), niet beide.
-  // Dit is globaal over alle ploegen heen.
-  const technischGeblokkeerd = new Set();
+  const technischGeblokkeerd = new Set(); // "atleetId|discipline" voor technische onderdelen
 
-  // Helper: probeer een atleet (aid) toe te wijzen aan een slot in een ploeg.
-  // Geeft true terug als het gelukt is, anders false.
+  // Helper: probeer een atleet toe te wijzen aan een slot.
+  // Geeft true als het gelukt is, anders false.
   function probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland) {
     const item = programma[idx];
     const isTechnisch = item.type === "technisch";
-    const isEstafette = item.type === "estafette";
+    const isEstafette  = item.type === "estafette";
     const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
 
-    // Tel hoeveel slots al gevuld zijn voor dit programma-item in deze ploeg
+    // Tel hoeveel slots al gevuld zijn voor dit item in deze ploeg
     let gevuld = 0;
     for (let s = 0; s < maxSlots; s++) {
       if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
     }
     if (gevuld >= maxSlots) return false;
 
-    // Regel: atleet mag maar in 1 ploeg
+    // Atleet al in een andere ploeg?
     if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) return false;
 
-    // Regel: max 3 onderdelen
+    // Max 3 onderdelen bereikt?
     if ((atleetOnderdeelTeller[aid] || 0) >= 3) return false;
 
-    // Regel: bij technisch mag een atleet maar in 1 startgroep per discipline
+    // Bij technisch: atleet mag maar in 1 startgroep per discipline
     if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) return false;
 
-    // Regel: geen tijdconflict binnen 15 min
+    // Geen tijdconflict binnen 15 min
     if (item.starttijd) {
       const hMin = tijdNaarMinuten(item.starttijd);
       const conflict = (atleetIngepland[aid] || []).some(ingepland => {
@@ -4161,7 +4159,12 @@ function genereerOpstelling() {
       if (conflict) return false;
     }
 
-    // Wijs toe aan het eerste vrije slot
+    // Atleet staat al in dit programma-item?
+    for (let s = 0; s < maxSlots; s++) {
+      if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`] === aid) return false;
+    }
+
+    // Wijs toe
     opstellingData[ploeg][`${ploeg}_${idx}_${gevuld}`] = aid;
     atleetInPloeg[aid] = ploeg;
     atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
@@ -4176,56 +4179,60 @@ function genereerOpstelling() {
     const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen in deze ploeg
     const atleetIngepland = {};       // atleetId → [{idx, starttijd}]
 
-    // ── Ronde 1: vul elk programma-item met de beste beschikbare atleten ──
-    programma.forEach((item, idx) => {
-      const isEstafette = item.type === "estafette";
-      const isTechnisch = item.type === "technisch";
-      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+    // Alle beschikbare atleten van het juiste geslacht
+    const beschikbareAtleten = atleten.filter(
+      a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
+    );
 
-      const kandidaten = atleten
-        .filter(a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id))
+    // Sorteerhelper: maak gesorteerde kandidatenlijst voor een programma-item.
+    // Sorteert op: eerst atleten met de minste onderdelen, dan op punten (hoog→laag).
+    function maakKandidaten(idx) {
+      const item = programma[idx];
+      return beschikbareAtleten
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
-          return { atleet: a, pts };
+          return { atleet: a, pts, teller: atleetOnderdeelTeller[String(a.id)] || 0 };
         })
-        .sort((a, b) => b.pts - a.pts);
+        // Primair: minste onderdelen eerst. Secundair: meeste punten eerst.
+        .sort((a, b) => a.teller - b.teller || b.pts - a.pts);
+    }
 
+    // ── Ronde 1: vul elk programma-item, minst-ingepland krijgt voorrang ──
+    programma.forEach((item, idx) => {
+      const isTechnisch = item.type === "technisch";
+      const isEstafette  = item.type === "estafette";
+      const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
+      const kandidaten = maakKandidaten(idx);
       let gevuld = 0;
       for (const k of kandidaten) {
         if (gevuld >= maxSlots) break;
-        const aid = String(k.atleet.id);
-        if (probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland)) {
+        if (probeerToewijzen(ploeg, idx, String(k.atleet.id), atleetOnderdeelTeller, atleetIngepland)) {
           gevuld++;
         }
       }
     });
 
-    // ── Ronde 2: geef atleten met maar 1 onderdeel een extra kans ──
-    // Ga alle programma-items opnieuw langs; atleten met < 2 onderdelen
-    // krijgen voorrang voor nog beschikbare slots.
+    // ── Ronde 2: extra kans voor atleten met maar 1 onderdeel ──
+    // Herbereken kandidaten zodat de teller up-to-date is na ronde 1.
     programma.forEach((item, idx) => {
-      const isEstafette = item.type === "estafette";
       const isTechnisch = item.type === "technisch";
+      const isEstafette  = item.type === "estafette";
       const maxSlots = isTechnisch ? 1 : isEstafette ? 4 : 3;
 
-      // Kijk hoeveel slots al gevuld zijn
+      // Kijk of er nog vrije slots zijn
       let gevuld = 0;
       for (let s = 0; s < maxSlots; s++) {
         if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
       }
-      if (gevuld >= maxSlots) return; // slot is al vol
+      if (gevuld >= maxSlots) return;
 
-      // Kandidaten: atleten die in deze ploeg zitten (of nog niet ingedeeld zijn)
-      // met minder dan 2 onderdelen, gesorteerd op punten
-      const kandidaten = atleten
+      // Alleen atleten met precies 1 onderdeel tot nu toe
+      const kandidaten = beschikbareAtleten
         .filter(a => {
-          if (a.geslacht !== actiefGeslacht || !isBeschikbaar(a.id)) return false;
           const aid = String(a.id);
-          // Atleet moet in deze ploeg zitten of nog niet ingedeeld zijn
           if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) return false;
-          // Alleen atleten met minder dan 2 onderdelen
-          return (atleetOnderdeelTeller[aid] || 0) < 2;
+          return (atleetOnderdeelTeller[aid] || 0) === 1;
         })
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
@@ -4236,19 +4243,25 @@ function genereerOpstelling() {
 
       for (const k of kandidaten) {
         if (gevuld >= maxSlots) break;
-        const aid = String(k.atleet.id);
-        // Controleer of atleet niet al in dit slot staat
-        let alInDitItem = false;
-        for (let s = 0; s < maxSlots; s++) {
-          if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`] === aid) { alInDitItem = true; break; }
-        }
-        if (alInDitItem) continue;
-        if (probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland)) {
+        if (probeerToewijzen(ploeg, idx, String(k.atleet.id), atleetOnderdeelTeller, atleetIngepland)) {
           gevuld++;
         }
       }
     });
 
+    // ── Waarschuwing: atleten die toch maar 1 onderdeel hebben ──
+    const teWeinig = beschikbareAtleten.filter(a => {
+      const aid = String(a.id);
+      // Alleen atleten die aan deze ploeg zijn toegewezen
+      if (atleetInPloeg[aid] !== ploeg) return false;
+      return (atleetOnderdeelTeller[aid] || 0) < 2;
+    });
+    if (teWeinig.length > 0) {
+      const namen = teWeinig.map(a => `${a.voornaam} ${a.achternaam}`).join(", ");
+      setTimeout(() => {
+        toast(`⚠️ Ploeg ${ploeg}: controleer handmatig — ${namen} ${teWeinig.length === 1 ? "heeft" : "hebben"} maar 1 onderdeel`, "warn", 8000);
+      }, 300 * (ploegNamen.indexOf(ploeg) + 1));
+    }
   });
 
   renderPloegen();
