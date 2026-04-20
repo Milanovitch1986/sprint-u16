@@ -4125,58 +4125,9 @@ function genereerOpstelling() {
   opstellingData = {};
   ploegNamen.forEach(p => opstellingData[p] = {});
 
-  const atleetInPloeg      = {};           // atleetId → ploeg
-  const technischGeblokkeerd = new Set();  // "atleetId|discipline"
-
-  // ── Stap 1: verzamel beschikbare atleten en bereken hun totale puntenpotentie ──
-  // Puntenpotentie = som van punten voor de top-3 disciplines (beste PR per discipline).
-  const beschikbareAtleten = atleten.filter(
-    a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
-  );
-
-  const disciplines = [...new Set(programma.map(p => p.discipline))];
-
-  function potentie(atleet) {
-    return disciplines
-      .map(disc => {
-        const pr = bestePrestatie(atleet.id, disc);
-        return pr ? berekenPunten(disc, pr.resultaat, actiefGeslacht) : 0;
-      })
-      .sort((a, b) => b - a)
-      .slice(0, 3)
-      .reduce((s, v) => s + v, 0);
-  }
-
-  // Sorteer atleten op potentie (sterkste eerst)
-  const gesorteerdeAtleten = [...beschikbareAtleten]
-    .map(a => ({ atleet: a, pot: potentie(a) }))
-    .sort((a, b) => b.pot - a.pot)
-    .map(x => x.atleet);
-
-  // ── Stap 2: verdeel atleten over ploegen via snake-draft ──
-  // Ploeg A krijgt de beste atleet, B de tweede, C de derde, C de vierde, B de vijfde, A de zesde, …
-  // Zo zijn alle ploegen zo gelijkwaardig mogelijk.
-  const ploegVanAtleet = {}; // atleetId → ploeg
-  if (ploegNamen.length === 1) {
-    gesorteerdeAtleten.forEach(a => { ploegVanAtleet[String(a.id)] = "A"; });
-  } else {
-    // snake-draft volgorde: A, B, C, C, B, A, A, B, C, …
-    const snake = [];
-    const n = ploegNamen.length;
-    let richting = 1; // 1 = vooruit, -1 = achteruit
-    let pos = 0;
-    for (let i = 0; i < gesorteerdeAtleten.length; i++) {
-      snake.push(ploegNamen[pos]);
-      if (i % n === n - 1) richting *= -1; // keer om aan het einde van een ronde
-      pos += richting;
-      if (pos < 0) pos = 0;
-      if (pos >= n) pos = n - 1;
-    }
-    gesorteerdeAtleten.forEach((a, i) => {
-      ploegVanAtleet[String(a.id)] = snake[i];
-      atleetInPloeg[String(a.id)]  = snake[i];
-    });
-  }
+  // atleetId → ploeg: eenmaal toegewezen, nooit meer beschikbaar voor andere ploeg
+  const atleetInPloeg        = {};
+  const technischGeblokkeerd = new Set(); // "atleetId|discipline"
 
   // ── Helper: probeer een atleet toe te wijzen aan een slot ──
   function probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland) {
@@ -4191,13 +4142,13 @@ function genereerOpstelling() {
     }
     if (gevuld >= maxSlots) return false;
 
-    // Atleet hoort bij een andere ploeg?
+    // Atleet al in een andere ploeg?
     if (atleetInPloeg[aid] && atleetInPloeg[aid] !== ploeg) return false;
 
     // Max 3 onderdelen bereikt?
     if ((atleetOnderdeelTeller[aid] || 0) >= 3) return false;
 
-    // Bij technisch: maar in 1 startgroep per discipline
+    // Bij technisch: maar in 1 startgroep per discipline (over alle ploegen heen)
     if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) return false;
 
     // Geen tijdconflict binnen 15 min
@@ -4225,41 +4176,50 @@ function genereerOpstelling() {
     return true;
   }
 
-  // ── Stap 3: vul per ploeg de slots in ──
-  // Atleten worden gesorteerd op: minste onderdelen eerst, dan meeste punten voor dit item.
+  // ── Vul ploegen sequentieel: A → B → C ──
+  // Elke ploeg pakt de beste beschikbare atleten (nog niet in een andere ploeg).
+  // Ronde 1: sorteer puur op punten voor dit onderdeel (sterkste atleet voorrang).
+  // Ronde 2: geef atleten met maar 1 onderdeel een extra kans, zodat iedereen ≥ 2 doet.
   ploegNamen.forEach(ploeg => {
-    const atleetOnderdeelTeller = {};
-    const atleetIngepland = {};
+    const atleetOnderdeelTeller = {}; // atleetId → aantal onderdelen in deze ploeg
+    const atleetIngepland       = {}; // atleetId → [{idx, starttijd}]
 
-    // Atleten die bij deze ploeg horen
-    const ploegAtleten = gesorteerdeAtleten.filter(
-      a => ploegVanAtleet[String(a.id)] === ploeg
+    const beschikbareAtleten = atleten.filter(
+      a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
     );
 
+    // Kandidatenlijst voor een programma-item: alleen atleten die nog vrij zijn (geen andere ploeg),
+    // gesorteerd op punten hoog→laag.
     function maakKandidaten(idx) {
       const item = programma[idx];
-      return ploegAtleten
+      return beschikbareAtleten
+        .filter(a => {
+          const aid = String(a.id);
+          return !atleetInPloeg[aid] || atleetInPloeg[aid] === ploeg;
+        })
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
-          return { atleet: a, pts, teller: atleetOnderdeelTeller[String(a.id)] || 0 };
+          return { atleet: a, pts };
         })
-        .sort((a, b) => a.teller - b.teller || b.pts - a.pts);
+        .sort((a, b) => b.pts - a.pts);
     }
 
-    // ── Ronde 1: vul elk programma-item ──
+    // ── Ronde 1: vul elk onderdeel met de beste vrije atleten ──
     programma.forEach((item, idx) => {
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
       const kandidaten = maakKandidaten(idx);
       let gevuld = 0;
       for (const k of kandidaten) {
-        if (gevuld >= (item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3)) break;
+        if (gevuld >= maxSlots) break;
         if (probeerToewijzen(ploeg, idx, String(k.atleet.id), atleetOnderdeelTeller, atleetIngepland)) {
           gevuld++;
         }
       }
     });
 
-    // ── Ronde 2: extra kans voor atleten met maar 1 onderdeel ──
+    // ── Ronde 2: atleten die aan deze ploeg zijn toegewezen maar nog maar 1 onderdeel hebben
+    //            krijgen een extra kans bij onderdelen die nog vrije slots hebben ──
     programma.forEach((item, idx) => {
       const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
       let gevuld = 0;
@@ -4268,8 +4228,12 @@ function genereerOpstelling() {
       }
       if (gevuld >= maxSlots) return;
 
-      const kandidaten = ploegAtleten
-        .filter(a => (atleetOnderdeelTeller[String(a.id)] || 0) === 1)
+      // Alleen atleten die al aan déze ploeg zijn gekoppeld én maar 1 onderdeel hebben
+      const kandidaten = beschikbareAtleten
+        .filter(a => {
+          const aid = String(a.id);
+          return atleetInPloeg[aid] === ploeg && (atleetOnderdeelTeller[aid] || 0) === 1;
+        })
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
@@ -4285,10 +4249,11 @@ function genereerOpstelling() {
       }
     });
 
-    // ── Waarschuwing: atleten die nog maar 1 onderdeel hebben ──
-    const teWeinig = ploegAtleten.filter(
-      a => (atleetOnderdeelTeller[String(a.id)] || 0) < 2
-    );
+    // ── Waarschuwing: atleten in deze ploeg die toch maar 1 onderdeel hebben ──
+    const teWeinig = beschikbareAtleten.filter(a => {
+      const aid = String(a.id);
+      return atleetInPloeg[aid] === ploeg && (atleetOnderdeelTeller[aid] || 0) < 2;
+    });
     if (teWeinig.length > 0) {
       const namen = teWeinig.map(a => `${a.voornaam} ${a.achternaam}`).join(", ");
       setTimeout(() => {
@@ -4335,44 +4300,8 @@ function aanvullenOpstelling() {
     });
   });
 
-  // ── Verdeel atleten die nog GEEN ploeg hebben via snake-draft ──
-  // Zodat ook bij aanvullen de gelijkwaardige verdeling geldt.
-  const beschikbareAtleten = atleten.filter(
-    a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
-  );
-  const disciplines = [...new Set(programma.map(p => p.discipline))];
-
-  function potentie(atleet) {
-    return disciplines
-      .map(disc => {
-        const pr = bestePrestatie(atleet.id, disc);
-        return pr ? berekenPunten(disc, pr.resultaat, actiefGeslacht) : 0;
-      })
-      .sort((a, b) => b - a)
-      .slice(0, 3)
-      .reduce((s, v) => s + v, 0);
-  }
-
-  const onverdeeld = beschikbareAtleten
-    .filter(a => !atleetInPloeg[String(a.id)])
-    .map(a => ({ atleet: a, pot: potentie(a) }))
-    .sort((a, b) => b.pot - a.pot)
-    .map(x => x.atleet);
-
-  if (onverdeeld.length > 0 && ploegNamen.length > 1) {
-    const n = ploegNamen.length;
-    let richting = 1;
-    let pos = 0;
-    onverdeeld.forEach((a, i) => {
-      atleetInPloeg[String(a.id)] = ploegNamen[pos];
-      if (i % n === n - 1) richting *= -1;
-      pos += richting;
-      if (pos < 0) pos = 0;
-      if (pos >= n) pos = n - 1;
-    });
-  } else {
-    onverdeeld.forEach(a => { atleetInPloeg[String(a.id)] = atleetInPloeg[String(a.id)] || "A"; });
-  }
+  // ── Atleten zonder ploeg blijven vrij — ze worden opgepikt door de eerste ploeg die ze nodig heeft ──
+  // (geen pre-verdeling nodig: aanvullen werkt sequentieel net als genereren)
 
   // Helper: probeer een atleet toe te wijzen
   function probeerToewijzen(ploeg, idx, aid, atleetOnderdeelTeller, atleetIngepland) {
@@ -4410,25 +4339,30 @@ function aanvullenOpstelling() {
     return true;
   }
 
+  const beschikbareAtleten = atleten.filter(
+    a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
+  );
+
   ploegNamen.forEach(ploeg => {
     if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
     const atleetOnderdeelTeller = atleetOnderdeelTellerPerPloeg[ploeg];
     const atleetIngepland = atleetIngeplandPerPloeg[ploeg];
 
-    // Alleen atleten van deze ploeg
-    const ploegAtleten = beschikbareAtleten.filter(
-      a => atleetInPloeg[String(a.id)] === ploeg
-    );
-
+    // Kandidaten: atleten die nog vrij zijn (geen andere ploeg) of al aan deze ploeg hangen,
+    // gesorteerd op punten voor dit onderdeel.
     function maakKandidaten(idx) {
       const item = programma[idx];
-      return ploegAtleten
+      return beschikbareAtleten
+        .filter(a => {
+          const aid = String(a.id);
+          return !atleetInPloeg[aid] || atleetInPloeg[aid] === ploeg;
+        })
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
-          return { atleet: a, pts, teller: atleetOnderdeelTeller[String(a.id)] || 0 };
+          return { atleet: a, pts };
         })
-        .sort((a, b) => a.teller - b.teller || b.pts - a.pts);
+        .sort((a, b) => b.pts - a.pts);
     }
 
     // Ronde 1: vul lege slots in
@@ -4448,7 +4382,7 @@ function aanvullenOpstelling() {
       }
     });
 
-    // Ronde 2: extra kans voor atleten met maar 1 onderdeel
+    // Ronde 2: extra kans voor atleten met maar 1 onderdeel die al aan deze ploeg zijn gekoppeld
     programma.forEach((item, idx) => {
       const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
       let gevuld = 0;
@@ -4456,8 +4390,11 @@ function aanvullenOpstelling() {
         if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`]) gevuld++;
       }
       if (gevuld >= maxSlots) return;
-      const kandidaten = ploegAtleten
-        .filter(a => (atleetOnderdeelTeller[String(a.id)] || 0) === 1)
+      const kandidaten = beschikbareAtleten
+        .filter(a => {
+          const aid = String(a.id);
+          return atleetInPloeg[aid] === ploeg && (atleetOnderdeelTeller[aid] || 0) === 1;
+        })
         .map(a => {
           const pr  = bestePrestatie(a.id, item.discipline);
           const pts = pr ? berekenPunten(item.discipline, pr.resultaat, actiefGeslacht) : 0;
