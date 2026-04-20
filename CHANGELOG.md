@@ -6,6 +6,55 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 15] — 2026-04-20
+
+### 🔧 Verbeterde automatische opstelling: sequentieel op punten
+
+**Wat is veranderd:**
+- `genereerOpstelling()` en `aanvullenOpstelling()` gebruiken nu een **sequentiële** verdeling: ploeg A eerst, dan B, dan C
+- Per onderdeel worden kandidaten gesorteerd op **punten hoog→laag** — de sterkste beschikbare atleet krijgt altijd voorrang
+- Zodra een atleet aan een ploeg is toegewezen, is hij **niet meer beschikbaar** voor de andere ploegen
+- Ploeg B en C pakken automatisch de beste atleten die overblijven na ploeg A
+- **Ronde 2** geeft atleten die al aan een ploeg zijn gekoppeld maar nog maar 1 onderdeel hebben een extra kans, zodat elke atleet minimaal 2 onderdelen doet
+- Ook `aanvullenOpstelling()` respecteert de bestaande ploegkoppelingen en vult vrije atleten sequentieel bij
+
+**Wat dit oplevert:**
+- Ploeg A is altijd zo sterk mogelijk
+- Ploeg B en C zijn zo vol mogelijk met de resterende atleten
+- Elke atleet doet minimaal 2 onderdelen (tenzij het programma/tijdconflicten dat onmogelijk maken — dan verschijnt een waarschuwing)
+- Ploeg B of C kan bij sommige onderdelen minder dan 3 atleten hebben — dat is bewust
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
+## [april 2026 — patch 14] — 2026-04-19
+
+### ✨ PR-overzicht importeren vanuit Excel
+
+**Wat is toegevoegd:**
+- Nieuwe knop **"📊 PR-overzicht importeren"** in de Prestaties-tab header
+- Ondersteunt het brede Excel-formaat: atleten in kolom A, disciplines als kolomtitels in rij 1, waarden in de cellen
+
+**Hoe het werkt (3 stappen):**
+1. Bestand kiezen → Excel wordt ingelezen en verwerkt via SheetJS
+2. Overzichtsscherm per atleet:
+   - Niet-herkende atleten → dropdown om handmatig te koppelen aan bestaande atleet, of overslaan
+   - Per discipline: nieuwe waarde + huidige PR naast elkaar + label "▲ PR verbeterd / ▼ lager dan huidig / = gelijk"
+   - Alle rijen standaard aangevinkt — uitvinken wat je niet wilt importeren
+3. Importeren → samenvatting (x nieuw · x overschreven · x overgeslagen)
+
+**Technische details:**
+- Tijdwaarden als gewoon getal (≥ 1): al in seconden → direct overgenomen
+- Tijdwaarden als Excel-tijddecimaal (< 1): × 86400 = seconden → omgezet naar `ss.hh` of `m:ss.hh`
+- Eenheid wordt correct bepaald: `min` voor 800m/1500m/600m, `sec` voor sprints, `m` voor veld
+- Per discipline een gerichte DELETE op `atleet_id + discipline` vóór de insert — voorkomt duplicaten
+- Mapping tabel `PR_KOLOM_MAP` vertaalt kolomtitels naar interne discipline-namen
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [april 2026 — patch 13] — 2026-04-17
 
 ### 🐛 Bugfix: Dropdown atleetkeuze afgeknipt bij laatste onderdelen

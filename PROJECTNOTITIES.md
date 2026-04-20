@@ -3,11 +3,6 @@
 
 ---
 
-## 📋 Laatste wijziging — patch 9 (17 april 2026)
-- Importknop toegevoegd aan Prestaties tab (zelfde functie als in Atleten tab)
-- PR-export Excel: titelrij nu dikgedrukt
-- PR-export Excel: lege PR-cellen lichtrood gemarkeerd (verdwijnt na vullen)
-
 ## 🏗️ Architectuur
 
 | Onderdeel | Keuze | Reden |
@@ -45,6 +40,33 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Automatische opstelling: sequentieel op punten (patch 15, april 2026)
+`genereerOpstelling()` en `aanvullenOpstelling()` vullen ploegen in **volgorde A → B → C**.
+
+**Principe:**
+- Kandidaten per onderdeel worden gesorteerd op punten hoog→laag
+- De sterkste vrije atleet (nog niet in een andere ploeg) krijgt altijd de eerste slot
+- Zodra een atleet aan een ploeg is toegewezen, is hij niet meer beschikbaar voor andere ploegen
+- Ploeg A krijgt dus de allerbeste atleten; ploeg B de beste resterende; ploeg C de rest
+
+**Ronde 2 — minimaal 2 onderdelen:**
+Na ronde 1 krijgen atleten die al aan een ploeg zijn gekoppeld maar nog maar 1 onderdeel hebben een tweede kans bij onderdelen met vrije slots. Zo doet elke atleet minimaal 2 onderdelen. Als dat toch niet lukt (bijv. door tijdconflicten), verschijnt een waarschuwing.
+
+**Gevolg:** ploeg B en C kunnen bij sommige onderdelen minder dan 3 atleten hebben — dat is bewust en gewenst.
+
+### PR-overzicht import (patch 14, april 2026)
+Nieuwe importflow voor het brede Excel-formaat (kolom A = naam, rij 1 = disciplines als kolomtitels).
+
+**Tijdlogica:** SheetJS geeft tijdcellen terug als decimaalbreuk (`< 1`) of als gewoon getal (`≥ 1`):
+- Waarde `≥ 1` → al in seconden (bijv. `11`, `15.5`, `19.08`)
+- Waarde `< 1` → Excel-tijddecimaal → `× 86400 = seconden` → geformatteerd als `ss.hh` of `m:ss.hh`
+
+**Eenheid-logica:** zelfde als handmatig invoeren — `min` voor 800m/1500m/600m, `sec` voor sprints, `m` voor veld.
+
+**Opslaan-strategie:** per discipline een gerichte `DELETE WHERE atleet_id + discipline` vóór de insert. Dit voorkomt duplicaten en is robuuster dan een batch-delete op ID-lijsten (wat Supabase-fouten gaf bij lege of ongeldige ID-arrays).
+
+**Mapping:** `PR_KOLOM_MAP` vertaalt kolomtitels (lowercase) naar interne discipline-namen. Niet-herkende atleten kunnen handmatig gekoppeld worden via dropdown in de importmodal.
 
 ### Wedstrijdprogramma volledig in Wedstrijden-tab (patch 7, april 2026)
 Het programma-overzicht is verwijderd uit de Opstelling-tab. Beheren én bekijken van het programma gaat uitsluitend via de Wedstrijden-tab ("📋 Programma"-knop op elke wedstrijdkaart). Afdrukken kan via 🖨️ in de programma-modal. `renderProgrammaOverzicht()` heeft een null-check zodat de functie niet crasht zonder het (verwijderde) DOM-element.
@@ -125,6 +147,22 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | Estafette | 4 lopers | Alle punten |
 
 De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past bovenstaande selectie toe vóór het optellen van het ploeg-totaal.
+
+---
+
+## 📥 Importmogelijkheden (overzicht)
+
+| Knop | Locatie | Formaat | Wat het doet |
+|------|---------|---------|--------------|
+| 📥 Excel importeren | Atleten-tab | `.xlsx` atletenlijst (atletiek.nu formaat) | Importeert atletengegevens |
+| 📥 PRs importeren | Prestaties-tab (Atletiek.nu sectie) | Atletiek.nu webresultaten | Haalt PR's op via externe koppeling |
+| 📊 PR-overzicht importeren | Prestaties-tab | `.xlsx` breed formaat (naam + disciplines) | Importeert PR-overzicht met tijdomrekening |
+
+### PR-overzicht Excel formaat (patch 14)
+- Kolom A: atletennamen
+- Rij 1: discipline-namen als kolomtitels (bijv. `80m`, `hoogspringen`, `1500m`)
+- Cellen: waarden — tijden als getal (seconden) of als Excel-tijddecimaal, veld als meters
+- Ondersteunde disciplines: 80m, 80m horden, 100m, 100m horden, 150m, 200m, 300m, 300m horden, 600m, 800m, 1500m, Hoogspringen, Verspringen, Speerwerpen, Discuswerpen, Kogelstoten, 4x100m, 4x80m
 
 ---
 
