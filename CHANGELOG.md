@@ -6,25 +6,24 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 18] — 2026-04-21
+
+### ✨ Verlopen uitnodigingen verwijderen
+
+**Wat is veranderd:**
+- Verlopen uitnodigingen (niet gebruikt, wel vervallen) tonen nu een **🗑️ Verwijderen**-knop
+- Na bevestiging wordt de uitnodiging uit de database verwijderd en de lijst ververst automatisch
+
+---
+
 ## [april 2026 — patch 17] — 2026-04-21
 
-### ✨ Uitnodigingen intrekken in Admin-tab
+### ✨ Actieve uitnodigingen intrekken in Admin-tab
 
 **Wat is veranderd:**
 - Actieve uitnodigingen (niet gebruikt, niet verlopen) tonen nu een **🗑️ Intrekken**-knop naast de bestaande Kopiëren-knop
 - Na klikken verschijnt een bevestigingsdialoog met naam van de uitgenodigde
 - Bij bevestiging wordt de uitnodiging verwijderd uit de `uitnodigingen` tabel en de lijst ververst automatisch
-- Verlopen of reeds gebruikte uitnodigingen tonen geen Intrekken-knop (niet van toepassing)
-
----
-
-## [april 2026 — patch 16] — 2026-04-17
-
-### 🐛 Dropdown flip-logica: herpositionering bij viewport-rand
-
-**Wat is veranderd:**
-- De atleet-selectie dropdown herpositioneert automatisch naar **boven** wanneer hij anders buiten de viewport zou vallen
-- Z-index verhoogd zodat de dropdown altijd boven andere elementen zweeft
 
 ---
 

@@ -5226,6 +5226,9 @@ async function laadAdminUitnodigingen() {
             <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
             <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Intrekken</button>
           ` : ""}
+          ${verlopen && !u.gebruikt ? `
+            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Verwijderen</button>
+          ` : ""}
         </div>`;
     }).join("");
   } catch(e) { uitnEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
@@ -5454,12 +5457,12 @@ function kopieerUitnodigingslink(token) {
 }
 
 async function intrekUitnodiging(id, email) {
-  const ok = await bevestig("Uitnodiging intrekken", `Wil je de uitnodiging voor <strong>${email}</strong> intrekken? Deze link wordt dan ongeldig.`);
+  const ok = await bevestig("Uitnodiging verwijderen", `Wil je de uitnodiging voor <strong>${email}</strong> verwijderen?`);
   if (!ok) return;
   try {
     const { error } = await sb.from("uitnodigingen").delete().eq("id", id);
     if (error) throw error;
-    toast(`Uitnodiging voor ${email} ingetrokken ✓`);
+    toast(`Uitnodiging voor ${email} verwijderd ✓`);
     laadAdminUitnodigingen();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
