@@ -3,6 +3,12 @@
 
 ---
 
+## Patch 16 — Puntenrekentool (21 april 2026)
+
+Nieuwe tab **🧮 Punten** toegevoegd. Hiermee kunnen prestaties vrij worden ingevoerd (zonder atleetkoppeling) en worden omgezet naar NAU-punten. Meerdere prestaties kunnen worden vergeleken in een automatisch gesorteerde tabel. Gebruikt de bestaande `berekenPunten()` en `normaliserenResultaat()` functies.
+
+---
+
 ## 🏗️ Architectuur
 
 | Onderdeel | Keuze | Reden |
