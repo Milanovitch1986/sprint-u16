@@ -4,20 +4,19 @@
 Alle wijzigingen worden hier bijgehouden, nieuwste bovenaan.
 Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
+---
+
 ## [april 2026 — patch 16] — 2026-04-21
 
-### ✨ Nieuwe tab: Puntenrekentool
+### 🐛 Bugfix: waarschuwing toont nu correcte atletennamen
 
-**Wat is toegevoegd:**
-- Nieuwe tab **🧮 Punten** in de navigatiebalk
-- Kies geslacht (jongen/meisje), onderdeel en voer een prestatie in
-- Druk op **"Berekenen & toevoegen"** om de NAU-puntentelling toe te passen en de rij aan de vergelijkingstabel toe te voegen
-- Optioneel een **label** meegeven (bijv. naam of omschrijving)
-- Vergelijkingstabel sorteert automatisch op punten (hoogste eerst) met een visuele balk
-- Medaille-iconen (🥇🥈🥉) voor de top 3
-- Individuele rijen verwijderen met de **✕-knop**, of alles wissen met **🗑️ Wis alles**
-- Gebruikt dezelfde `berekenPunten`- en `parseResultaat`-functies als de rest van de app
-- Enter-toets werkt als snelkoppeling voor berekenen
+**Probleem:** Na het automatisch opstellen verscheen de melding `"undefined undefined hebben maar 1 onderdeel"` rechtsonder in beeld.
+
+**Oorzaak:** De waarschuwingscode in `genereerOpstelling()` gebruikte `a.voornaam` en `a.achternaam` als aparte velden op het atleet-object. De `atleten`-tabel in Supabase slaat de naam echter op als één veld `naam` — `voornaam` en `achternaam` bestaan niet, waardoor JavaScript `undefined` teruggaf.
+
+**Oplossing:** Eén regel aangepast: `a.naam` gebruiken in plaats van `` `${a.voornaam} ${a.achternaam}` ``.
+
+**Bestanden gewijzigd:** `app.html`
 
 ---
 
