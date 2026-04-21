@@ -895,7 +895,6 @@
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
-    <button id="tab-punten" onclick="showTab('punten')">🧮 Punten</button>
     <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">👤 Profiel</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none;">⚙️ Admin</button>
   </nav>
@@ -1190,93 +1189,6 @@
   </div>
 
   <!-- ADMIN TAB -->
-  <!-- ── Punten tab ────────────────────────────────────────────────── -->
-  <div id="view-punten" style="display:none;">
-    <div class="page-header"><div class="page-title">🧮 Puntenrekentool</div></div>
-
-    <div class="detail-panel" style="margin-bottom:20px;">
-      <div class="section-label">Bereken punten</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;">
-
-        <!-- Geslacht -->
-        <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Geslacht</label>
-          <select id="punten-geslacht" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;">
-            <option value="M">👦 Jongen</option>
-            <option value="V">👧 Meisje</option>
-          </select>
-        </div>
-
-        <!-- Onderdeel -->
-        <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Onderdeel</label>
-          <select id="punten-discipline" onchange="updatePuntenPlaceholder()" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;">
-            <option value="100m">100m</option>
-            <option value="80m">80m</option>
-            <option value="150m">150m</option>
-            <option value="300m">300m</option>
-            <option value="800m">800m</option>
-            <option value="1500m">1500m</option>
-            <option value="80m horden">80m horden</option>
-            <option value="100m horden">100m horden</option>
-            <option value="300m horden">300m horden</option>
-            <option value="Verspringen">Verspringen</option>
-            <option value="Hoogspringen">Hoogspringen</option>
-            <option value="Kogelstoten">Kogelstoten</option>
-            <option value="Discuswerpen">Discuswerpen</option>
-            <option value="Speerwerpen">Speerwerpen</option>
-          </select>
-        </div>
-
-        <!-- Label (optioneel) -->
-        <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Label <span style="font-weight:400;font-style:italic;">(optioneel)</span></label>
-          <input type="text" id="punten-label" placeholder="bijv. naam of omschrijving" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;">
-        </div>
-
-        <!-- Prestatie -->
-        <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Prestatie</label>
-          <input type="text" id="punten-prestatie" placeholder="bijv. 10.84" id="punten-prestatie"
-            style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;"
-            onkeydown="if(event.key==='Enter') berekenEnVoegToe()">
-        </div>
-
-      </div>
-
-      <!-- Knop + foutmelding -->
-      <div style="padding:0 16px 16px;display:flex;align-items:center;gap:12px;">
-        <button class="btn btn-primary" onclick="berekenEnVoegToe()">➕ Berekenen &amp; toevoegen</button>
-        <span id="punten-fout" style="color:#e05252;font-size:13px;display:none;"></span>
-      </div>
-    </div>
-
-    <!-- Vergelijkingstabel -->
-    <div class="detail-panel" id="punten-tabel-panel" style="display:none;">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>📊 Vergelijking</span>
-        <button class="btn btn-ghost btn-sm" onclick="leegPuntenTabel()" style="margin:8px 16px;">🗑️ Wis alles</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <thead>
-            <tr style="border-bottom:2px solid var(--border);">
-              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">#</th>
-              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Label</th>
-              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Geslacht</th>
-              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Onderdeel</th>
-              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Prestatie</th>
-              <th style="text-align:right;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Punten</th>
-              <th style="padding:10px 12px;"></th>
-            </tr>
-          </thead>
-          <tbody id="punten-tabel-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <!-- ── einde Punten tab ──────────────────────────────────────────── -->
-
   <div id="view-admin" style="display:none;">
     <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
 
@@ -1737,7 +1649,7 @@ async function syncAll() {
 
 // ── Tabs ──────────────────────────────────────────────────────
 function showTab(tab) {
-  ["home","atleten","prestaties","wedstrijden","opstelling","punten","profiel","admin"].forEach(t => {
+  ["home","atleten","prestaties","wedstrijden","opstelling","profiel","admin"].forEach(t => {
     const el = document.getElementById("view-" + t);
     if (el) el.style.display = t === tab ? "" : "none";
     const tb = document.getElementById("tab-" + t);
@@ -1751,111 +1663,6 @@ function showTab(tab) {
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────
-
-// ── Puntenrekentool ───────────────────────────────────────────
-let puntenRijen = [];
-let puntenTeller = 0;
-
-function updatePuntenPlaceholder() {
-  const disc = document.getElementById("punten-discipline").value;
-  const input = document.getElementById("punten-prestatie");
-  input.placeholder = getPRPlaceholder(disc);
-}
-
-function berekenEnVoegToe() {
-  const geslacht     = document.getElementById("punten-geslacht").value;
-  const discipline   = document.getElementById("punten-discipline").value;
-  const prestatieRaw = document.getElementById("punten-prestatie").value.trim();
-  const label        = document.getElementById("punten-label").value.trim();
-  const foutEl       = document.getElementById("punten-fout");
-
-  foutEl.style.display = "none";
-
-  if (!prestatieRaw) {
-    foutEl.textContent = "Voer een prestatie in.";
-    foutEl.style.display = "";
-    return;
-  }
-
-  const prestatieNorm = normaliserenResultaat(prestatieRaw, discipline);
-  const punten = berekenPunten(discipline, prestatieNorm, geslacht);
-
-  if (punten <= 0) {
-    foutEl.textContent = "Kan geen punten berekenen. Controleer de ingevoerde prestatie.";
-    foutEl.style.display = "";
-    return;
-  }
-
-  puntenTeller++;
-  puntenRijen.push({
-    id: puntenTeller,
-    label: label || ("#" + puntenTeller),
-    geslacht,
-    discipline,
-    prestatie: prestatieNorm,
-    punten
-  });
-
-  puntenRijen.sort((a, b) => b.punten - a.punten);
-
-  document.getElementById("punten-prestatie").value = "";
-  document.getElementById("punten-label").value = "";
-
-  renderPuntenTabel();
-}
-
-function verwijderPuntenRij(id) {
-  puntenRijen = puntenRijen.filter(r => r.id !== id);
-  renderPuntenTabel();
-}
-
-function leegPuntenTabel() {
-  puntenRijen = [];
-  puntenTeller = 0;
-  renderPuntenTabel();
-}
-
-function renderPuntenTabel() {
-  const panel = document.getElementById("punten-tabel-panel");
-  const tbody = document.getElementById("punten-tabel-body");
-
-  if (!panel || !tbody) return;
-
-  if (puntenRijen.length === 0) {
-    panel.style.display = "none";
-    return;
-  }
-
-  panel.style.display = "";
-
-  const maxPunten = Math.max(...puntenRijen.map(r => r.punten));
-
-  tbody.innerHTML = puntenRijen.map((rij, idx) => {
-    const geslachtLabel = rij.geslacht === "M" ? "Jongen" : "Meisje";
-    const isFirst = idx === 0;
-    const barPct  = maxPunten > 0 ? Math.round((rij.punten / maxPunten) * 100) : 0;
-    const medalEmoji = idx === 0 ? "\uD83E\uDD47" : idx === 1 ? "\uD83E\uDD48" : idx === 2 ? "\uD83E\uDD49" : (idx + 1) + ".";
-
-    return "<tr style=\"border-bottom:1px solid var(--border);" + (isFirst ? "background:rgba(99,102,241,.07);" : "") + "\">"
-      + "<td style=\"padding:10px 12px;font-weight:700;color:var(--muted);font-size:13px;\">" + medalEmoji + "</td>"
-      + "<td style=\"padding:10px 12px;font-weight:600;\">" + esc(rij.label) + "</td>"
-      + "<td style=\"padding:10px 12px;font-size:13px;color:var(--muted);\">" + geslachtLabel + "</td>"
-      + "<td style=\"padding:10px 12px;\">" + esc(rij.discipline) + "</td>"
-      + "<td style=\"padding:10px 12px;font-family:monospace;font-size:14px;\">" + esc(rij.prestatie) + "</td>"
-      + "<td style=\"padding:10px 12px;text-align:right;\">"
-      +   "<span style=\"font-weight:800;font-size:18px;\">" + rij.punten + "</span>"
-      +   "<div style=\"margin-top:5px;height:4px;border-radius:2px;background:var(--border);width:72px;margin-left:auto;\">"
-      +     "<div style=\"height:4px;border-radius:2px;background:var(--accent);width:" + barPct + "%;\"></div>"
-      +   "</div>"
-      + "</td>"
-      + "<td style=\"padding:10px 6px;\">"
-      +   "<button class=\"btn btn-ghost btn-sm\" onclick=\"verwijderPuntenRij(" + rij.id + ")\" title=\"Verwijder\" style=\"padding:2px 8px;font-size:13px;\">x</button>"
-      + "</td>"
-      + "</tr>";
-  }).join("");
-}
-// einde Puntenrekentool
-
 function toggleSelecteerModus() {
   selecteerModus = !selecteerModus;
   geselecteerd.clear();
@@ -4448,7 +4255,7 @@ function genereerOpstelling() {
       return atleetInPloeg[aid] === ploeg && (atleetOnderdeelTeller[aid] || 0) < 2;
     });
     if (teWeinig.length > 0) {
-      const namen = teWeinig.map(a => `${a.voornaam} ${a.achternaam}`).join(", ");
+      const namen = teWeinig.map(a => a.naam || `atleet ${a.id}`).join(", ");
       setTimeout(() => {
         toast(`⚠️ Ploeg ${ploeg}: controleer handmatig — ${namen} ${teWeinig.length === 1 ? "heeft" : "hebben"} maar 1 onderdeel`, "warn", 8000);
       }, 300 * (ploegNamen.indexOf(ploeg) + 1));
