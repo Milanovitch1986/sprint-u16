@@ -5224,6 +5224,7 @@ async function laadAdminUitnodigingen() {
             padding:3px 10px;border-radius:20px;">${statusTekst}</span>
           ${!u.gebruikt && !verlopen ? `
             <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Intrekken</button>
           ` : ""}
         </div>`;
     }).join("");
@@ -5450,6 +5451,17 @@ function kopieerUitnodigingslink(token) {
   }).catch(() => {
     prompt("Kopieer deze link handmatig:", link);
   });
+}
+
+async function intrekUitnodiging(id, email) {
+  const ok = await bevestig("Uitnodiging intrekken", `Wil je de uitnodiging voor <strong>${email}</strong> intrekken? Deze link wordt dan ongeldig.`);
+  if (!ok) return;
+  try {
+    const { error } = await sb.from("uitnodigingen").delete().eq("id", id);
+    if (error) throw error;
+    toast(`Uitnodiging voor ${email} ingetrokken ✓`);
+    laadAdminUitnodigingen();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
 async function wisselRol(gebruikerId, huidigeRol) {
