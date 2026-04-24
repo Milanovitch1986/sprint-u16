@@ -1025,6 +1025,7 @@
           📊 PR-overzicht importeren
           <input type="file" id="prOverzichtInput" accept=".xlsx" style="display:none;" onchange="openPROverzichtImport(this)">
         </label>
+        <button class="btn btn-ghost" onclick="openAtlNuPRModal()" title="Haal PRs op van atletiek.nu voor alle atleten in de app">🌐 PRs ophalen van atletiek.nu</button>
         <button class="btn btn-primary" onclick="openPrestatieModal(null, document.getElementById('prestatie-atleet-filter').value || null)">+ Prestatie invoeren</button>
       </div>
     </div>
@@ -1522,6 +1523,82 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="confirmNee">Annuleren</button>
       <button class="btn btn-primary" id="confirmJa">Bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ATLETIEK.NU PR-IMPORT MODAL ── -->
+<div class="modal-overlay" id="atlNuPRModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">🌐 PRs ophalen van atletiek.nu</div>
+
+    <!-- Stap 1: kies methode -->
+    <div id="atlnupr-stap1">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        De app haalt automatisch de beste prestaties op van atletiek.nu voor alle atleten in de huidige categorie.
+      </p>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button id="atlnupr-tab-login"  class="btn btn-primary btn-sm"  onclick="atlNuPRSetModus('login')">🔑 Inloggen</button>
+        <button id="atlnupr-tab-cookie" class="btn btn-ghost btn-sm"    onclick="atlNuPRSetModus('cookie')">🍪 Cookie-methode</button>
+      </div>
+
+      <!-- Login-formulier -->
+      <div id="atlnupr-form-login">
+        <div class="field">
+          <label>E-mailadres (atletiek.nu)</label>
+          <input type="email" id="atlnupr-email" placeholder="trainer@voorbeeld.nl" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>Wachtwoord (atletiek.nu)</label>
+          <input type="password" id="atlnupr-ww" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">
+          🔒 Je inloggegevens worden uitsluitend gebruikt voor dit verzoek en nooit opgeslagen.
+        </p>
+      </div>
+
+      <!-- Cookie-formulier (fallback) -->
+      <div id="atlnupr-form-cookie" style="display:none;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6;">
+          <strong style="color:var(--text);">Hoe kopieer ik mijn cookie-string?</strong><br>
+          1. Log in op <strong>atletiek.nu</strong> in je browser<br>
+          2. Druk op <strong>F12</strong> → tabblad <strong>Application</strong> (Chrome) of <strong>Storage</strong> (Firefox)<br>
+          3. Klik links op <strong>Cookies → https://www.atletiek.nu</strong><br>
+          4. Kopieer alle cookie-rijen als tekst, bijv.:<br>
+          <code style="background:var(--bg);padding:2px 6px;border-radius:4px;display:block;margin-top:4px;word-break:break-all;">PHPSESSID=abc123; andere=xyz</code>
+        </div>
+        <div class="field">
+          <label>Cookie-string (plak hier)</label>
+          <textarea id="atlnupr-cookie-input" rows="3" placeholder="PHPSESSID=abc123; ..." style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+        </div>
+        <p style="font-size:11px;color:var(--muted);">
+          🔒 De cookie-string wordt uitsluitend gebruikt voor dit verzoek en nooit opgeslagen.
+        </p>
+      </div>
+    </div>
+
+    <!-- Stap 2: voortgang -->
+    <div id="atlnupr-stap2" style="display:none;">
+      <div style="text-align:center;padding:12px 0 8px;">
+        <div style="font-size:32px;margin-bottom:8px;">⏳</div>
+        <div id="atlnupr-voortgang-tekst" style="font-size:14px;color:var(--muted);margin-bottom:12px;">Bezig met ophalen…</div>
+        <div style="background:var(--surface2);border-radius:8px;height:10px;overflow:hidden;">
+          <div id="atlnupr-voortgang-balk" style="height:100%;width:0%;background:var(--accent);transition:width .3s;border-radius:8px;"></div>
+        </div>
+        <div id="atlnupr-voortgang-sub" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- Stap 3: resultaten -->
+    <div id="atlnupr-stap3" style="display:none;">
+      <div id="atlnupr-resultaat-header" style="font-size:14px;margin-bottom:12px;"></div>
+      <div id="atlnupr-resultaat-lijst" style="max-height:280px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" id="atlnupr-btn-sluiten" onclick="closeModal('atlNuPRModal')">Sluiten</button>
+      <button class="btn btn-primary" id="atlnupr-btn-ophalen" onclick="startAtlNuPROphalen()">⬇️ Ophalen</button>
+      <button class="btn btn-primary" id="atlnupr-btn-opslaan" style="display:none;" onclick="slaAtlNuPRsOp()">✅ Opslaan</button>
     </div>
   </div>
 </div>
@@ -5743,6 +5820,241 @@ async function archiveerNote(id) {
     toast("Gearchiveerd ✓");
     laadReleasenotes();
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Atletiek.nu PR-import (bulk) ──────────────────────────────────────────────
+
+let atlNuPRModus = 'login';      // 'login' of 'cookie'
+let atlNuPROpgehaaldePrs = [];   // tijdelijke opslag voor importbevestiging
+
+function openAtlNuPRModal() {
+  atlNuPROpgehaaldePrs = [];
+  // Reset naar stap 1
+  document.getElementById('atlnupr-stap1').style.display = '';
+  document.getElementById('atlnupr-stap2').style.display = 'none';
+  document.getElementById('atlnupr-stap3').style.display = 'none';
+  document.getElementById('atlnupr-btn-ophalen').style.display = '';
+  document.getElementById('atlnupr-btn-opslaan').style.display = 'none';
+  document.getElementById('atlnupr-email').value = '';
+  document.getElementById('atlnupr-ww').value = '';
+  document.getElementById('atlnupr-cookie-input').value = '';
+  atlNuPRSetModus('login');
+  openModal('atlNuPRModal');
+}
+
+function atlNuPRSetModus(modus) {
+  atlNuPRModus = modus;
+  document.getElementById('atlnupr-form-login').style.display  = modus === 'login'  ? '' : 'none';
+  document.getElementById('atlnupr-form-cookie').style.display = modus === 'cookie' ? '' : 'none';
+  document.getElementById('atlnupr-tab-login').className  = 'btn btn-sm ' + (modus === 'login'  ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('atlnupr-tab-cookie').className = 'btn btn-sm ' + (modus === 'cookie' ? 'btn-primary' : 'btn-ghost');
+}
+
+async function startAtlNuPROphalen() {
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast('Geen categorie actief', 'err'); return; }
+
+  // Valideer invoer
+  let body;
+  if (atlNuPRModus === 'login') {
+    const email = document.getElementById('atlnupr-email').value.trim();
+    const ww    = document.getElementById('atlnupr-ww').value;
+    if (!email || !ww) { toast('Vul e-mail en wachtwoord in', 'err'); return; }
+    body = { modus: 'login', email, wachtwoord: ww, atleten: [] };
+  } else {
+    const cookieStr = document.getElementById('atlnupr-cookie-input').value.trim();
+    if (!cookieStr) { toast('Plak een cookie-string in', 'err'); return; }
+    body = { modus: 'cookie', cookie_string: cookieStr, atleten: [] };
+  }
+
+  // Bouw atletenlijst op uit de huidige categorie
+  body.atleten = atleten
+    .filter(a => String(a.categorie_id) === String(cid))
+    .map(a => ({ id: a.id, naam: a.naam, geslacht: a.geslacht || 'M' }));
+
+  if (body.atleten.length === 0) {
+    toast('Geen atleten gevonden in deze categorie', 'err');
+    return;
+  }
+
+  // Naar stap 2 (voortgang)
+  document.getElementById('atlnupr-stap1').style.display = 'none';
+  document.getElementById('atlnupr-stap2').style.display = '';
+  document.getElementById('atlnupr-btn-ophalen').style.display = 'none';
+  atlNuPRVoortgangUpdate('Verbinden met atletiek.nu…', 0, body.atleten.length);
+
+  // Wis wachtwoord-veld zodra we het doorsturen (niet langer nodig in geheugen)
+  document.getElementById('atlnupr-ww').value = '';
+
+  let resultaat;
+  try {
+    const resp = await fetch(ATL_API + '/importeer-prs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    resultaat = await resp.json();
+  } catch (e) {
+    atlNuPRToonFout('Verbindingsfout: ' + e.message);
+    return;
+  }
+
+  // Wis cookie-invoer
+  document.getElementById('atlnupr-cookie-input').value = '';
+
+  // Controleer op Turnstile-blokkering → bied cookie-methode aan
+  if (resultaat.fout === 'TURNSTILE_BLOCKED') {
+    document.getElementById('atlnupr-stap2').style.display = 'none';
+    document.getElementById('atlnupr-stap1').style.display = '';
+    document.getElementById('atlnupr-btn-ophalen').style.display = '';
+    atlNuPRSetModus('cookie');
+    toast('⚠️ Automatisch inloggen geblokkeerd. Gebruik de cookie-methode.', 'err', 6000);
+    return;
+  }
+
+  if (resultaat.fout) {
+    atlNuPRToonFout(resultaat.fout);
+    return;
+  }
+
+  // PRs ontvangen — toon resultatenscherm
+  atlNuPROpgehaaldePrs = resultaat.prs || [];
+  atlNuPRToonResultaten(atlNuPROpgehaaldePrs, body.atleten.length);
+}
+
+function atlNuPRVoortgangUpdate(tekst, huidig, totaal) {
+  document.getElementById('atlnupr-voortgang-tekst').textContent = tekst;
+  const pct = totaal > 0 ? Math.round((huidig / totaal) * 100) : 0;
+  document.getElementById('atlnupr-voortgang-balk').style.width = pct + '%';
+  document.getElementById('atlnupr-voortgang-sub').textContent =
+    totaal > 0 ? `${huidig} van ${totaal} atleten verwerkt` : '';
+}
+
+function atlNuPRToonFout(bericht) {
+  document.getElementById('atlnupr-stap2').style.display = 'none';
+  document.getElementById('atlnupr-stap1').style.display = '';
+  document.getElementById('atlnupr-btn-ophalen').style.display = '';
+  toast('Fout: ' + bericht, 'err', 6000);
+}
+
+function atlNuPRToonResultaten(prs, aantalAtleten) {
+  document.getElementById('atlnupr-stap2').style.display = 'none';
+  document.getElementById('atlnupr-stap3').style.display = '';
+  document.getElementById('atlnupr-btn-opslaan').style.display = prs.length > 0 ? '' : 'none';
+
+  const header = document.getElementById('atlnupr-resultaat-header');
+  if (prs.length === 0) {
+    header.innerHTML = `<span style="color:var(--muted);">Geen PRs gevonden voor de atleten in deze categorie.</span>`;
+    return;
+  }
+
+  // Groepeer per atleet
+  const perAtleet = {};
+  for (const pr of prs) {
+    if (!perAtleet[pr.atleet_naam]) perAtleet[pr.atleet_naam] = [];
+    perAtleet[pr.atleet_naam].push(pr);
+  }
+
+  header.innerHTML = `<strong>${prs.length} PR${prs.length !== 1 ? 's' : ''}</strong> gevonden voor <strong>${Object.keys(perAtleet).length}</strong> van de ${aantalAtleten} atleten. Controleer hieronder en klik op <em>Opslaan</em>.`;
+
+  const lijst = document.getElementById('atlnupr-resultaat-lijst');
+  let html = '';
+  for (const [naam, records] of Object.entries(perAtleet)) {
+    html += `<div style="margin-bottom:10px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px;">${esc(naam)}</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">`;
+    for (const r of records) {
+      // Vergelijk met huidige beste PR in de app
+      const atleet   = atleten.find(a => String(a.id) === String(r.atleet_id));
+      const huidigPR = atleet ? bestePrestatie(atleet.id, r.discipline) : null;
+      const huidigStr = huidigPR ? huidigPR.resultaat : '—';
+      html += `<tr>
+        <td style="padding:2px 8px 2px 0;color:var(--muted);">${esc(r.discipline)}</td>
+        <td style="padding:2px 8px 2px 0;color:var(--text);font-weight:600;">${esc(r.prestatie)}</td>
+        <td style="padding:2px 0;color:var(--muted);font-size:11px;">huidig: ${esc(String(huidigStr))}</td>
+      </tr>`;
+    }
+    html += `</table></div>`;
+  }
+  lijst.innerHTML = html;
+}
+
+async function slaAtlNuPRsOp() {
+  if (!atlNuPROpgehaaldePrs.length) return;
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast('Geen categorie actief', 'err'); return; }
+
+  const vandaag = new Date().toISOString().split('T')[0];
+  const isTijdDisc = (disc) => TIJD_DISCIPLINES.some(t => disc.toLowerCase().includes(t.toLowerCase()));
+
+  let toegevoegd = 0, verbeterd = 0, overgeslagen = 0;
+  const teVerwijderen = [];
+  const teInserteren  = [];
+
+  for (const pr of atlNuPROpgehaaldePrs) {
+    const nieuweWaarde = parseResultaat(pr.prestatie.replace(',', '.'));
+    if (!nieuweWaarde) { overgeslagen++; continue; }
+
+    const isTijd  = isTijdDisc(pr.discipline);
+    const eenheid = isTijd ? 'sec' : 'm';
+
+    const bestaande = prestaties.filter(p =>
+      String(p.atleet_id || p.atleetId) === String(pr.atleet_id) &&
+      p.discipline.toLowerCase() === pr.discipline.toLowerCase()
+    );
+
+    if (!bestaande.length) {
+      teInserteren.push({
+        categorie_id: cid, atleet_id: pr.atleet_id,
+        discipline: pr.discipline, resultaat: pr.prestatie.replace(',', '.'),
+        eenheid, datum: vandaag, locatie: 'atletiek.nu',
+        notities: 'Geïmporteerd van atletiek.nu',
+      });
+      toegevoegd++;
+    } else {
+      const beste = bestaande.reduce((b, p) => {
+        const vP = parseResultaat(String(p.resultaat).replace(',', '.'));
+        if (vP === null) return b;
+        const vB = parseResultaat(String(b.resultaat).replace(',', '.'));
+        return isTijd ? (vP < vB ? p : b) : (vP > vB ? p : b);
+      });
+      const besteWaarde   = parseResultaat(String(beste.resultaat).replace(',', '.'));
+      const isVerbetering = isTijd ? nieuweWaarde < besteWaarde : nieuweWaarde > besteWaarde;
+
+      if (isVerbetering) {
+        teVerwijderen.push(String(beste.id));
+        teInserteren.push({
+          categorie_id: cid, atleet_id: pr.atleet_id,
+          discipline: pr.discipline, resultaat: pr.prestatie.replace(',', '.'),
+          eenheid, datum: vandaag, locatie: 'atletiek.nu',
+          notities: 'Geïmporteerd van atletiek.nu',
+        });
+        verbeterd++;
+      } else {
+        overgeslagen++;
+      }
+    }
+  }
+
+  try {
+    if (teVerwijderen.length) {
+      const { error } = await sb.from('prestaties').delete().in('id', teVerwijderen);
+      if (error) throw error;
+      prestaties = prestaties.filter(p => !teVerwijderen.includes(String(p.id)));
+    }
+    if (teInserteren.length) {
+      const { data, error } = await sb.from('prestaties').insert(teInserteren).select();
+      if (error) throw error;
+      (data || []).forEach(r => prestaties.push({ ...r, atleetId: r.atleet_id }));
+    }
+
+    closeModal('atlNuPRModal');
+    atlNuPROpgehaaldePrs = [];
+    renderPrestaties();
+    toast(`✓ ${toegevoegd} toegevoegd · ${verbeterd} verbeterd · ${overgeslagen} overgeslagen`);
+  } catch (e) {
+    toast('Fout bij opslaan: ' + e.message, 'err');
+  }
 }
 
 // ── PDF Import ────────────────────────────────────────────────
