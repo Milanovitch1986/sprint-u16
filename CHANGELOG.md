@@ -6,6 +6,20 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [april 2026 — patch 19] — 2026-04-29
+
+### ✨ Blessureregistratie per atleet
+
+**Wat is veranderd:**
+- In het bewerkingsscherm van een atleet kunnen nu drie checkboxes worden aangevinkt: **Lopen**, **Springen**, **Werpen**
+- Geblesseerde atleten tonen een **🩹 Geblesseerd** badge op hun atleetkaart
+- Bij de **automatische opstelling** en **aanvullen** worden geblesseerde atleten niet ingepland op onderdelen waarvoor zij geblesseerd zijn — maar wél op onderdelen die zij nog kunnen doen
+- In de **handmatige slotkeuze** zijn geblesseerde atleten gedimd en niet selecteerbaar voor het betreffende onderdeel (met tekst "🩹 geblesseerd")
+- Blessuredata wordt opgeslagen in de kolom `blessure` (text/JSON) in de Supabase tabel `atleten`
+- Vereist Supabase migratie: `ALTER TABLE atleten ADD COLUMN IF NOT EXISTS blessure text DEFAULT NULL;`
+
+---
+
 ## [april 2026 — patch 18] — 2026-04-21
 
 ### ✨ Verlopen uitnodigingen verwijderen

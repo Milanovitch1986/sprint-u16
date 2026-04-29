@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 21 april 2026 (patch 18)*
+*AV Sprint Breda · Laatste update: 29 april 2026 (patch 19)*
 
 ---
 
@@ -26,7 +26,7 @@
 | `profielen` | Traineraccounts (gebruikersnaam, rol, laatste_login) |
 | `categorieen` | U14, U16, U18 etc. (naam, volgorde) |
 | `trainer_categorieen` | Koppeling trainer ↔ categorie (many-to-many) |
-| `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr) |
+| `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr, **blessure**) |
 | `prestaties` | PR's per atleet per discipline |
 | `wedstrijden` | Wedstrijden (naam, datum, locatie) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
@@ -36,6 +36,8 @@
 
 **Belangrijk:** alle datatabellen gebruiken `categorie_id` als toegangssleutel — NIET `eigenaar_id`.
 Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieën.
+
+**Kolom `blessure` in `atleten`:** tekst (JSON-array), bijv. `["lopen"]` of `["springen","werpen"]`. Null = niet geblesseerd.
 
 ---
 
