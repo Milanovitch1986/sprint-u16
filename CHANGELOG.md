@@ -6,17 +6,14 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 19] — 2026-04-29
+## [april 2026 — patch 19] — 2026-04-30
 
-### ✨ Blessureregistratie per atleet
+### 🔧 Opstelling export verbeterd voor atletiek.nu import
 
 **Wat is veranderd:**
-- In het bewerkingsscherm van een atleet kunnen nu drie checkboxes worden aangevinkt: **Lopen**, **Springen**, **Werpen**
-- Geblesseerde atleten tonen een **🩹 Geblesseerd** badge op hun atleetkaart
-- Bij de **automatische opstelling** en **aanvullen** worden geblesseerde atleten niet ingepland op onderdelen waarvoor zij geblesseerd zijn — maar wél op onderdelen die zij nog kunnen doen
-- In de **handmatige slotkeuze** zijn geblesseerde atleten gedimd en niet selecteerbaar voor het betreffende onderdeel (met tekst "🩹 geblesseerd")
-- Blessuredata wordt opgeslagen in de kolom `blessure` (text/JSON) in de Supabase tabel `atleten`
-- Vereist Supabase migratie: `ALTER TABLE atleten ADD COLUMN IF NOT EXISTS blessure text DEFAULT NULL;`
+- Exportbestand bevat nu een extra kolom **"Naam (atletiek.nu formaat)"** met de naam in het formaat `Achternaam (Voornaam)` dat atletiek.nu verwacht bij naam-matching (bijv. `van Zimmeren (Léoni)`)
+- Het **Atletiekunie licentienummer** wordt nu als een echt getal geëxporteerd in plaats van als tekst — atletiek.nu herkent het nummer daardoor correct
+- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en correct geplaatst in het atletiek.nu formaat
 
 ---
 
