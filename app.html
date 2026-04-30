@@ -5684,11 +5684,11 @@ async function exporteerOpstelling() {
         const categorieNaam = actieveCategorie?.naam || "U16";
 
         const rij = [
-          naamNaarAtlNuFormaat(atleet.naam || ""),
-          voornaam,
-          tussenvoegsel,
-          achternaam,
-          bondsnrWaarde,
+          "", // Naam (atletiek.nu formaat) — leeg, matching via licentienummer
+          "", // Voornaam — leeg
+          "", // Tussenvoegsel — leeg
+          "", // Achternaam — leeg
+          bondsnrWaarde, // Atletiekunie nummer — altijd als getal
           atleet.geslacht === "V" ? "F" : "M",
           "AV Sprint",
           categorieNaam,
@@ -5723,6 +5723,17 @@ async function exporteerOpstelling() {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rijen);
+
+    // Zorg dat de licentienummer-kolom (kolom E = index 4) als getal is opgeslagen,
+    // niet als tekst. SheetJS herkent parseInt-waarden al als getal, maar we
+    // overschrijven elke cel expliciet voor zekerheid.
+    for (let r = 1; r < rijen.length; r++) { // r=0 is headerrij, sla over
+      const celAdres = XLSX.utils.encode_cell({ r, c: 4 });
+      if (ws[celAdres] && typeof ws[celAdres].v === "number") {
+        ws[celAdres].t = "n"; // type: number
+        ws[celAdres].z = "0"; // format: geheel getal, geen decimalen
+      }
+    }
 
     // Kolombreedte instellen
     ws["!cols"] = [
