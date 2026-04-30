@@ -5579,14 +5579,12 @@ async function exporteerOpstelling() {
   // Alle disciplines uit het programma (kolomkoppen)
   const disciplines = programma.map(p => p.discipline);
 
-  // ── Hulpfunctie: zet "Voornaam [tussenvoegsel] Achternaam" om naar "Achternaam (Voornaam)"
-  // zodat atletiek.nu de atleet correct kan koppelen bij naam-matching.
-  // Bekende tussenvoegsels worden herkend en voor de achternaam geplaatst.
-  function naamNaarAtlNuFormaat(volledigeNaam) {
-    if (!volledigeNaam) return "";
+  // ── Hulpfunctie: splits volledige naam in voornaam, tussenvoegsel, achternaam
+  function splitsNaam(volledigeNaam) {
+    if (!volledigeNaam) return { voornaam: "", tussenvoegsel: "", achternaam: "" };
     const s = volledigeNaam.trim();
     const woorden = s.split(/\s+/);
-    if (woorden.length < 2) return s;
+    if (woorden.length === 1) return { voornaam: s, tussenvoegsel: "", achternaam: "" };
 
     const tussenvoegsels = [
       "van der","van den","van de","van het","van 't",
@@ -5594,13 +5592,10 @@ async function exporteerOpstelling() {
       "op de","op den","te","ter","ten","in de","in den"
     ];
 
-    // Probeer het langste tussenvoegsel te vinden dat ergens in de naam voorkomt
-    // (niet als eerste woord, want dat is de voornaam)
     let tussenIdx = -1;
     let tussenLen = 0;
     for (const tv of tussenvoegsels) {
       const tvWoorden = tv.split(/\s+/);
-      // Zoek vanaf positie 1 (na de voornaam)
       for (let i = 1; i <= woorden.length - tvWoorden.length; i++) {
         const match = tvWoorden.every((w, j) => woorden[i + j].toLowerCase() === w.toLowerCase());
         if (match && tvWoorden.length > tussenLen) {
@@ -5611,19 +5606,24 @@ async function exporteerOpstelling() {
       if (tussenIdx >= 0) break;
     }
 
-    let voornaam, tussenvoegsel, achternaam;
     if (tussenIdx > 0) {
-      voornaam     = woorden.slice(0, tussenIdx).join(" ");
-      tussenvoegsel = woorden.slice(tussenIdx, tussenIdx + tussenLen).join(" ");
-      achternaam   = woorden.slice(tussenIdx + tussenLen).join(" ");
-    } else {
-      // Geen tussenvoegsel: eerste woord = voornaam, rest = achternaam
-      voornaam   = woorden[0];
-      tussenvoegsel = "";
-      achternaam = woorden.slice(1).join(" ");
+      return {
+        voornaam:      woorden.slice(0, tussenIdx).join(" "),
+        tussenvoegsel: woorden.slice(tussenIdx, tussenIdx + tussenLen).join(" "),
+        achternaam:    woorden.slice(tussenIdx + tussenLen).join(" ")
+      };
     }
+    return {
+      voornaam:      woorden[0],
+      tussenvoegsel: "",
+      achternaam:    woorden.slice(1).join(" ")
+    };
+  }
 
-    if (!achternaam) return s; // fallback: geef origineel terug
+  // ── Hulpfunctie: zet naam om naar atletiek.nu formaat "Achternaam (Voornaam)"
+  function naamNaarAtlNuFormaat(volledigeNaam) {
+    const { voornaam, tussenvoegsel, achternaam } = splitsNaam(volledigeNaam);
+    if (!achternaam) return volledigeNaam || "";
     const achtermetTussen = [tussenvoegsel, achternaam].filter(Boolean).join(" ");
     return `${achtermetTussen} (${voornaam})`;
   }
@@ -5633,9 +5633,12 @@ async function exporteerOpstelling() {
     const atletenLijst = atleten.filter(a => a.geslacht === geslacht);
     const rijen = [];
 
-    // Headerrij — atletiek.nu formaat naam staat als aparte kolom zodat je die
-    // bij het koppelen kunt kiezen als "Achternaam (Voornaam)" veld.
-    rijen.push(["Naam", "Naam (atletiek.nu formaat)", "Atletiekunie nummer", "Geslacht", "Vereniging", "Team", "Startgroep", ...disciplines]);
+    // Headerrij — gesplitste naamkolommen + categorie zodat atletiek.nu alles herkent
+    rijen.push([
+      "Naam (atletiek.nu formaat)", "Voornaam", "Tussenvoegsel", "Achternaam",
+      "Atletiekunie nummer", "Geslacht", "Vereniging", "Categorie", "Team", "Startgroep",
+      ...disciplines
+    ]);
 
     for (const ploeg of ploegNamen) {
       const opst = opstellingData[ploeg] || {};
@@ -5655,17 +5658,18 @@ async function exporteerOpstelling() {
         if (!atleet) continue;
         if (atleet.geslacht !== geslacht) continue;
 
-        // Bouw rij: naam, atletiek.nu formaat naam, bondsnr (als getal), geslacht, club, ploeg
         const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
         const geslachtCode = geslacht === "V" ? "V" : "M";
         const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
 
-        // Bondsnummer: exporteer als getal als het puur cijfers zijn,
-        // anders als tekst. Atletiek.nu verwacht een numeriek licentienummer.
+        // Bondsnummer als getal als het puur cijfers zijn
         const bondsnrRaw = (atleet.bondsnr || "").trim();
         const bondsnrWaarde = /^\d+$/.test(bondsnrRaw) ? parseInt(bondsnrRaw, 10) : bondsnrRaw;
 
-        // Bepaal startgroep: zoek de eerste technische rij waaraan deze atleet deelneemt
+        // Naam splitsen
+        const { voornaam, tussenvoegsel, achternaam } = splitsNaam(atleet.naam || "");
+
+        // Startgroep bepalen
         let startgroepWaarde = "";
         programma.forEach((pItem, pIdx) => {
           if (pItem.type === "technisch" && pItem.startgroep) {
@@ -5676,12 +5680,18 @@ async function exporteerOpstelling() {
           }
         });
 
+        // Categorie: gebruik naam van actieve categorie
+        const categorieNaam = actieveCategorie?.naam || "U16";
+
         const rij = [
-          atleet.naam || "",
           naamNaarAtlNuFormaat(atleet.naam || ""),
+          voornaam,
+          tussenvoegsel,
+          achternaam,
           bondsnrWaarde,
           atleet.geslacht === "V" ? "F" : "M",
           "AV Sprint",
+          categorieNaam,
           teamNaam,
           startgroepWaarde
         ];
@@ -5716,12 +5726,15 @@ async function exporteerOpstelling() {
 
     // Kolombreedte instellen
     ws["!cols"] = [
-      { wch: 25 }, // Naam
       { wch: 28 }, // Naam (atletiek.nu formaat)
+      { wch: 16 }, // Voornaam
+      { wch: 12 }, // Tussenvoegsel
+      { wch: 18 }, // Achternaam
       { wch: 18 }, // Atletiekunie nummer
       { wch: 10 }, // Geslacht
       { wch: 16 }, // Vereniging
-      { wch: 12 }, // Team
+      { wch: 10 }, // Categorie
+      { wch: 22 }, // Team
       { wch: 20 }, // Startgroep
       ...disciplines.map(() => ({ wch: 14 }))
     ];

@@ -11,9 +11,11 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 ### 🔧 Opstelling export verbeterd voor atletiek.nu import
 
 **Wat is veranderd:**
-- Exportbestand bevat nu een extra kolom **"Naam (atletiek.nu formaat)"** met de naam in het formaat `Achternaam (Voornaam)` dat atletiek.nu verwacht bij naam-matching (bijv. `van Zimmeren (Léoni)`)
-- Het **Atletiekunie licentienummer** wordt nu als een echt getal geëxporteerd in plaats van als tekst — atletiek.nu herkent het nummer daardoor correct
-- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en correct geplaatst in het atletiek.nu formaat
+- Exportbestand bevat nu aparte kolommen **Voornaam**, **Tussenvoegsel** en **Achternaam** — atletiek.nu vereist deze als losse velden
+- Extra kolom **Categorie** toegevoegd (bijv. "U16") — ook vereist door atletiek.nu
+- Kolom **"Naam (atletiek.nu formaat)"** blijft aanwezig als `Achternaam (Voornaam)` voor naam-matching
+- Het **Atletiekunie licentienummer** wordt als getal geëxporteerd
+- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en correct gesplitst
 
 ---
 
