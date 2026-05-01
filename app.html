@@ -5579,14 +5579,14 @@ async function exporteerOpstelling() {
   // Alle disciplines uit het programma (kolomkoppen)
   const disciplines = programma.map(p => p.discipline);
 
-  // ── Hulpfunctie: splits volledige naam in voornaam, tussenvoegsel, achternaam
+  // ── Hulpfunctie: splits "Voornaam [tussenvoegsel] Achternaam" in drie delen ──
   function splitsNaam(volledigeNaam) {
     if (!volledigeNaam) return { voornaam: "", tussenvoegsel: "", achternaam: "" };
     const s = volledigeNaam.trim();
     const woorden = s.split(/\s+/);
     if (woorden.length === 1) return { voornaam: s, tussenvoegsel: "", achternaam: "" };
 
-    const tussenvoegsels = [
+    const tvLijst = [
       "van der","van den","van de","van het","van 't",
       "van","de","den","der","het","'t",
       "op de","op den","te","ter","ten","in de","in den"
@@ -5594,14 +5594,11 @@ async function exporteerOpstelling() {
 
     let tussenIdx = -1;
     let tussenLen = 0;
-    for (const tv of tussenvoegsels) {
-      const tvWoorden = tv.split(/\s+/);
-      for (let i = 1; i <= woorden.length - tvWoorden.length; i++) {
-        const match = tvWoorden.every((w, j) => woorden[i + j].toLowerCase() === w.toLowerCase());
-        if (match && tvWoorden.length > tussenLen) {
-          tussenIdx = i;
-          tussenLen = tvWoorden.length;
-        }
+    for (const tv of tvLijst) {
+      const tvW = tv.split(/\s+/);
+      for (let i = 1; i <= woorden.length - tvW.length; i++) {
+        const match = tvW.every((w, j) => woorden[i + j].toLowerCase() === w.toLowerCase());
+        if (match && tvW.length > tussenLen) { tussenIdx = i; tussenLen = tvW.length; }
       }
       if (tussenIdx >= 0) break;
     }
@@ -5613,30 +5610,29 @@ async function exporteerOpstelling() {
         achternaam:    woorden.slice(tussenIdx + tussenLen).join(" ")
       };
     }
-    return {
-      voornaam:      woorden[0],
-      tussenvoegsel: "",
-      achternaam:    woorden.slice(1).join(" ")
-    };
+    return { voornaam: woorden[0], tussenvoegsel: "", achternaam: woorden.slice(1).join(" ") };
   }
 
-  // ── Hulpfunctie: zet naam om naar atletiek.nu formaat "Achternaam (Voornaam)"
-  function naamNaarAtlNuFormaat(volledigeNaam) {
-    const { voornaam, tussenvoegsel, achternaam } = splitsNaam(volledigeNaam);
-    if (!achternaam) return volledigeNaam || "";
-    const achtermetTussen = [tussenvoegsel, achternaam].filter(Boolean).join(" ");
-    return `${achtermetTussen} (${voornaam})`;
+  // ── Hulpfunctie: zet ISO-datum (2011-03-15) om naar dd-mm-jjjj ──
+  function formatGeboortedatumAtlNu(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const dd   = String(d.getDate()).padStart(2, "0");
+    const mm   = String(d.getMonth() + 1).padStart(2, "0");
+    const jjjj = d.getFullYear();
+    return `${dd}-${mm}-${jjjj}`;
   }
 
-  // Bouw rijen voor het huidige geslacht
+  // Bouw rijen voor het opgegeven geslacht
+  // Kolommen: Voornaam | Tussenvoegsel | Achternaam | Geboortedatum | Lidnummer | ...disciplines
   function bouwRijen(geslacht) {
-    const atletenLijst = atleten.filter(a => a.geslacht === geslacht);
     const rijen = [];
 
-    // Headerrij — gesplitste naamkolommen + categorie zodat atletiek.nu alles herkent
+    // Headerrij — exact de kolommen die atletiek.nu verwacht
     rijen.push([
-      "Naam (atletiek.nu formaat)", "Voornaam", "Tussenvoegsel", "Achternaam",
-      "Atletiekunie nummer", "Geslacht", "Vereniging", "Categorie", "Team", "Startgroep",
+      "Voornaam", "Tussenvoegsel", "Achternaam", "Geboortedatum", "Lidnummer",
+      "Geslacht", "Vereniging", "Categorie", "Team", "Startgroep",
       ...disciplines
     ]);
 
@@ -5655,40 +5651,39 @@ async function exporteerOpstelling() {
 
       for (const atleetId of atleetInPloeg) {
         const atleet = atleten.find(a => String(a.id) === atleetId);
-        if (!atleet) continue;
-        if (atleet.geslacht !== geslacht) continue;
+        if (!atleet || atleet.geslacht !== geslacht) continue;
 
-        const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
+        const ploegNr      = {"A":1,"B":2,"C":3}[ploeg] || 1;
         const geslachtCode = geslacht === "V" ? "V" : "M";
-        const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
-
-        // Bondsnummer als getal als het puur cijfers zijn
-        const bondsnrRaw = (atleet.bondsnr || "").trim();
-        const bondsnrWaarde = /^\d+$/.test(bondsnrRaw) ? parseInt(bondsnrRaw, 10) : bondsnrRaw;
+        const teamNaam     = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
+        const categorieNaam = actieveCategorie?.naam || "U16";
 
         // Naam splitsen
         const { voornaam, tussenvoegsel, achternaam } = splitsNaam(atleet.naam || "");
+
+        // Geboortedatum in dd-mm-jjjj formaat
+        const geboortedatum = formatGeboortedatumAtlNu(atleet.geboortedatum || "");
+
+        // Lidnummer: als puur getal opslaan (geen decimalen), anders lege string
+        const bondsnrRaw  = (atleet.bondsnr || "").trim();
+        const lidnummer   = /^\d+$/.test(bondsnrRaw) ? parseInt(bondsnrRaw, 10) : bondsnrRaw;
 
         // Startgroep bepalen
         let startgroepWaarde = "";
         programma.forEach((pItem, pIdx) => {
           if (pItem.type === "technisch" && pItem.startgroep) {
             if (String(opst[`${ploeg}_${pIdx}_0`]) === atleetId) {
-              const gc = geslacht === "V" ? "V" : "M";
-              startgroepWaarde = `U16-${gc} - Groep ${pItem.startgroep}`;
+              startgroepWaarde = `U16-${geslachtCode} - Groep ${pItem.startgroep}`;
             }
           }
         });
 
-        // Categorie: gebruik naam van actieve categorie
-        const categorieNaam = actieveCategorie?.naam || "U16";
-
         const rij = [
-          "", // Naam (atletiek.nu formaat) — leeg, matching via licentienummer
-          "", // Voornaam — leeg
-          "", // Tussenvoegsel — leeg
-          "", // Achternaam — leeg
-          bondsnrWaarde, // Atletiekunie nummer — altijd als getal
+          voornaam,
+          tussenvoegsel,
+          achternaam,
+          geboortedatum,
+          lidnummer,
           atleet.geslacht === "V" ? "F" : "M",
           "AV Sprint",
           categorieNaam,
@@ -5711,7 +5706,7 @@ async function exporteerOpstelling() {
     return rijen;
   }
 
-  // Maak twee aparte werkboeken
+  // Maak twee aparte werkboeken (jongens / meisjes)
   const geslachten = [
     { code: "V", label: "Meisjes", suffix: "meisjes" },
     { code: "M", label: "Jongens", suffix: "jongens" }
@@ -5724,24 +5719,22 @@ async function exporteerOpstelling() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rijen);
 
-    // Zorg dat de licentienummer-kolom (kolom E = index 4) als getal is opgeslagen,
-    // niet als tekst. SheetJS herkent parseInt-waarden al als getal, maar we
-    // overschrijven elke cel expliciet voor zekerheid.
-    for (let r = 1; r < rijen.length; r++) { // r=0 is headerrij, sla over
-      const celAdres = XLSX.utils.encode_cell({ r, c: 4 });
-      if (ws[celAdres] && typeof ws[celAdres].v === "number") {
-        ws[celAdres].t = "n"; // type: number
-        ws[celAdres].z = "0"; // format: geheel getal, geen decimalen
+    // Lidnummer-kolom (index 4) expliciet als geheel getal formatteren
+    for (let r = 1; r < rijen.length; r++) {
+      const cel = XLSX.utils.encode_cell({ r, c: 4 });
+      if (ws[cel] && typeof ws[cel].v === "number") {
+        ws[cel].t = "n";
+        ws[cel].z = "0"; // geen decimalen
       }
     }
 
     // Kolombreedte instellen
     ws["!cols"] = [
-      { wch: 28 }, // Naam (atletiek.nu formaat)
       { wch: 16 }, // Voornaam
       { wch: 12 }, // Tussenvoegsel
-      { wch: 18 }, // Achternaam
-      { wch: 18 }, // Atletiekunie nummer
+      { wch: 20 }, // Achternaam
+      { wch: 14 }, // Geboortedatum
+      { wch: 14 }, // Lidnummer
       { wch: 10 }, // Geslacht
       { wch: 16 }, // Vereniging
       { wch: 10 }, // Categorie

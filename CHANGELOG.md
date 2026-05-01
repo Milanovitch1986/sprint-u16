@@ -6,16 +6,17 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [april 2026 — patch 19] — 2026-04-30
+## [mei 2026 — patch 19] — 2026-05-01
 
-### 🔧 Opstelling export verbeterd voor atletiek.nu import
+### 🔧 Opstelling export herschreven voor atletiek.nu import
 
 **Wat is veranderd:**
-- Exportbestand bevat nu aparte kolommen **Voornaam**, **Tussenvoegsel** en **Achternaam** — atletiek.nu vereist deze als losse velden
-- Extra kolom **Categorie** toegevoegd (bijv. "U16") — ook vereist door atletiek.nu
-- Kolom **"Naam (atletiek.nu formaat)"** blijft aanwezig als `Achternaam (Voornaam)` voor naam-matching
-- Het **Atletiekunie licentienummer** wordt als getal geëxporteerd
-- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en correct gesplitst
+- Export bevat nu aparte kolommen **Voornaam**, **Tussenvoegsel** en **Achternaam** — exact wat atletiek.nu vereist
+- **Geboortedatum** toegevoegd als kolom in het formaat `dd-mm-jjjj` (bijv. `15-03-2011`)
+- Kolom hernoemd van "Atletiekunie nummer" naar **"Lidnummer"**
+- Het lidnummer wordt als **geheel getal** geëxporteerd (geen decimalen, geen tekst)
+- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en gesplitst
+- Kolom **Categorie** (bijv. "U16") toegevoegd
 
 ---
 
