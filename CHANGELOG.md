@@ -6,17 +6,15 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [mei 2026 — patch 19] — 2026-05-01
+## [mei 2026 — patch 20] — 2026-05-03
 
-### 🔧 Opstelling export herschreven voor atletiek.nu import
+### 🔧 Opstelling export: startgroepen per technisch onderdeel
 
 **Wat is veranderd:**
-- Export bevat nu aparte kolommen **Voornaam**, **Tussenvoegsel** en **Achternaam** — exact wat atletiek.nu vereist
-- **Geboortedatum** toegevoegd als kolom in het formaat `dd-mm-jjjj` (bijv. `15-03-2011`)
-- Kolom hernoemd van "Atletiekunie nummer" naar **"Lidnummer"**
-- Het lidnummer wordt als **geheel getal** geëxporteerd (geen decimalen, geen tekst)
-- Tussenvoegsels (van, de, van der, etc.) worden automatisch herkend en gesplitst
-- Kolom **Categorie** (bijv. "U16") toegevoegd
+- Technische onderdelen (Hoogspringen, Verspringen, Kogelstoten, Discuswerpen, Speerwerpen) komen nu **één keer** voor als kolom, ook als er twee startgroepen in het programma staan
+- Direct **na** elke technische discipline-kolom staat nu een **Startgroep [discipline]** kolom met de startgroep van de atleet (bijv. `U16-M - Groep A`)
+- De aparte algemene Startgroep-kolom is vervallen — de startgroep staat nu per onderdeel
+- Tijdzonefout in geboortedatum hersteld: datum werd via `new Date()` omgezet wat bij UTC+2 één dag kon verschuiven; wordt nu direct uit de ISO-string gesplitst
 
 ---
 
