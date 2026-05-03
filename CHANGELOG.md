@@ -8,13 +8,19 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ## [mei 2026 — patch 20] — 2026-05-03
 
-### 🔧 Opstelling export: startgroepen per technisch onderdeel
+### 🔧 Export: correcte startgroepnamen voor atletiek.nu
 
 **Wat is veranderd:**
-- Technische onderdelen (Hoogspringen, Verspringen, Kogelstoten, Discuswerpen, Speerwerpen) komen nu **één keer** voor als kolom, ook als er twee startgroepen in het programma staan
-- Direct **na** elke technische discipline-kolom staat nu een **Startgroep [discipline]** kolom met de startgroep van de atleet (bijv. `U16-M - Groep A`)
-- De aparte algemene Startgroep-kolom is vervallen — de startgroep staat nu per onderdeel
-- Tijdzonefout in geboortedatum hersteld: datum werd via `new Date()` omgezet wat bij UTC+2 één dag kon verschuiven; wordt nu direct uit de ISO-string gesplitst
+- De startgroep-kolom in het exportbestand gebruikt nu de exacte namen die atletiek.nu verwacht, inclusief gewicht/specificatie per geslacht:
+  - Kogelstoten jongens → `Kogelstoten 4 kilogram`
+  - Kogelstoten meisjes → `Kogelstoten 3 kilogram`
+  - Speerwerpen jongens → `Speerwerpen 600 gram`
+  - Speerwerpen meisjes → `Speerwerpen 500 gram`
+  - Discuswerpen → `Discuswerpen 1 kilogram` (beide geslachten)
+  - Hoogspringen / Verspringen → naam zonder specificatie
+- Formaat is nu `U16-M - groep A - Hoogspringen` (kleine letter g, onderdeel erbij)
+- Technische onderdelen komen één keer voor als kolom, met direct erna een startgroep-kolom
+- Tijdzonefout in geboortedatum hersteld (ISO-datum direct splitsen, geen Date object)
 
 ---
 

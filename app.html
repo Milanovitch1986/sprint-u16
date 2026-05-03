@@ -5639,6 +5639,28 @@ async function exporteerOpstelling() {
     return `${dd}-${mm}-${jjjj}`;
   }
 
+  // ── Mapping: discipline (app-naam) + geslacht → atletiek.nu onderdeel naam ──
+  // Atletiek.nu gebruikt specifieke namen met gewicht/specificatie in de startgroepnaam.
+  function atlNuOnderdeelNaam(discipline, geslacht) {
+    const g = geslacht === "V" ? "V" : "M";
+    const map = {
+      "Hoogspringen": { M: "Hoogspringen",           V: "Hoogspringen"           },
+      "Verspringen":  { M: "Verspringen",             V: "Verspringen"            },
+      "Kogelstoten":  { M: "Kogelstoten 4 kilogram",  V: "Kogelstoten 3 kilogram" },
+      "Discuswerpen": { M: "Discuswerpen 1 kilogram", V: "Discuswerpen 1 kilogram"},
+      "Speerwerpen":  { M: "Speerwerpen 600 gram",    V: "Speerwerpen 500 gram"   },
+    };
+    return (map[discipline] && map[discipline][g]) || discipline;
+  }
+
+  // ── Bouw de volledige startgroepnaam zoals atletiek.nu die verwacht ──
+  // Formaat: "U16-M - groep A - Hoogspringen"  (kleine letter g in groep)
+  function bouwStartgroepNaam(categorie, geslacht, groep, discipline) {
+    const gc        = geslacht === "V" ? "V" : "M";
+    const onderdeel = atlNuOnderdeelNaam(discipline, geslacht);
+    return `${categorie}-${gc} - groep ${groep} - ${onderdeel}`;
+  }
+
   // ── Headerrij ─────────────────────────────────────────────────
   const headerRij = [
     "Voornaam", "Tussenvoegsel", "Achternaam", "Geboortedatum", "Lidnummer",
@@ -5698,7 +5720,9 @@ async function exporteerOpstelling() {
               if (String(opst[`${ploeg}_${idx}_${s}`]) === atleetId) {
                 staat = true;
                 if (d.isTechnisch && item.startgroep) {
-                  startgroep = `U16-${geslachtCode} - Groep ${item.startgroep}`;
+                  startgroep = bouwStartgroepNaam(
+                    categorieNaam, geslacht, item.startgroep, d.discipline
+                  );
                 }
                 break;
               }
