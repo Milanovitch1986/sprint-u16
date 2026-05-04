@@ -6,6 +6,17 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 23] — 2026-05-04
+
+### 🔧 Opstelling: uitklapbare teams + dropdown-fix
+
+**Wat is veranderd:**
+- Elk team in de opstellingstab heeft nu een klikbare header die het team open- of dichtvouwt. Team A is standaard open; teams B en C zijn standaard dichtgevouwen. Meerdere teams tegelijk openklappen is mogelijk.
+- De open/dichtstand van teams blijft bewaard bij elke herrender (bijv. na het kiezen van een atleet).
+- De atleten-dropdown wordt niet langer afgeknipt door het kader van het team. De bestaande flip-omhoog-logica werkt nu correct voor alle teams, inclusief de onderste rijen.
+
+---
+
 ## [mei 2026 — patch 22] — 2026-05-04
 
 ### 🔧 Export: categorie per geslacht (U16-M / U16-V)

@@ -551,7 +551,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     margin-bottom: 20px;
-    overflow: hidden;
   }
   .ploeg-header {
     background: var(--surface2);
@@ -559,6 +558,31 @@
     padding: 14px 20px;
     display: flex; align-items: center; gap: 12px;
     flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--radius);
+  }
+  .ploeg-header.open {
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .ploeg-header:hover {
+    filter: brightness(1.07);
+  }
+  .ploeg-chevron {
+    margin-left: auto;
+    font-size: 14px;
+    color: var(--muted);
+    transition: transform .2s;
+  }
+  .ploeg-header.open .ploeg-chevron {
+    transform: rotate(180deg);
+  }
+  .ploeg-body {
+    display: none;
+    overflow: visible;
+  }
+  .ploeg-body.open {
+    display: block;
   }
   .ploeg-naam {
     font-family: 'Barlow Condensed', sans-serif;
@@ -580,6 +604,7 @@
     padding: 10px 20px;
     border-bottom: 1px solid var(--border)44;
     transition: background .15s;
+    overflow: visible;
   }
   .onderdeel-rij:hover { background: var(--surface2); }
   .onderdeel-naam {
@@ -4021,11 +4046,19 @@ function renderPloegen() {
     return;
   }
 
+  // Bewaar welke ploegen open zijn vóór de re-render
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
-  cont.innerHTML = ploegNamen.map(ploeg => renderPloeg(ploeg)).join("");
+  const wasOpen = {};
+  ploegNamen.forEach(p => {
+    const body = document.getElementById(`ploeg-body-${p}`);
+    // Eerste render: body bestaat nog niet → gebruik default (A = open)
+    wasOpen[p] = body ? body.classList.contains("open") : (p === "A");
+  });
+
+  cont.innerHTML = ploegNamen.map(ploeg => renderPloeg(ploeg, wasOpen[ploeg])).join("");
 }
 
-function renderPloeg(ploeg) {
+function renderPloeg(ploeg, isOpen = false) {
   const opst = opstellingData[ploeg] || {};
 
   // Verzamel punten per discipline voor correcte puntentelling:
@@ -4112,16 +4145,31 @@ function renderPloeg(ploeg) {
   const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
   const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
   return `
-    <div class="ploeg-container">
-      <div class="ploeg-header">
+    <div class="ploeg-container" id="ploeg-container-${ploeg}">
+      <div class="ploeg-header ${isOpen ? "open" : ""}" onclick="togglePloeg('${ploeg}')">
         <div class="ploeg-naam">${teamNaam}</div>
         <div class="ploeg-punten print-hide">~${totalePunten} pts</div>
+        <span class="ploeg-chevron print-hide">▼</span>
       </div>
-      ${rijen}
+      <div class="ploeg-body ${isOpen ? "open" : ""}" id="ploeg-body-${ploeg}">
+        ${rijen}
+      </div>
     </div>`;
 }
 
-// Controleer tijdconflict: zelfde atleet al ingepland binnen 15 min
+// Toggle een ploeg open/dicht (collapsible)
+function togglePloeg(ploeg) {
+  const header = document.querySelector(`#ploeg-container-${ploeg} .ploeg-header`);
+  const body   = document.getElementById(`ploeg-body-${ploeg}`);
+  if (!header || !body) return;
+  const isOpen = body.classList.contains("open");
+  header.classList.toggle("open", !isOpen);
+  body.classList.toggle("open", !isOpen);
+  // Sluit eventuele open dropdowns bij dichtvouwen
+  if (isOpen) document.querySelectorAll(".slot-select").forEach(d => d.remove());
+}
+
+
 function checkConflict(ploeg, opst, huidigIdx, atleetId, huidigItem) {
   if (!huidigItem.starttijd || !atleetId) return false;
   const huidigMin = tijdNaarMinuten(huidigItem.starttijd);

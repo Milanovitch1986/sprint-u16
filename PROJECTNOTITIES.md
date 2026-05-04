@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 mei 2026 (patch 22)
+*AV Sprint Breda · Laatste update: 4 mei 2026 (patch 23)
 
 ---
 
