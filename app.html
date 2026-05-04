@@ -5552,17 +5552,41 @@ async function verstuurUitnodiging() {
   if (!categorieId) { toast("Kies een categorie", "err"); return; }
   const uid = await getUid();
   try {
-    const { error } = await sb.from("uitnodigingen").insert({
+    // 1. Sla uitnodiging op in Supabase en haal het token op
+    const { data: nieuweUitn, error } = await sb.from("uitnodigingen").insert({
       email,
       categorie_id:   categorieId,
       aangemaakt_door: uid
-    });
+    }).select("token").single();
     if (error) {
       if (error.code === "23505") { toast("Dit e-mailadres heeft al een uitnodiging", "err"); }
       else throw error;
       return;
     }
-    toast(`Uitnodiging aangemaakt voor ${email} ✓`);
+
+    // 2. Bouw de uitnodigingslink
+    const basis = window.location.origin + window.location.pathname.replace("app.html", "");
+    const link  = `${basis}index.html?uitnodiging=${nieuweUitn.token}`;
+
+    // 3. Verstuur e-mail via Cloudflare Worker (Brevo)
+    try {
+      const resp = await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, link })
+      });
+      if (!resp.ok) {
+        const fout = await resp.text();
+        console.warn("E-mail versturen mislukt:", fout);
+        toast(`Uitnodiging aangemaakt, maar e-mail niet verzonden (${fout})`, "warn");
+      } else {
+        toast(`Uitnodiging verstuurd naar ${email} ✓`);
+      }
+    } catch(mailErr) {
+      console.warn("Worker niet bereikbaar:", mailErr);
+      toast(`Uitnodiging aangemaakt, maar e-mail niet verzonden`, "warn");
+    }
+
     closeModal("uitnodigingModal");
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
