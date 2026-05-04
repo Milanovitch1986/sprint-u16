@@ -5630,35 +5630,37 @@ async function exporteerOpstelling() {
     return { voornaam: woorden[0], tussenvoegsel: "", achternaam: woorden.slice(1).join(" ") };
   }
 
-  // ── Hulpfunctie: ISO-datum → dd-mm-jjjj (geen Date object, geen tijdzonefout) ──
-  function formatGeboortedatumAtlNu(iso) {
+  // ── Hulpfunctie: ISO-datum → Excel-datumwaarde + 1 dag correctie ──
+  // De datums in de DB staan 1 dag te vroeg door een tijdzonefout bij invoer.
+  // Excel slaat datums op als aantal dagen sinds 1 jan 1900 (epoch 1).
+  // We splitsen de ISO-string direct (geen Date object) en tellen 1 dag op.
+  function isoNaarExcelDatum(iso) {
     if (!iso || !iso.includes("-")) return "";
     const delen = iso.split("T")[0].split("-");
     if (delen.length !== 3) return "";
     const [jjjj, mm, dd] = delen;
-    return `${dd}-${mm}-${jjjj}`;
+    // Bouw datum via UTC om tijdzoneproblemen te vermijden, tel 1 dag op
+    const d = new Date(Date.UTC(parseInt(jjjj), parseInt(mm) - 1, parseInt(dd) + 1));
+    // Zet om naar Excel-serienummer: dagen sinds 1 jan 1900
+    // Excel heeft een bug: telt 29 feb 1900 mee (niet bestaand), vandaar + 1
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    return Math.round((d - excelEpoch) / 86400000);
   }
 
-  // ── Mapping: discipline (app-naam) + geslacht → atletiek.nu onderdeel naam ──
-  // Atletiek.nu gebruikt specifieke namen met gewicht/specificatie in de startgroepnaam.
-  function atlNuOnderdeelNaam(discipline, geslacht) {
-    const g = geslacht === "V" ? "V" : "M";
-    const map = {
-      "Hoogspringen": { M: "Hoogspringen",           V: "Hoogspringen"           },
-      "Verspringen":  { M: "Verspringen",             V: "Verspringen"            },
-      "Kogelstoten":  { M: "Kogelstoten 4 kilogram",  V: "Kogelstoten 3 kilogram" },
-      "Discuswerpen": { M: "Discuswerpen 1 kilogram", V: "Discuswerpen 1 kilogram"},
-      "Speerwerpen":  { M: "Speerwerpen 600 gram",    V: "Speerwerpen 500 gram"   },
-    };
-    return (map[discipline] && map[discipline][g]) || discipline;
-  }
+  // ── Afkorting per discipline voor atletiek.nu startgroepnaam ──
+  // Formaat: "U16-M - Ver Groep A"  of  "U16-V - Kogel Groep B"
+  const DISC_AFKORTING = {
+    "Hoogspringen": "Hoog",
+    "Verspringen":  "Ver",
+    "Kogelstoten":  "Kogel",
+    "Discuswerpen": "Discus",
+    "Speerwerpen":  "Speer",
+  };
 
-  // ── Bouw de volledige startgroepnaam zoals atletiek.nu die verwacht ──
-  // Formaat: "U16-M - groep A - Hoogspringen"  (kleine letter g in groep)
   function bouwStartgroepNaam(categorie, geslacht, groep, discipline) {
-    const gc        = geslacht === "V" ? "V" : "M";
-    const onderdeel = atlNuOnderdeelNaam(discipline, geslacht);
-    return `${categorie}-${gc} - groep ${groep} - ${onderdeel}`;
+    const gc       = geslacht === "V" ? "V" : "M";
+    const afkorting = DISC_AFKORTING[discipline] || discipline;
+    return `${categorie}-${gc} - ${afkorting} Groep ${groep}`;
   }
 
   // ── Headerrij ─────────────────────────────────────────────────
@@ -5698,7 +5700,7 @@ async function exporteerOpstelling() {
         const categorieNaam = actieveCategorie?.naam || "U16";
 
         const { voornaam, tussenvoegsel, achternaam } = splitsNaam(atleet.naam || "");
-        const geboortedatum = formatGeboortedatumAtlNu(atleet.geboortedatum || "");
+        const geboortedatum = isoNaarExcelDatum(atleet.geboortedatum || "");
         const bondsnrRaw    = (atleet.bondsnr || "").trim();
         const lidnummer     = /^\d+$/.test(bondsnrRaw) ? parseInt(bondsnrRaw, 10) : bondsnrRaw;
 
@@ -5751,6 +5753,15 @@ async function exporteerOpstelling() {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rijen);
+
+    // Datumkolom (index 3) als echte Excel-datumcel formatteren (dd/mm/yyyy)
+    for (let r = 1; r < rijen.length; r++) {
+      const celDatum = XLSX.utils.encode_cell({ r, c: 3 });
+      if (ws[celDatum] && typeof ws[celDatum].v === "number") {
+        ws[celDatum].t = "n";          // type: number (Excel datum is een getal)
+        ws[celDatum].z = "dd/mm/yyyy"; // weergaveformaat
+      }
+    }
 
     // Lidnummer-kolom (index 4) als geheel getal formatteren
     for (let r = 1; r < rijen.length; r++) {
