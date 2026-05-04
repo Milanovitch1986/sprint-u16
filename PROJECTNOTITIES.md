@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 mei 2026 (patch 23)
+*AV Sprint Breda · Laatste update: 4 mei 2026 (patch 26)
 
 ---
 
@@ -54,6 +54,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 Na ronde 1 krijgen atleten die al aan een ploeg zijn gekoppeld maar nog maar 1 onderdeel hebben een tweede kans bij onderdelen met vrije slots. Zo doet elke atleet minimaal 2 onderdelen. Als dat toch niet lukt (bijv. door tijdconflicten), verschijnt een waarschuwing.
 
 **Gevolg:** ploeg B en C kunnen bij sommige onderdelen minder dan 3 atleten hebben — dat is bewust en gewenst.
+
+### Geboortedatum tijdzonefout bij import (opgelost mei 2026, patches 25 + 26)
+Bij de eerste atletenimport in het begin van het project stonden alle geboortedata 1 dag te vroeg opgeslagen. Oorzaak: `formatDatum()` gebruikte `.toISOString()` op een JavaScript `Date` object, wat in Nederland (UTC+1/+2) de datum 1 dag terug converteert naar UTC.
+
+**Hoe opgelost:**
+- Database gecorrigeerd via gerichte SQL-query: `UPDATE atleten SET geboortedatum = (geboortedatum::date + INTERVAL '1 day')::text WHERE id IN (...)` — 44 atleten bijgewerkt (patch 25)
+- Tijdelijke export-compensatie (`+1 dag` in `isoNaarExcelDatum()`) verwijderd nu de database correct is (patch 25)
+- `formatDatum()` gebruikt nu `getFullYear()` / `getMonth()` / `getDate()` (lokale tijd) in plaats van `.toISOString()` — voorkomt herhaling bij toekomstige imports (patch 26)
 
 ### PR-overzicht import (patch 14, april 2026)
 Nieuwe importflow voor het brede Excel-formaat (kolom A = naam, rij 1 = disciplines als kolomtitels).
@@ -124,6 +132,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | Service | Details |
 |---------|---------|
 | Atletiek.nu API | Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev` |
+| E-mail uitnodigingen | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo (API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker) |
 | World Athletics PR | `worldathletics.nimarion.de` |
 | NAU scoretabellen | Ingebouwd (U14/U16, feb. 2022) |
 

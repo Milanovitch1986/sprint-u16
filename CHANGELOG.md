@@ -6,14 +6,48 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [mei 2026 — patch 23] — 2026-05-04
+## [mei 2026 — patch 26] — 2026-05-04
 
-### 🔧 Opstelling: uitklapbare teams + dropdown-fix
+### 🐛 Bugfix: Geboortedatum tijdzonefout bij Excel-import opgelost
 
-**Wat is veranderd:**
-- Elk team in de opstellingstab heeft nu een klikbare header die het team open- of dichtvouwt. Team A is standaard open; teams B en C zijn standaard dichtgevouwen. Meerdere teams tegelijk openklappen is mogelijk.
-- De open/dichtstand van teams blijft bewaard bij elke herrender (bijv. na het kiezen van een atleet).
-- De atleten-dropdown wordt niet langer afgeknipt door het kader van het team. De bestaande flip-omhoog-logica werkt nu correct voor alle teams, inclusief de onderste rijen.
+**Probleem:** Bij het importeren van een atletenlijst via Excel kon de geboortedatum 1 dag te vroeg worden opgeslagen. SheetJS levert datumcellen aan als JavaScript `Date` objecten, en de `formatDatum()` functie gebruikte `.toISOString()` om de datum op te slaan. In Nederland (UTC+1 of UTC+2) converteert `.toISOString()` naar UTC, waardoor middernacht lokale tijd als 23:00 of 22:00 de dag ervóór wordt geschreven — en dus de datum 1 dag teruggaat.
+
+**Oplossing:** `formatDatum()` gebruikt nu `getFullYear()`, `getMonth()` en `getDate()` — dit zijn de lokale datumonderdelen en zijn tijdzone-onafhankelijk.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
+## [mei 2026 — patch 25] — 2026-05-04
+
+### 🐛 Bugfix: +1 dag correctie verwijderd uit Excel-export
+
+**Achtergrond:** In patch 21 was een tijdelijke compensatie ingebouwd in de Excel-export: bij het exporteren van de opstelling werd de geboortedatum van alle atleten automatisch 1 dag opgeteld. Dit was een workaround omdat de geboortedata in de database 1 dag te vroeg stonden door een tijdzonefout bij de eerste import.
+
+**Oplossing:** De database is gecorrigeerd via een gerichte SQL-query (44 atleten, +1 dag). Nu de database-datums correct zijn, is de compensatie in de export niet meer nodig en verwijderd.
+
+**Wat is veranderd:** In `isoNaarExcelDatum()` is `parseInt(dd) + 1` teruggebracht naar `parseInt(dd)`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
+## [mei 2026 — patch 24] — 2026-05-04
+
+### ✨ Uitnodigingen per e-mail versturen via Brevo
+
+**Wat is toegevoegd:**
+- Na het aanmaken van een uitnodiging verstuurt de app automatisch een e-mail naar het opgegeven adres via de Cloudflare Worker (`sprint-uitnodiging.milande-maat.workers.dev`) en Brevo
+- De e-mail bevat de persoonlijke uitnodigingslink met token
+- Als de e-mail niet verstuurd kan worden (bijv. Worker niet bereikbaar), blijft de uitnodiging wél opgeslagen in de database en verschijnt een oranje waarschuwing
+
+**Technische details:**
+- `verstuurUitnodiging()` haalt nu na de insert het gegenereerde token op via `.select("token").single()`
+- De uitnodigingslink wordt opgebouwd als `{basis}index.html?uitnodiging={token}`
+- De Cloudflare Worker verwacht een POST met `{ email, link }` en gebruikt `env.BREVO_API_KEY` (ingesteld als Secret in Cloudflare)
+- Brevo API-sleutel aangemaakt (naam: `sprint-u16-worker`) en als Secret `BREVO_API_KEY` toegevoegd aan de Worker
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
 
 ---
 
