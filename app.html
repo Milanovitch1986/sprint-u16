@@ -5702,17 +5702,16 @@ async function exporteerOpstelling() {
     return { voornaam: woorden[0], tussenvoegsel: "", achternaam: woorden.slice(1).join(" ") };
   }
 
-  // ── Hulpfunctie: ISO-datum → Excel-datumwaarde + 1 dag correctie ──
-  // De datums in de DB staan 1 dag te vroeg door een tijdzonefout bij invoer.
+  // ── Hulpfunctie: ISO-datum → Excel-datumwaarde ──
   // Excel slaat datums op als aantal dagen sinds 1 jan 1900 (epoch 1).
-  // We splitsen de ISO-string direct (geen Date object) en tellen 1 dag op.
+  // We splitsen de ISO-string direct (geen Date object) om tijdzoneproblemen te vermijden.
   function isoNaarExcelDatum(iso) {
     if (!iso || !iso.includes("-")) return "";
     const delen = iso.split("T")[0].split("-");
     if (delen.length !== 3) return "";
     const [jjjj, mm, dd] = delen;
-    // Bouw datum via UTC om tijdzoneproblemen te vermijden, tel 1 dag op
-    const d = new Date(Date.UTC(parseInt(jjjj), parseInt(mm) - 1, parseInt(dd) + 1));
+    // Bouw datum via UTC om tijdzoneproblemen te vermijden
+    const d = new Date(Date.UTC(parseInt(jjjj), parseInt(mm) - 1, parseInt(dd)));
     // Zet om naar Excel-serienummer: dagen sinds 1 jan 1900
     // Excel heeft een bug: telt 29 feb 1900 mee (niet bestaand), vandaar + 1
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
