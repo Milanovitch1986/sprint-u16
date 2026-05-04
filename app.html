@@ -5707,7 +5707,7 @@ async function exporteerOpstelling() {
         const rij = [
           voornaam, tussenvoegsel, achternaam, geboortedatum, lidnummer,
           atleet.geslacht === "V" ? "F" : "M",
-          "AV Sprint", categorieNaam, teamNaam
+          "AV Sprint", `${categorieNaam}-${geslachtCode}`, teamNaam
         ];
 
         // Per unieke discipline: x-kolom + (bij technisch) startgroep-kolom

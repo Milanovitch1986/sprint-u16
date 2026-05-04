@@ -6,14 +6,12 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [mei 2026 — patch 21] — 2026-05-03
+## [mei 2026 — patch 22] — 2026-05-04
 
-### 🔧 Export: geboortedatum +1 dag, datumcel formaat en correcte startgroepnamen
+### 🔧 Export: categorie per geslacht (U16-M / U16-V)
 
 **Wat is veranderd:**
-- **Geboortedatum +1 dag**: alle geboortedata in de DB staan 1 dag te vroeg door een tijdzonefout bij invoer. Bij export wordt nu automatisch 1 dag opgeteld.
-- **Geboortedatum als Excel-datumcel**: de kolom Geboortedatum wordt nu als echte datumcel opgeslagen (niet als tekst) met het formaat `dd/mm/yyyy`.
-- **Startgroepnamen gecorrigeerd**: format is nu `U16-M - Ver Groep A` of `U16-V - Kogel Groep B`. Afkortingen: Hoog, Ver, Kogel, Discus, Speer.
+- De kolom Categorie in het exportbestand toont nu `U16-M` voor jongens en `U16-V` voor meisjes in plaats van alleen `U16`.
 
 ---
 
