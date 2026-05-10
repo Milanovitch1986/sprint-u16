@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 mei 2026 (patch 26)
+*AV Sprint Breda · Laatste update: 10 mei 2026 (patch 27)*
 
 ---
 
@@ -41,6 +41,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### 3-uurs-regel middenafstand (patch 27, mei 2026)
+Een atleet op de 800m of 1500m mag nooit automatisch ook worden opgesteld op de 300m of 300m horden (en omgekeerd) als de starttijden minder dan 180 minuten uit elkaar liggen.
+
+**Implementatie:**
+- Helper-functie `heeftDrieUurConflict(nieuweDisc, nieuweTijd, ingeplandLijst)` controlecert de combinatie
+- `MIDDEN_AFSTANDEN = {800m, 1500m}`, `SPRINT_COMBINATIES = {300m, 300m horden}`
+- Elk ingepland item slaat nu ook `discipline` op (naast `idx` en `starttijd`)
+- Geldt in zowel `genereerOpstelling()` als `aanvullenOpstelling()`
+- De bestaande 15-minuten-blokkade voor alle disciplines blijft ongewijzigd naast deze regel
+
 ### Automatische opstelling: sequentieel op punten (patch 15, april 2026)
 `genereerOpstelling()` en `aanvullenOpstelling()` vullen ploegen in **volgorde A → B → C**.
 
@@ -54,6 +64,11 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 Na ronde 1 krijgen atleten die al aan een ploeg zijn gekoppeld maar nog maar 1 onderdeel hebben een tweede kans bij onderdelen met vrije slots. Zo doet elke atleet minimaal 2 onderdelen. Als dat toch niet lukt (bijv. door tijdconflicten), verschijnt een waarschuwing.
 
 **Gevolg:** ploeg B en C kunnen bij sommige onderdelen minder dan 3 atleten hebben — dat is bewust en gewenst.
+
+### PDF-import tijdschema: discipline-vertaling (patch 27, mei 2026)
+De vertaaltabel `PDF_DISCIPLINE_VERTALING` bevat alle discipline-sleutels die in een wedstrijdprogramma-PDF kunnen voorkomen. Volgorde is belangrijk: de zoekfunctie `zoekDisciplineVertaling()` werkt ook met `startsWith`, dus specifiekere sleutels (bijv. `"300m horden"`) moeten altijd vóór kortere overlappende sleutels (bijv. `"300m"`) staan.
+
+Toegevoegd in patch 27: `"300m horden"`, `"300mh"`, `"300mhorden"`.
 
 ### Geboortedatum tijdzonefout bij import (opgelost mei 2026, patches 25 + 26)
 Bij de eerste atletenimport in het begin van het project stonden alle geboortedata 1 dag te vroeg opgeslagen. Oorzaak: `formatDatum()` gebruikte `.toISOString()` op een JavaScript `Date` object, wat in Nederland (UTC+1/+2) de datum 1 dag terug converteert naar UTC.
@@ -166,6 +181,7 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 | 📥 Excel importeren | Atleten-tab | `.xlsx` atletenlijst (atletiek.nu formaat) | Importeert atletengegevens |
 | 📥 PRs importeren | Prestaties-tab (Atletiek.nu sectie) | Atletiek.nu webresultaten | Haalt PR's op via externe koppeling |
 | 📊 PR-overzicht importeren | Prestaties-tab | `.xlsx` breed formaat (naam + disciplines) | Importeert PR-overzicht met tijdomrekening |
+| 📄 Tijdschema importeren | Wedstrijden-tab | `.pdf` wedstrijdprogramma | Importeert starttijden per onderdeel/geslacht |
 
 ### PR-overzicht Excel formaat (patch 14)
 - Kolom A: atletennamen

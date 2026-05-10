@@ -6,6 +6,32 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 27] — 2026-05-10
+
+### ⚡ 3-uurs-regel middenafstand + fix PDF-import 300m horden
+
+**Wijziging 1 — Automatische opstelling: 800m/1500m niet binnen 3 uur naast 300m/300m horden**
+
+Een atleet die staat opgesteld op de 800m of 1500m wordt nooit automatisch ook opgesteld op de 300m of 300m horden (en andersom) als de starttijden van deze onderdelen minder dan 180 minuten uit elkaar liggen. Deze blokkade geldt in zowel `genereerOpstelling()` als `aanvullenOpstelling()`.
+
+**Technische details:**
+- Nieuwe helper-functie `heeftDrieUurConflict(nieuweDisc, nieuweTijd, ingeplandLijst)` toegevoegd
+- Twee vaste sets: `MIDDEN_AFSTANDEN = {800m, 1500m}` en `SPRINT_COMBINATIES = {300m, 300m horden}`
+- Interne ingepland-registratie uitgebreid: elk object slaat nu ook `discipline` op (naast `idx` en `starttijd`), zodat de check weet wát er al gepland staat
+- De bestaande 15-minuten-blokkade blijft ongewijzigd en werkt naast deze nieuwe regel
+
+**Wijziging 2 — Bugfix: "300m horden" werd bij PDF-import vertaald naar "300m"**
+
+Bij het importeren van een tijdschema via PDF werd "300m horden" (en varianten zoals "300mH") fout herkend als gewone "300m".
+
+**Oorzaak:** De vertaaltabel `PDF_DISCIPLINE_VERTALING` bevatte geen sleutels voor `"300m horden"` of `"300mh"`. De zoekfunctie `zoekDisciplineVertaling()` werkt ook met `startsWith`, waardoor `"300m horden"` als eerste de sleutel `"300m"` raakte — verkeerde discipline.
+
+**Oplossing:** Drie sleutels toegevoegd aan `PDF_DISCIPLINE_VERTALING`: `"300m horden"`, `"300mh"` en `"300mhorden"`, geplaatst vóór `"300m"` zodat de exacte match altijd eerst gevonden wordt.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [mei 2026 — patch 26] — 2026-05-04
 
 ### 🐛 Bugfix: Geboortedatum tijdzonefout bij Excel-import opgelost
