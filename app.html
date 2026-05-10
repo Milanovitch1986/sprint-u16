@@ -4200,6 +4200,38 @@ function tijdNaarMinuten(tijdStr) {
   return h * 60 + (m || 0);
 }
 
+// ── Speciale 3-uurs-regel: 800m/1500m mag niet samen met 300m/300m horden
+//    als hun starttijden minder dan 180 minuten uit elkaar liggen ──
+const MIDDEN_AFSTANDEN  = new Set(["800m", "1500m"]);
+const SPRINT_COMBINATIES = new Set(["300m", "300m horden"]);
+
+function heeftDrieUurConflict(nieuweDisc, nieuweTijd, ingeplandLijst) {
+  if (!nieuweTijd) return false;
+  // Bepaal of de nieuwe discipline een middenafstand of een sprintcombinatie is
+  const nieuweIsMidden  = MIDDEN_AFSTANDEN.has(nieuweDisc);
+  const nieuweIsSprint  = SPRINT_COMBINATIES.has(nieuweDisc);
+  if (!nieuweIsMidden && !nieuweIsSprint) return false; // regel geldt niet
+
+  const nieuwMin = tijdNaarMinuten(nieuweTijd);
+
+  for (const ingepland of ingeplandLijst) {
+    if (!ingepland.starttijd || !ingepland.discipline) continue;
+    const ingeplandIsMidden = MIDDEN_AFSTANDEN.has(ingepland.discipline);
+    const ingeplandIsSprint = SPRINT_COMBINATIES.has(ingepland.discipline);
+
+    // Conflict = één is midden, ander is sprint, én tijdsverschil < 180 min
+    const combinatieConflict =
+      (nieuweIsMidden && ingeplandIsSprint) ||
+      (nieuweIsSprint && ingeplandIsMidden);
+
+    if (combinatieConflict) {
+      const diff = Math.abs(tijdNaarMinuten(ingepland.starttijd) - nieuwMin);
+      if (diff < 180) return true;
+    }
+  }
+  return false;
+}
+
 // Bouw leesbare tooltip voor tijdconflict
 function bouwConflictTooltip(ploeg, opst, huidigIdx, atleetId) {
   const huidigItem = programma[huidigIdx];
@@ -4484,6 +4516,9 @@ function genereerOpstelling() {
         return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
       });
       if (conflict) return false;
+
+      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden
+      if (heeftDrieUurConflict(item.discipline, item.starttijd, atleetIngepland[aid] || [])) return false;
     }
 
     // Atleet al in dit slot?
@@ -4496,12 +4531,10 @@ function genereerOpstelling() {
     atleetInPloeg[aid] = ploeg;
     atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
     if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
-    atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+    atleetIngepland[aid].push({ idx, starttijd: item.starttijd, discipline: item.discipline });
     if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
     return true;
   }
-
-  // ── Vul ploegen sequentieel: A → B → C ──
   // Elke ploeg pakt de beste beschikbare atleten (nog niet in een andere ploeg).
   // Ronde 1: sorteer puur op punten voor dit onderdeel (sterkste atleet voorrang).
   // Ronde 2: geef atleten met maar 1 onderdeel een extra kans, zodat iedereen ≥ 2 doet.
@@ -4619,7 +4652,7 @@ function aanvullenOpstelling() {
         atleetOnderdeelTellerPerPloeg[ploeg][String(aid)] =
           (atleetOnderdeelTellerPerPloeg[ploeg][String(aid)] || 0) + 1;
         if (!atleetIngeplandPerPloeg[ploeg][String(aid)]) atleetIngeplandPerPloeg[ploeg][String(aid)] = [];
-        atleetIngeplandPerPloeg[ploeg][String(aid)].push({ idx, starttijd: item.starttijd });
+        atleetIngeplandPerPloeg[ploeg][String(aid)].push({ idx, starttijd: item.starttijd, discipline: item.discipline });
         if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
       }
     });
@@ -4651,6 +4684,9 @@ function aanvullenOpstelling() {
         return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
       });
       if (conflict) return false;
+
+      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden
+      if (heeftDrieUurConflict(item.discipline, item.starttijd, atleetIngepland[aid] || [])) return false;
     }
     for (let s = 0; s < maxSlots; s++) {
       if (opstellingData[ploeg][`${ploeg}_${idx}_${s}`] === aid) return false;
@@ -4659,7 +4695,7 @@ function aanvullenOpstelling() {
     atleetInPloeg[aid] = ploeg;
     atleetOnderdeelTeller[aid] = (atleetOnderdeelTeller[aid] || 0) + 1;
     if (!atleetIngepland[aid]) atleetIngepland[aid] = [];
-    atleetIngepland[aid].push({ idx, starttijd: item.starttijd });
+    atleetIngepland[aid].push({ idx, starttijd: item.starttijd, discipline: item.discipline });
     if (isTechnisch) technischGeblokkeerd.add(`${aid}|${item.discipline}`);
     return true;
   }
@@ -6287,6 +6323,9 @@ const PDF_DISCIPLINE_VERTALING = {
   "100m":          "100m",
   "800m":          "800m",
   "600m":          "600m",
+  "300m horden":   "300m horden",
+  "300mh":         "300m horden",
+  "300mhorden":    "300m horden",
   "300m":          "300m",
   "200m":          "200m",
   "80m":           "80m",
