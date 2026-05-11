@@ -447,8 +447,7 @@ async function registreer() {
     await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, link: appLink })
-    });
+     body: JSON.stringify({ email, link: appLink, type: "welkom" })
   } catch(e) { console.warn("Welkomstmail niet verzonden:", e.message); }
 
   bezig("reg-btn", false);
