@@ -431,7 +431,7 @@ async function registreer() {
   }
 
   // Markeer uitnodiging als gebruikt
-  await sb.rpc("markeer_uitnodiging_gebruikt", { p_token: token });
+ await sb.rpc("markeer_uitnodiging_gebruikt", { p_token: token });
 
   // Koppel trainer automatisch aan de categorie van de uitnodiging
   try {
@@ -440,6 +440,16 @@ async function registreer() {
       p_token:      token
     });
   } catch(e) { console.warn("Categorie koppeling mislukt:", e.message); }
+  
+  // Stuur welkomstmail via Cloudflare Worker
+  try {
+    const appLink = window.location.origin + window.location.pathname.replace("index.html", "") + "app.html";
+    await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, link: appLink })
+    });
+  } catch(e) { console.warn("Welkomstmail niet verzonden:", e.message); }
 
   bezig("reg-btn", false);
 
