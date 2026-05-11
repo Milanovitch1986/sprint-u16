@@ -5466,6 +5466,10 @@ async function laadAdminGebruikers() {
             <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
               ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
             </button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;"
+              onclick="verwijderGebruiker('${g.id}', '${esc(g.gebruikersnaam)}', '${esc(g.email)}')">
+              🗑️ Verwijderen
+            </button>
           ` : ""}
         </div>`;
     }).join("");
@@ -5700,6 +5704,20 @@ async function wisselRol(gebruikerId, huidigeRol) {
     const { error } = await sb.from("profielen").update({ rol: nieuweRol }).eq("id", gebruikerId);
     if (error) throw error;
     toast(`Rol gewijzigd naar ${nieuweRol} ✓`);
+    laadAdmin();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function verwijderGebruiker(gebruikerId, gebruikersnaam, email) {
+  const ok = await bevestig(
+    "Gebruiker verwijderen",
+    `Weet je zeker dat je <strong>${gebruikersnaam}</strong> (${email}) wilt verwijderen?\n\nHet account en alle toegangsrechten worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.`
+  );
+  if (!ok) return;
+  try {
+    const { error } = await sb.rpc("verwijder_gebruiker", { p_gebruiker_id: gebruikerId });
+    if (error) throw error;
+    toast(`Gebruiker ${gebruikersnaam} verwijderd ✓`);
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
