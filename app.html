@@ -1313,6 +1313,13 @@
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openUitnodigingModal()">+ Nieuwe uitnodiging</button>
       </div>
       <div id="uitnodigingen-lijst" style="padding:16px;"></div>
+      <!-- Geschiedenis: gebruikt & verlopen -->
+      <div id="uitnodigingen-geschiedenis-wrapper" style="display:none;">
+        <div style="padding:8px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;">
+          📋 Geschiedenis
+        </div>
+        <div id="uitnodigingen-geschiedenis" style="padding:0 16px 8px;"></div>
+      </div>
     </div>
 
     <!-- Gebruikers -->
@@ -5361,44 +5368,70 @@ async function laadAdmin() {
 
 async function laadAdminUitnodigingen() {
   const uitnEl = document.getElementById("uitnodigingen-lijst");
+  const geschEl = document.getElementById("uitnodigingen-geschiedenis");
+  const geschWrapper = document.getElementById("uitnodigingen-geschiedenis-wrapper");
   uitnEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
   try {
-    // Haal ook categorie naam op via join
     const { data: uitn, error } = await sb.from("uitnodigingen")
       .select("*, categorieen(naam)")
       .order("aangemaakt", { ascending: false });
     if (error) throw error;
 
-    if (!uitn.length) {
-      uitnEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Nog geen uitnodigingen aangemaakt.</div>`;
-      return;
-    }
-    uitnEl.innerHTML = uitn.map(u => {
-      const verlopen   = new Date(u.vervalt) < new Date();
-      const statusKleur = u.gebruikt ? "var(--success)" : verlopen ? "var(--accent2)" : "var(--accent)";
-      const statusTekst = u.gebruikt ? "Gebruikt" : verlopen ? "Verlopen" : "Actief";
-      const catNaam     = u.categorieen?.naam || "—";
-      return `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-          <div style="flex:1;min-width:200px;">
-            <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-              Categorie: <strong>${esc(catNaam)}</strong> ·
-              Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+    const actief    = uitn.filter(u => !u.gebruikt && new Date(u.vervalt) >= new Date());
+    const geschiedenis = uitn.filter(u => u.gebruikt || new Date(u.vervalt) < new Date());
+
+    // ── Actieve uitnodigingen ──
+    if (!actief.length) {
+      uitnEl.innerHTML = `<div style="color:var(--muted);font-size:13px;">Geen actieve uitnodigingen.</div>`;
+    } else {
+      uitnEl.innerHTML = actief.map(u => {
+        const catNaam = u.categorieen?.naam || "—";
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                Categorie: <strong>${esc(catNaam)}</strong> ·
+                Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+              </div>
             </div>
-          </div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-            color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
-            padding:3px 10px;border-radius:20px;">${statusTekst}</span>
-          ${!u.gebruikt && !verlopen ? `
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+              color:var(--accent);background:var(--accent)22;border:1px solid var(--accent)44;
+              padding:3px 10px;border-radius:20px;">Actief</span>
             <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
             <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Intrekken</button>
-          ` : ""}
-          ${verlopen && !u.gebruikt ? `
-            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Verwijderen</button>
-          ` : ""}
-        </div>`;
-    }).join("");
+          </div>`;
+      }).join("");
+    }
+
+    // ── Geschiedenis (gebruikt + verlopen) ──
+    if (!geschiedenis.length) {
+      geschWrapper.style.display = "none";
+    } else {
+      geschWrapper.style.display = "block";
+      geschEl.innerHTML = geschiedenis.map(u => {
+        const verlopen    = new Date(u.vervalt) < new Date();
+        const statusKleur = u.gebruikt ? "var(--success)" : "var(--accent2)";
+        const statusTekst = u.gebruikt ? "Gebruikt" : "Verlopen";
+        const catNaam     = u.categorieen?.naam || "—";
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;opacity:0.65;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                Categorie: <strong>${esc(catNaam)}</strong> ·
+                Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
+              </div>
+            </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+              color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
+              padding:3px 10px;border-radius:20px;">${statusTekst}</span>
+            ${verlopen && !u.gebruikt ? `
+              <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Verwijderen</button>
+            ` : ""}
+          </div>`;
+      }).join("");
+    }
   } catch(e) { uitnEl.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }
 }
 
