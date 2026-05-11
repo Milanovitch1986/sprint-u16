@@ -5616,7 +5616,7 @@ async function verstuurUitnodiging() {
       const resp = await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, link })
+        body: JSON.stringify({ email, link, type: "uitnodiging" })
       });
       if (!resp.ok) {
         const fout = await resp.text();
