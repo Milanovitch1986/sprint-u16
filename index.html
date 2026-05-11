@@ -431,7 +431,7 @@ async function registreer() {
   }
 
   // Markeer uitnodiging als gebruikt
-  await sb.from("uitnodigingen").update({ gebruikt: true }).eq("token", token);
+  await sb.rpc("markeer_uitnodiging_gebruikt", { p_token: token });
 
   // Koppel trainer automatisch aan de categorie van de uitnodiging
   try {
