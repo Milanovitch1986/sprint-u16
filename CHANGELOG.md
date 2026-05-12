@@ -6,6 +6,119 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 29] — 2026-05-11
+
+### ✨ Gebruikers verwijderen vanuit Admin panel
+
+Admin kan geregistreerde gebruikers permanent verwijderen via een nieuwe 🗑️ Verwijderen-knop in de gebruikerslijst.
+
+**Wat er verwijderd wordt (cascaderend):**
+1. Categorie-koppelingen (`trainer_categorieen`)
+2. Uitnodigingen aangemaakt door de gebruiker (`uitnodigingen`)
+3. Het profiel (`profielen`)
+4. Het Supabase Auth-account (`auth.users`)
+
+Data die gekoppeld is aan categorieën (atleten, wedstrijden, prestaties) blijft bewaard — die is eigendom van de categorie, niet van de gebruiker.
+
+**Beveiligingsregels:**
+- Zelfverwijdering is geblokkeerd (de knop verschijnt niet naast het eigen account)
+- Alleen admins kunnen de functie aanroepen (gecontroleerd in de database-functie)
+
+**Technische implementatie:**
+- Nieuwe database-functie `verwijder_gebruiker(p_gebruiker_id uuid)` met `SECURITY DEFINER` — verwijdert auth-account en data in de juiste volgorde
+- `laadAdminGebruikers()` uitgebreid: rode 🗑️ Verwijderen-knop toegevoegd naast elke gebruikersrij (behalve de eigen)
+- Nieuwe functie `verwijderGebruiker(gebruikerId, gebruikersnaam, email)` toegevoegd — toont bevestigingsdialoog en roept `sb.rpc("verwijder_gebruiker", ...)` aan
+
+**Supabase SQL uitgevoerd:**
+```sql
+CREATE OR REPLACE FUNCTION verwijder_gebruiker(p_gebruiker_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profielen WHERE id = auth.uid() AND rol = 'admin') THEN
+    RAISE EXCEPTION 'Geen toegang: alleen admins mogen gebruikers verwijderen';
+  END IF;
+  IF p_gebruiker_id = auth.uid() THEN
+    RAISE EXCEPTION 'Je kunt jezelf niet verwijderen';
+  END IF;
+  DELETE FROM trainer_categorieen WHERE trainer_id = p_gebruiker_id;
+  DELETE FROM uitnodigingen WHERE aangemaakt_door = p_gebruiker_id;
+  DELETE FROM profielen WHERE id = p_gebruiker_id;
+  DELETE FROM auth.users WHERE id = p_gebruiker_id;
+END;
+$$;
+```
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Supabase: nieuwe database-functie `verwijder_gebruiker` aangemaakt.
+
+---
+
+## [mei 2026 — patch 28] — 2026-05-11
+
+### ✨ Uitnodigingsbeheer verbeterd + welkomstmail + bugfix registratie
+
+**Wijziging 1 — Bugfix: uitnodiging werd niet als "gebruikt" gemarkeerd na registratie**
+
+Na een succesvolle registratie bleef de uitnodiging in de database op `gebruikt = false` staan. Oorzaak: de Supabase RLS-policy op de `uitnodigingen` tabel stond schrijven niet toe voor een gebruiker zonder actieve sessie. Direct na `signUp()` bestaat er nog geen sessie, waardoor de `update` stilzwijgend werd geweigerd.
+
+**Oplossing:**
+- Nieuwe database-functie `markeer_uitnodiging_gebruikt(p_token text)` aangemaakt met `SECURITY DEFINER` — deze omzeilt RLS en werkt ook zonder actieve sessie
+- Aanroep in `index.html` gewijzigd van directe `.update()` naar `sb.rpc("markeer_uitnodiging_gebruikt", { p_token: token })`
+
+**Supabase SQL uitgevoerd:**
+```sql
+CREATE OR REPLACE FUNCTION markeer_uitnodiging_gebruikt(p_token text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  UPDATE uitnodigingen SET gebruikt = true
+  WHERE token = p_token AND gebruikt = false AND vervalt > now();
+END;
+$$;
+```
+
+---
+
+**Wijziging 2 — Uitnodigingsbeheer: actief vs. geschiedenis**
+
+Het uitnodigingenblok in de admin-tab toont nu alleen nog **actieve** uitnodigingen (niet gebruikt, niet verlopen). Gebruikte en verlopen uitnodigingen verschijnen in een aparte **Geschiedenis**-sectie eronder, iets gedimd weergegeven. De Geschiedenis-sectie is automatisch verborgen als er geen historische uitnodigingen zijn.
+
+**Wijzigingen in `app.html`:**
+- `laadAdminUitnodigingen()` herschreven: uitnodigingen worden gesplitst in `actief` en `geschiedenis`
+- Nieuw DOM-element `#uitnodigingen-geschiedenis-wrapper` met `#uitnodigingen-geschiedenis` toegevoegd in de admin HTML
+
+---
+
+**Wijziging 3 — Welkomstmail na registratie**
+
+Na een succesvolle registratie ontvangt de nieuwe gebruiker automatisch een welkomstmail met een directe link naar de app.
+
+**Wijzigingen:**
+- `index.html`: na succesvolle registratie wordt een `fetch` gedaan naar de Cloudflare Worker met `{ email, link: appLink, type: "welkom" }`
+- Cloudflare Worker (`sprint-uitnodiging`) uitgebreid: het nieuwe veld `type` bepaalt welke e-mailtekst verstuurd wordt:
+  - `type: "uitnodiging"` → uitnodigingsmail (bestaande tekst, ongewijzigd)
+  - `type: "welkom"` → nieuwe welkomstmail met "Account aangemaakt"-tekst en directe app-link
+- `app.html`: `type: "uitnodiging"` toegevoegd aan de fetch bij het versturen van nieuwe uitnodigingen (was al aanwezig in de geüploade versie)
+
+---
+
+**Wijziging 4 — RLS-policy: admin ziet alle profielen**
+
+De admin-tab toonde alleen het eigen profiel in de "Geregistreerde gebruikers"-lijst. Oorzaak: de bestaande RLS-policy `eigen profiel lezen` (SELECT) gaf elke gebruiker alleen zijn eigen rij terug.
+
+**Oplossing:** nieuwe policy toegevoegd via Supabase SQL Editor:
+```sql
+CREATE POLICY "admin_leest_alle_profielen"
+ON profielen FOR SELECT TO authenticated
+USING (true);
+```
+Alle ingelogde gebruikers kunnen nu alle profielen lezen. Dit is veilig omdat de `profielen` tabel geen gevoelige gegevens bevat (alleen gebruikersnaam, e-mail, rol).
+
+**Bestanden gewijzigd:** `app.html`, `index.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Cloudflare Worker `sprint-uitnodiging` bijgewerkt en opnieuw deployed.
+Supabase: nieuwe RPC-functie en nieuwe RLS-policy aangemaakt.
+
+---
+
 ## [mei 2026 — patch 27] — 2026-05-10
 
 ### ⚡ 3-uurs-regel middenafstand + fix PDF-import 300m horden

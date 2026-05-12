@@ -341,26 +341,31 @@ async function login() {
   const ww    = document.getElementById("login-ww").value;
   if (!email || !ww) { toonFout("login-fout", "Vul e-mail en wachtwoord in."); return; }
   bezig("login-btn", true);
-  const { error } = await sb.auth.signInWithPassword({ email, password: ww });
-  bezig("login-btn", false);
-  if (error) { toonFout("login-fout", "Inloggen mislukt: controleer je e-mail en wachtwoord."); return; }
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: ww });
+    if (error) { toonFout("login-fout", "Inloggen mislukt: controleer je e-mail en wachtwoord."); return; }
 
-  // Haal alle aangemelde factoren op
-  const { data: factors } = await sb.auth.mfa.listFactors();
-  const totp = factors?.totp?.[0];
+    // Haal alle aangemelde factoren op
+    const { data: factors } = await sb.auth.mfa.listFactors();
+    const totp = factors?.totp?.[0];
 
-  // Geen 2FA factor aangemeld → verplicht setup starten
-  if (!totp) {
-    await start2FASetup();
-    return;
+    // Geen 2FA factor aangemeld → verplicht setup starten
+    if (!totp) {
+      await start2FASetup();
+      return;
+    }
+
+    // Wel een factor maar nog niet geverifieerd in deze sessie
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.nextLevel === "aal2" && aal?.nextLevel !== aal?.currentLevel) {
+      totpFactorId = totp.id; toonView("view-2fa"); document.getElementById("totp-code").focus(); return;
+    }
+    window.location.href = "app.html";
+  } catch (e) {
+    toonFout("login-fout", "Er is iets misgegaan. Probeer het opnieuw.");
+  } finally {
+    bezig("login-btn", false);
   }
-
-  // Wel een factor maar nog niet geverifieerd in deze sessie
-  const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal?.nextLevel === "aal2" && aal?.nextLevel !== aal?.currentLevel) {
-    totpFactorId = totp.id; toonView("view-2fa"); document.getElementById("totp-code").focus(); return;
-  }
-  window.location.href = "app.html";
 }
 
 // ── 2FA verificatie ───────────────────────────────────────────
@@ -410,7 +415,7 @@ async function registreer() {
   }
 
   // Registreer
-  const { data: signUpData, error } = await sb.auth.signUp({
+  const { error } = await sb.auth.signUp({
     email, password: ww,
     options: { data: { gebruikersnaam: naam, rol: "trainer" } }
   });
@@ -422,28 +427,23 @@ async function registreer() {
     return;
   }
 
-  // Haal de nieuwe gebruiker op uit de signUp response
-  const nieuweUser = signUpData?.user;
-  if (!nieuweUser) {
-    bezig("reg-btn", false);
-    toonFout("reg-fout", "Registratie mislukt: geen gebruiker ontvangen. Probeer opnieuw.");
-    return;
-  }
-
   // Markeer uitnodiging als gebruikt
   await sb.from("uitnodigingen").update({ gebruikt: true }).eq("token", token);
 
   // Koppel trainer automatisch aan de categorie van de uitnodiging
   try {
-    await sb.rpc("koppel_trainer_aan_uitnodiging_categorie", {
-      p_trainer_id: nieuweUser.id,
-      p_token:      token
-    });
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+      await sb.rpc("koppel_trainer_aan_uitnodiging_categorie", {
+        p_trainer_id: user.id,
+        p_token:      token
+      });
+    }
   } catch(e) { console.warn("Categorie koppeling mislukt:", e.message); }
 
   bezig("reg-btn", false);
 
-  // Start 2FA setup — sessie is nu direct beschikbaar (email confirm staat uit)
+  // Start 2FA setup
   await start2FASetup();
 }
 

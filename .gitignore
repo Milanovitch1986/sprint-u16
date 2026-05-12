@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+.claude/
+*.xlsx
+~$*
+github-recovery-codes.txt
+*.log
+.env
+.env.*

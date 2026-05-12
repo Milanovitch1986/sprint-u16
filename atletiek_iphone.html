@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SPRINT U16">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.json">
+<!-- Apple touch icon (gegenereerd via canvas) -->
+<link rel="apple-touch-icon" id="apple-icon" href="">
+<title>SPRINT U16</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --zwart:#111;--geel:#F5D000;--geel-licht:#FFFBE6;
+  --wit:#fff;--grijs:#F4F4F2;--grijs-mid:#DDDDD8;--grijs-dark:#777773;
+  --rood:#C0392B;--rood-licht:#FDECEA;--groen:#1B7A3E;--groen-licht:#E6F4EC;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --tab-h:64px;
+}
+html,body{height:100%;overflow:hidden;background:var(--grijs);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;color:var(--zwart)}
+
+/* ── HEADER ── */
+.header{
+  background:var(--zwart);
+  padding:calc(var(--safe-top) + 14px) 16px 12px;
+  display:flex;align-items:center;gap:12px;
+  position:fixed;top:0;left:0;right:0;z-index:100;
+}
+.logo{width:36px;height:36px;background:var(--geel);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:var(--zwart);flex-shrink:0}
+.header-text h1{font-size:16px;font-weight:700;color:var(--wit)}
+.header-text p{font-size:11px;color:#888}
+.header-save{margin-left:auto;background:var(--geel);color:var(--zwart);border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.header-accent{height:3px;background:var(--geel);position:fixed;top:calc(var(--safe-top) + 62px);left:0;right:0;z-index:100}
+
+/* ── CONTENT AREA ── */
+.content{
+  position:fixed;
+  top:calc(var(--safe-top) + 65px);
+  bottom:calc(var(--tab-h) + var(--safe-bot));
+  left:0;right:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:16px 16px 8px;
+}
+
+/* ── BOTTOM TAB BAR ── */
+.tabbar{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(var(--tab-h) + var(--safe-bot));
+  background:var(--zwart);
+  display:flex;align-items:flex-start;
+  padding-top:8px;
+  border-top:1px solid #222;
+  z-index:100;
+}
+.tabbar-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  border:none;background:transparent;cursor:pointer;padding:4px 0;
+  color:#666;font-size:10px;font-weight:500;
+  transition:color .15s;
+}
+.tabbar-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar-btn.active{color:var(--geel)}
+
+/* ── CARDS ── */
+.card{background:var(--wit);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card-title{font-size:11px;font-weight:600;color:var(--grijs-dark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+
+/* ── FORMS ── */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.lbl{font-size:12px;font-weight:600;color:var(--grijs-dark);text-transform:uppercase;letter-spacing:.04em}
+input,select{
+  font-size:16px;/* 16px voorkomt zoom op iOS */
+  padding:11px 13px;border:1.5px solid var(--grijs-mid);border-radius:10px;
+  background:var(--wit);color:var(--zwart);font-family:inherit;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,select:focus{outline:none;border-color:var(--geel)}
+
+/* ── BUTTONS ── */
+.btn{font-size:15px;cursor:pointer;padding:12px 18px;border:1.5px solid var(--grijs-mid);border-radius:10px;background:var(--wit);color:var(--zwart);font-family:inherit;font-weight:500;width:100%;text-align:center;display:block}
+.btn+.btn{margin-top:8px}
+.btn-primary{background:var(--geel);color:var(--zwart);border-color:var(--geel);font-weight:700}
+.btn-dark{background:var(--zwart);color:var(--wit);border-color:var(--zwart);font-weight:700}
+.btn-sm{font-size:13px;padding:7px 12px;width:auto;display:inline-block}
+.btn-danger{color:var(--rood);border-color:transparent;background:transparent;width:auto}
+
+/* ── LISTS ── */
+.list-item{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--grijs);gap:10px}
+.list-item:last-child{border-bottom:none}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--geel-licht);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--zwart);flex-shrink:0}
+.list-main{flex:1;min-width:0}
+.list-main strong{font-size:14px;display:block}
+.list-sub{font-size:12px;color:var(--grijs-dark);margin-top:1px}
+
+/* ── BADGES ── */
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;display:inline-block}
+.badge-geel{background:var(--geel-licht);color:#7A6800}
+.badge-groen{background:var(--groen-licht);color:var(--groen)}
+.badge-grijs{background:#EFEFEF;color:var(--zwart)}
+.badge-rood{background:var(--rood-licht);color:var(--rood)}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.metric{background:var(--wit);border-radius:12px;padding:12px 10px;text-align:center;border-top:3px solid var(--geel)}
+.metric-val{font-size:22px;font-weight:700}
+.metric-lbl{font-size:10px;color:var(--grijs-dark);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+
+/* ── ALERTS ── */
+.alert{border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.alert-info{background:#EFEFEF;color:var(--zwart)}
+.alert-warn{background:var(--geel-licht);border:1px solid #F5C518;color:#7D5A00}
+
+/* ── WEDSTRIJD CHECKBOXES ── */
+.prog-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0}
+.prog-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--grijs-mid);border-radius:10px;background:var(--wit);cursor:pointer}
+.prog-check.aan{border-color:var(--geel);background:var(--geel-licht)}
+.prog-check input{width:18px;height:18px;accent-color:var(--zwart);flex-shrink:0}
+.prog-check span{font-size:13px;line-height:1.3}
+.prog-check.aan span{font-weight:600}
+.cat-head{font-size:11px;font-weight:700;color:var(--zwart);text-transform:uppercase;letter-spacing:.08em;padding:14px 0 6px;border-bottom:2px solid var(--geel);margin-bottom:10px}
+
+/* ── OPSTELLING ── */
+.kand-wrap{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.kand-btn{font-size:13px;padding:7px 12px;border:1.5px solid var(--grijs-mid);border-radius:8px;background:var(--wit);color:var(--zwart);cursor:pointer}
+.kand-btn.actief{background:var(--geel-licht);border-color:var(--geel);font-weight:600}
+.kand-btn:disabled{opacity:.35;cursor:not-allowed}
+.disc-row{padding:10px 0;border-bottom:1px solid var(--grijs)}
+.disc-row:last-child{border-bottom:none}
+.disc-naam{font-weight:600;font-size:14px}
+.disc-sub{font-size:11px;color:var(--grijs-dark);margin-top:1px}
+.ingepland-item{font-size:12px;padding:2px 0;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+
+/* ── SWITCH ── */
+.switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:var(--grijs-mid);border-radius:22px;transition:.2s}
+.slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--rood)}
+input:checked+.slider:before{transform:translateX(18px)}
+
+/* ── RESULT ROW ── */
+.res-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid var(--grijs);gap:8px}
+.res-row:last-child{border-bottom:none}
+.res-disc{flex:1;font-size:13px;font-weight:500}
+.res-prest{font-size:13px;color:var(--grijs-dark);min-width:60px;text-align:right}
+.res-pnt{font-size:14px;font-weight:700;min-width:36px;text-align:right}
+.geblesseerd .res-disc,.geblesseerd .res-prest,.geblesseerd .res-pnt{opacity:.4;text-decoration:line-through}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:3rem 1rem;color:var(--grijs-dark);font-size:14px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(var(--tab-h) + var(--safe-bot) + 12px);left:50%;transform:translateX(-50%);background:var(--zwart);color:var(--geel);padding:9px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">S</div>
+  <div class="header-text"><h1>U16 Competitietool</h1><p>AV SPRINT Breda</p></div>
+  <button class="header-save" onclick="slaOp()">Opslaan</button>
+</div>
+<div class="header-accent"></div>
+
+<div class="content" id="content"></div>
+
+<div class="tabbar">
+  <button class="tabbar-btn active" onclick="showTab(0)" id="tb0">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Atleten
+  </button>
+  <button class="tabbar-btn" onclick="showTab(1)" id="tb1">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Resultaten
+  </button>
+  <button class="tabbar-btn" onclick="showTab(2)" id="tb2">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Wedstrijd
+  </button>
+  <button class="tabbar-btn" onclick="showTab(3)" id="tb3">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Opstelling
+  </button>
+</div>
+<div id="toast"></div>
+
+<script>
+const DISC=[
+  {id:"60m",   naam:"60m",            type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"80m",   naam:"80m",            type:"loop",     cat:"Sprint",   prestType:"tijd",geslacht:"V"},
+  {id:"100m",  naam:"100m",           type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"200m",  naam:"200m *",         type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"300m",  naam:"300m",           type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"400m",  naam:"400m *",         type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"80mH",  naam:"80m horden",     type:"loop",     cat:"Sprint",   prestType:"tijd",geslacht:"V"},
+  {id:"100mH", naam:"100m horden",    type:"loop",     cat:"Sprint",   prestType:"tijd",geslacht:"M"},
+  {id:"300mH", naam:"300m horden",    type:"loop",     cat:"Sprint",   prestType:"tijd"},
+  {id:"800m",  naam:"800m",           type:"loop",     cat:"Midden",   prestType:"tijd"},
+  {id:"1500m", naam:"1500m",          type:"loop",     cat:"Midden",   prestType:"tijd"},
+  {id:"ver",   naam:"Verspringen",    type:"tech",     cat:"Springen", prestType:"afstand"},
+  {id:"hoog",  naam:"Hoogspringen",   type:"tech",     cat:"Springen", prestType:"afstand"},
+  {id:"kogel", naam:"Kogelstoten",    type:"tech",     cat:"Werpen",   prestType:"afstand"},
+  {id:"discus",naam:"Discuswerpen",   type:"tech",     cat:"Werpen",   prestType:"afstand"},
+  {id:"speer", naam:"Speerwerpen",    type:"tech",     cat:"Werpen",   prestType:"afstand"},
+  {id:"4x100M",naam:"4×100m ♂",       type:"estafette",cat:"Estafette",prestType:"tijd",geslacht:"M"},
+  {id:"4x80V", naam:"4×80m ♀",        type:"estafette",cat:"Estafette",prestType:"tijd",geslacht:"V"},
+  {id:"zwM",   naam:"Zweedse est. ♂", type:"estafette",cat:"Estafette",prestType:"tijd",geslacht:"M"},
+  {id:"zwV",   naam:"Zweedse est. ♀", type:"estafette",cat:"Estafette",prestType:"tijd",geslacht:"V"},
+];
+const CATS=["Sprint","Midden","Springen","Werpen","Estafette"];
+
+const NAU_LOOP={
+  "60m":{A:15365.0,B:1158},"80m":{A:19933.0,B:1193},"100m":{A:24450.0,B:1212},
+  "300m":{A:78286.0,B:1204},"800m":{A:216604.8,B:884.5},"1500m":{A:425682.0,B:788.5},
+  "80mH":{A:18100.0,B:804.5},"100mH":{A:21800.0,B:727},"300mH":{A:70800.0,B:872.5},
+  "4x100M":{A:95150.0,B:1189.5},"4x80V":{A:77325.0,B:1168},
+  "zwM":{A:247800.0,B:1126},"zwV":{A:261981.5,B:865},
+};
+NAU_LOOP["200m"]={A:78286.0,B:1204};
+NAU_LOOP["400m"]={A:111960.0,B:1433.5};
+
+const NAU_SPRING={
+  "ver":{A:887.99,B:1364.5,drempel:4.41,Alo:200,Blo:1.91,Clo:0.5},
+  "hoog":{A:1977.53,B:1798.5,drempel:1.35,Alo:733.33333,Blo:0.67,Clo:0.7},
+};
+const NAU_WERP={"kogel":{A:303.73,B:437.5},"discus":{A:166.79,B:438.5},"speer":{A:170.39,B:437.5}};
+
+function berekenPunten(dId,w){
+  if(!w||isNaN(w)||w<=0) return null;
+  if(NAU_LOOP[dId]){const{A,B}=NAU_LOOP[dId];return Math.max(0,Math.trunc(A/w-B));}
+  if(NAU_SPRING[dId]){const s=NAU_SPRING[dId];return w<=s.drempel?Math.max(0,Math.trunc((w-s.Blo)*s.Alo+s.Clo)):Math.max(0,Math.trunc(s.A*Math.sqrt(w)-s.B));}
+  if(NAU_WERP[dId]){const{A,B}=NAU_WERP[dId];return Math.max(0,Math.trunc(A*Math.sqrt(w)-B));}
+  return null;
+}
+function parseTijd(s){if(!s)return null;s=s.trim().replace(",",".");if(s.includes(":")){const[m,t]=s.split(":");return parseFloat(m)*60+parseFloat(t);}return parseFloat(s);}
+function formatW(dId,w){if(w===null||w===undefined)return"–";const d=DISC.find(x=>x.id===dId);if(d?.prestType==="tijd"){if(w>=60){const m=Math.floor(w/60),s=(w%60).toFixed(2).padStart(5,"0");return`${m}:${s}`;}return w.toFixed(2)+"s";}return w.toFixed(2)+"m";}
+function niveauBadge(p){if(p>=900)return`<span class="badge badge-geel">Nationaal</span>`;if(p>=700)return`<span class="badge badge-groen">Provinciaal</span>`;if(p>=500)return`<span class="badge badge-grijs">Regionaal</span>`;if(p>=300)return`<span class="badge" style="background:#FFF8CC;color:#7A6800">Lokaal</span>`;return`<span class="badge" style="background:var(--grijs);color:var(--grijs-dark)">Begin</span>`;}
+function maxVoorDisc(d){return d.type==="estafette"?4:d.type==="loop"?3:2;}
+function puntentellers(d){return d.type==="tech"?1:d.type==="loop"?2:4;}
+function isGeb(aId,dId){return!!(blessures[aId]&&blessures[aId][dId]);}
+function telNietEst(aId){return Object.entries(opstelling).filter(([dId,l])=>{const d=DISC.find(x=>x.id===dId);return d?.type!=="estafette"&&(l||[]).some(k=>k.atleetId===aId);}).length;}
+function telEst(aId){return Object.entries(opstelling).filter(([dId,l])=>{const d=DISC.find(x=>x.id===dId);return d?.type==="estafette"&&(l||[]).some(k=>k.atleetId===aId);}).length;}
+function magToe(aId,dId){const d=DISC.find(x=>x.id===dId);if(!d)return false;return d.type==="estafette"?telEst(aId)<1:telNietEst(aId)<2;}
+function kandidaten(dId){if(!prog.has(dId))return[];const d=DISC.find(x=>x.id===dId);return atleten.filter(a=>{if(d?.geslacht&&a.geslacht!==d.geslacht)return false;if(!resultaten[a.id]?.[dId])return false;if(isGeb(a.id,dId))return false;return true;}).map(a=>({atleetId:a.id,...resultaten[a.id][dId]})).sort((a,b)=>(b.punten||0)-(a.punten||0));}
+function telPuntenDisc(dId){const d=DISC.find(x=>x.id===dId);if(!d)return 0;const max=puntentellers(d);return(opstelling[dId]||[]).slice().sort((a,b)=>(b.punten||0)-(a.punten||0)).slice(0,max).reduce((s,k)=>s+(k.punten||0),0);}
+
+let atleten=[],resultaten={},opstelling={},blessures={},prog=new Set(),wedstrijdNaam="",activeTab=0;
+let _rAtleet="",_rDisc="100m";
+
+function showTab(i){
+  activeTab=i;
+  document.querySelectorAll(".tabbar-btn").forEach((b,j)=>b.classList.toggle("active",i===j));
+  render();
+  document.getElementById("content").scrollTop=0;
+}
+function render(){
+  const el=document.getElementById("content");
+  if(activeTab===0)el.innerHTML=renderAtleten();
+  else if(activeTab===1)el.innerHTML=renderResultaten();
+  else if(activeTab===2)el.innerHTML=renderWedstrijd();
+  else el.innerHTML=renderOpstelling();
+}
+
+function renderAtleten(){
+  return`
+  <div class="card">
+    <div class="card-title">Atleet toevoegen</div>
+    <div class="field"><div class="lbl">Naam</div><input id="a-naam" placeholder="Voor- en achternaam" autocomplete="name" onkeydown="if(event.key==='Enter')addAtleet()"></div>
+    <div class="field"><div class="lbl">Geboortejaar</div>
+      <select id="a-jaar"><option value="">— Kies —</option><option value="2011">2011</option><option value="2012">2012</option></select></div>
+    <div class="field"><div class="lbl">Geslacht</div>
+      <select id="a-gesl"><option value="M">Jongen (M)</option><option value="V">Meisje (V)</option></select></div>
+    <button class="btn btn-primary" onclick="addAtleet()" style="margin-top:4px">+ Toevoegen</button>
+  </div>
+  ${atleten.length===0?'<div class="empty">Nog geen atleten toegevoegd.</div>':
+  `<div class="card">
+    <div class="card-title">Atletenlijst (${atleten.length})</div>
+    ${atleten.map(a=>{
+      const n=Object.keys(resultaten[a.id]||{}).length;
+      return`<div class="list-item">
+        <div class="avatar">${a.naam.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div class="list-main">
+          <strong>${a.naam}</strong>
+          <div class="list-sub">${a.jaar} · ${a.geslacht==='M'?'Jongen':'Meisje'} · ${n} onderdeel${n!==1?'en':''}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="delAtleet('${a.id}')">✕</button>
+      </div>`;}).join('')}
+  </div>`}`;
+}
+
+function addAtleet(){
+  const naam=document.getElementById("a-naam").value.trim();
+  if(!naam)return;
+  atleten.push({id:Date.now().toString(),naam,jaar:document.getElementById("a-jaar").value,geslacht:document.getElementById("a-gesl").value});
+  render();autoSave();
+}
+function delAtleet(id){
+  atleten=atleten.filter(a=>a.id!==id);
+  delete resultaten[id];delete blessures[id];
+  for(const dId in opstelling)opstelling[dId]=(opstelling[dId]||[]).filter(k=>k.atleetId!==id);
+  render();autoSave();
+}
+
+function renderResultaten(){
+  if(!atleten.length)return'<div class="empty">Voeg eerst atleten toe.</div>';
+  const selA=atleten.find(a=>a.id===_rAtleet);
+  const discOpts=DISC.filter(d=>!d.geslacht||(selA&&d.geslacht===selA.geslacht)||!selA);
+  const d=DISC.find(x=>x.id===_rDisc)||DISC[0];
+  return`
+  <div class="card">
+    <div class="card-title">Resultaat invoeren</div>
+    <div class="field"><div class="lbl">Atleet</div>
+      <select id="r-atleet" onchange="_rAtleet=this.value;render()">
+        <option value="">— Kies atleet —</option>
+        ${atleten.map(a=>`<option value="${a.id}"${a.id===_rAtleet?" selected":""}>${a.naam} (${a.geslacht})</option>`).join("")}
+      </select></div>
+    <div class="field"><div class="lbl">Discipline</div>
+      <select id="r-disc" onchange="_rDisc=this.value;render()">
+        ${CATS.map(cat=>`<optgroup label="${cat}">${discOpts.filter(x=>x.cat===cat).map(x=>`<option value="${x.id}"${x.id===_rDisc?" selected":""}>${x.naam}</option>`).join("")}</optgroup>`).join("")}
+      </select></div>
+    <div class="field"><div class="lbl">${d.prestType==="tijd"?"Tijd (s of m:ss.ss)":"Afstand (m)"}</div>
+      <input id="r-waarde" inputmode="decimal" placeholder="${d.prestType==="tijd"?"12.45":"5.80"}" onkeydown="if(event.key==='Enter')saveResult()"></div>
+    <button class="btn btn-primary" onclick="saveResult()">Opslaan</button>
+  </div>
+  ${atleten.map(a=>{
+    const res=resultaten[a.id];
+    if(!res||!Object.keys(res).length)return`<div class="card"><div class="list-item" style="padding:6px 0"><div class="avatar">${a.naam.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div><div class="list-main"><strong>${a.naam}</strong><div class="list-sub">Nog geen resultaten</div></div></div></div>`;
+    const tot=Object.entries(res).filter(([dId])=>!isGeb(a.id,dId)).reduce((s,[,r])=>s+(r.punten||0),0);
+    return`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong style="font-size:15px">${a.naam}</strong>
+        <span style="font-size:18px;font-weight:700">${tot} <span style="font-size:11px;font-weight:400;color:var(--grijs-dark)">pnt</span></span>
+      </div>
+      ${Object.entries(res).map(([dId,r])=>{
+        const disc=DISC.find(x=>x.id===dId);
+        const geb=isGeb(a.id,dId);
+        return`<div class="res-row${geb?' geblesseerd':''}">
+          <div class="res-disc">${disc?.naam||dId}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            ${r.punten!=null?niveauBadge(r.punten):''}
+            <div class="res-prest">${formatW(dId,r.waarde)}</div>
+            <div class="res-pnt">${r.punten??'–'}</div>
+            <label class="switch"><input type="checkbox" ${geb?"checked":""} onchange="toggleGeb('${a.id}','${dId}',this.checked)"><span class="slider"></span></label>
+            <button class="btn btn-danger" style="padding:4px 8px;font-size:13px" onclick="delResult('${a.id}','${dId}')">✕</button>
+          </div>
+        </div>`;}).join('')}
+    </div>`;
+  }).join('')}`;
+}
+
+function saveResult(){
+  const aId=document.getElementById("r-atleet")?.value;
+  const dId=document.getElementById("r-disc")?.value;
+  const raw=document.getElementById("r-waarde")?.value?.trim();
+  if(!aId||!raw)return;
+  const a=atleten.find(x=>x.id===aId);
+  const d=DISC.find(x=>x.id===dId);
+  if(d?.geslacht&&a.geslacht!==d.geslacht){alert(`Alleen voor ${d.geslacht==='M'?'jongens':'meisjes'}.`);return;}
+  const w=d?.prestType==="tijd"?parseTijd(raw):parseFloat(raw.replace(",","."));
+  if(isNaN(w)||w<=0)return;
+  if(!resultaten[aId])resultaten[aId]={};
+  resultaten[aId][dId]={waarde:w,punten:berekenPunten(dId,w),invoer:raw};
+  _rAtleet=aId;
+  document.getElementById("r-waarde").value="";
+  render();autoSave();
+}
+function delResult(aId,dId){if(resultaten[aId]){delete resultaten[aId][dId];render();autoSave();}}
+function toggleGeb(aId,dId,aan){if(!blessures[aId])blessures[aId]={};blessures[aId][dId]=aan;if(aan&&opstelling[dId])opstelling[dId]=opstelling[dId].filter(k=>k.atleetId!==aId);render();autoSave();}
+
+function renderWedstrijd(){
+  return`
+  <div class="card">
+    <div class="card-title">Wedstrijdnaam</div>
+    <div class="field"><input id="w-naam" placeholder="bijv. Voorjaarscompetitie ronde 1" value="${wedstrijdNaam.replace(/"/g,'&quot;')}" oninput="wedstrijdNaam=this.value"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Onderdelen op het programma — ${prog.size} geselecteerd</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-primary btn-sm" onclick="alleAan()">Alles aan</button>
+      <button class="btn btn-sm" onclick="alleUit()">Alles uit</button>
+    </div>
+    ${CATS.map(cat=>{
+      const discs=DISC.filter(d=>d.cat===cat);
+      return`<div class="cat-head">${cat}</div>
+      <div class="prog-grid" style="margin-bottom:12px">
+        ${discs.map(d=>{
+          const aan=prog.has(d.id);
+          const heeftData=atleten.some(a=>resultaten[a.id]?.[d.id]&&(!d.geslacht||a.geslacht===d.geslacht));
+          return`<label class="prog-check${aan?' aan':''}">
+            <input type="checkbox" ${aan?'checked':''} onchange="toggleDisc('${d.id}',this.checked)">
+            <span>${d.naam}${heeftData?' ✓':''}</span>
+          </label>`;}).join('')}
+      </div>`;}).join('')}
+  </div>`;
+}
+function toggleDisc(id,aan){if(aan)prog.add(id);else{prog.delete(id);opstelling[id]=[];}render();autoSave();}
+function alleAan(){DISC.forEach(d=>prog.add(d.id));render();autoSave();}
+function alleUit(){prog.clear();opstelling={};render();autoSave();}
+
+function renderOpstelling(){
+  const discs=DISC.filter(d=>prog.has(d.id)&&(kandidaten(d.id).length>0||(opstelling[d.id]||[]).length>0));
+  if(!discs.length)return'<div class="empty">Selecteer onderdelen op het tabblad Wedstrijd en voer resultaten in.</div>';
+  const totPunten=DISC.filter(d=>prog.has(d.id)).reduce((s,d)=>s+telPuntenDisc(d.id),0);
+  const totAtleten=new Set(Object.values(opstelling).flat().map(k=>k?.atleetId).filter(Boolean)).size;
+  return`
+  <div class="metrics">
+    <div class="metric"><div class="metric-val">${totPunten}</div><div class="metric-lbl">Punten</div></div>
+    <div class="metric"><div class="metric-val">${totAtleten}</div><div class="metric-lbl">Atleten</div></div>
+    <div class="metric"><div class="metric-val">${Object.values(opstelling).filter(v=>v?.length).length}</div><div class="metric-lbl">Bezet</div></div>
+  </div>
+  <button class="btn btn-primary" onclick="autoOpst()" style="margin-bottom:8px">Beste opstelling genereren</button>
+  <button class="btn" onclick="clrOpst()" style="margin-bottom:14px">Wis opstelling</button>
+  ${CATS.map(cat=>{
+    const discsInCat=discs.filter(d=>d.cat===cat);
+    if(!discsInCat.length)return'';
+    return`<div class="card">
+      <div class="cat-head">${cat}</div>
+      ${discsInCat.map(disc=>{
+        const kands=kandidaten(disc.id);
+        const inOpst=opstelling[disc.id]||[];
+        const maxD=maxVoorDisc(disc);
+        const pt=puntentellers(disc);
+        const gesorteerd=[...inOpst].sort((a,b)=>(b.punten||0)-(a.punten||0));
+        const discPunten=telPuntenDisc(disc.id);
+        return`<div class="disc-row">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div>
+              <div class="disc-naam">${disc.naam}</div>
+              <div class="disc-sub">max ${maxD} · beste ${pt} telt${pt===1?'':'en'}</div>
+            </div>
+            ${inOpst.length?`<strong style="font-size:16px">${discPunten} pnt</strong>`:''}
+          </div>
+          <div class="kand-wrap">
+            ${kands.map(k=>{
+              const a=atleten.find(x=>x.id===k.atleetId);
+              const actief=inOpst.some(x=>x.atleetId===k.atleetId);
+              const vol=!actief&&(inOpst.length>=maxD||!magToe(k.atleetId,disc.id));
+              return`<button class="kand-btn${actief?' actief':''}" ${vol?'disabled':''} onclick="toggleOpst('${disc.id}','${k.atleetId}')">
+                ${a?.naam} <span style="opacity:.6;font-size:11px">${k.punten}pnt</span>
+              </button>`;}).join('')}
+          </div>
+          ${gesorteerd.length?`<div>${gesorteerd.map((k,i)=>{
+            const a=atleten.find(x=>x.id===k.atleetId);
+            const telt=i<pt;
+            return`<div class="ingepland-item">
+              <span style="font-weight:700;color:${telt?'var(--zwart)':'var(--grijs-dark)'}">${i+1}.</span>
+              <span style="color:${telt?'var(--zwart)':'var(--grijs-dark)'}">${a?.naam} — ${formatW(disc.id,k.waarde)}</span>
+              ${telt?`<span style="font-size:10px;background:var(--geel);color:var(--zwart);padding:1px 6px;border-radius:4px;font-weight:700">pnt</span>`:''}
+              ${k.isSnelheidProxy?`<span style="font-size:10px;background:#EFEFEF;color:var(--grijs-dark);padding:1px 5px;border-radius:4px">sprint</span>`:''}
+            </div>`;}).join('')}</div>`:''
+          }
+        </div>`;}).join('')}
+    </div>`;}).join('')}`;
+}
+
+function clrOpst(){opstelling={};render();autoSave();}
+function toggleOpst(dId,aId){
+  const disc=DISC.find(x=>x.id===dId);
+  const k=kandidaten(dId).find(x=>x.atleetId===aId);
+  if(!k)return;
+  if(!opstelling[dId])opstelling[dId]=[];
+  const idx=opstelling[dId].findIndex(x=>x.atleetId===aId);
+  if(idx>=0)opstelling[dId].splice(idx,1);
+  else{if(opstelling[dId].length>=maxVoorDisc(disc)||!magToe(aId,dId))return;opstelling[dId].push(k);}
+  render();autoSave();
+}
+function autoOpst(){
+  opstelling={};
+  [...DISC].filter(d=>prog.has(d.id)&&d.type!=="estafette").sort((a,b)=>["tech","loop"].indexOf(a.type)-["tech","loop"].indexOf(b.type)).forEach(disc=>{
+    const kands=kandidaten(disc.id),max=maxVoorDisc(disc);opstelling[disc.id]=[];
+    for(const k of kands){if(opstelling[disc.id].length>=max)break;if(magToe(k.atleetId,disc.id))opstelling[disc.id].push(k);}
+  });
+  DISC.filter(d=>prog.has(d.id)&&d.type==="estafette").forEach(disc=>{
+    const sDiscs=disc.geslacht==="V"?["80m","100m","60m","200m"]:["100m","60m","200m"];
+    const lopers=atleten.filter(a=>{if(disc.geslacht&&a.geslacht!==disc.geslacht)return false;if(isGeb(a.id,disc.id))return false;return sDiscs.some(dId=>resultaten[a.id]?.[dId]);})
+      .map(a=>{let bp=0,bw=null;sDiscs.forEach(dId=>{const r=resultaten[a.id]?.[dId];if(r?.punten>bp){bp=r.punten;bw=r.waarde;}});return{atleetId:a.id,punten:bp,waarde:bw,isSnelheidProxy:true};})
+      .sort((a,b)=>b.punten-a.punten);
+    opstelling[disc.id]=[];
+    for(const k of lopers){if(opstelling[disc.id].length>=4)break;if(telEst(k.atleetId)<1)opstelling[disc.id].push(k);}
+  });
+  render();autoSave();
+}
+
+// ── OPSLAAN ──
+async function slaOp(){
+  const data=JSON.stringify({atleten,resultaten,blessures,opstelling,wedstrijdNaam,prog:Array.from(prog)});
+  try{await window.storage.set('sprint-u16-data',data);toonToast('✓ Opgeslagen');}
+  catch(e){toonToast('Opslaan mislukt');}
+}
+async function laadData(){
+  try{
+    const res=await window.storage.get('sprint-u16-data');
+    if(res?.value){const d=JSON.parse(res.value);atleten=d.atleten||[];resultaten=d.resultaten||{};blessures=d.blessures||{};opstelling=d.opstelling||{};wedstrijdNaam=d.wedstrijdNaam||'';prog=new Set(d.prog||DISC.map(x=>x.id));}
+    else DISC.forEach(d=>prog.add(d.id));
+  }catch(e){DISC.forEach(d=>prog.add(d.id));}
+  render();
+}
+function autoSave(){clearTimeout(window._st);window._st=setTimeout(slaOp,800);}
+function toonToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2000);}
+
+laadData();
+
+// ── PWA: SERVICE WORKER REGISTRATIE ──
+// Alleen registreren als de app op een echte server draait (niet als lokaal artifact)
+if('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claudeusercontent')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(r => console.log('SW geregistreerd:', r.scope))
+      .catch(e => console.log('SW fout:', e));
+  });
+}
+
+// ── GENEREER APP-ICOON VIA CANVAS (geen losse PNG nodig) ──
+function maakIcoon(size){
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  // Achtergrond zwart
+  ctx.fillStyle = '#111111';
+  ctx.fillRect(0, 0, size, size);
+  // Gele cirkel
+  const r = size * 0.38;
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, r, 0, Math.PI*2);
+  ctx.fillStyle = '#F5D000';
+  ctx.fill();
+  // S
+  ctx.fillStyle = '#111111';
+  ctx.font = `900 ${size*0.3}px -apple-system,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('S', size/2, size/2 + size*0.02);
+  return c.toDataURL('image/png');
+}
+
+// Stel apple-touch-icon in
+window.addEventListener('DOMContentLoaded', () => {
+  const icon = maakIcoon(180);
+  document.getElementById('apple-icon').href = icon;
+  // Genereer ook 192 en 512 voor manifest (via blob URL)
+  [192, 512].forEach(size => {
+    const dataUrl = maakIcoon(size);
+    fetch(dataUrl)
+      .then(r => r.blob())
+      .catch(() => {});
+  });
+});
+</script>
+</body>
+</html>

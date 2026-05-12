@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 mei 2026 (patch 27)*
+*AV Sprint Breda · Laatste update: 11 mei 2026 (patch 29)*
 
 ---
 
@@ -32,7 +32,7 @@
 | `programma` | Onderdelen per wedstrijd per geslacht |
 | `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
-| `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt) |
+| `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt, gebruikt) |
 
 **Belangrijk:** alle datatabellen gebruiken `categorie_id` als toegangssleutel — NIET `eigenaar_id`.
 Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieën.
@@ -40,6 +40,30 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Gebruikers verwijderen: SECURITY DEFINER RPC (patch 29, mei 2026)
+Auth-accounts kunnen alleen worden verwijderd via de Supabase Service Role — die sleutel mag nooit in de frontend. Oplossing: database-functie `verwijder_gebruiker(p_gebruiker_id uuid)` met `SECURITY DEFINER`. De functie controleert zelf of de aanroeper admin is en blokkeert zelfverwijdering. Volgorde van verwijdering: `trainer_categorieen` → `uitnodigingen` → `profielen` → `auth.users`. Data gekoppeld aan categorieën (atleten, wedstrijden, prestaties) blijft bewaard.
+
+### Uitnodiging markeren als gebruikt: SECURITY DEFINER RPC (patch 28, mei 2026)
+Direct na `signUp()` heeft de nieuwe gebruiker nog geen actieve Supabase-sessie. Een directe `.update()` op de `uitnodigingen` tabel werd dan geblokkeerd door RLS. Oplossing: database-functie `markeer_uitnodiging_gebruikt(p_token text)` met `SECURITY DEFINER` — die omzeilt RLS en werkt sessie-onafhankelijk. Aanroep via `sb.rpc("markeer_uitnodiging_gebruikt", { p_token: token })`.
+
+### Uitnodigingsbeheer: actief vs. geschiedenis (patch 28, mei 2026)
+`laadAdminUitnodigingen()` splitst uitnodigingen in twee groepen:
+- **Actief:** `!gebruikt && vervalt >= nu` — getoond in het hoofdblok met Kopiëren/Intrekken knoppen
+- **Geschiedenis:** `gebruikt || vervalt < nu` — getoond in een aparte sectie eronder, gedimd, met alleen een Verwijderen-knop voor verlopen-ongebruikte uitnodigingen
+De Geschiedenis-wrapper (`#uitnodigingen-geschiedenis-wrapper`) is standaard verborgen en verschijnt automatisch zodra er historische uitnodigingen zijn.
+
+### Welkomstmail via Cloudflare Worker (patch 28, mei 2026)
+De Cloudflare Worker `sprint-uitnodiging` ondersteunt nu twee e-mailtypes via het `type`-veld in de POST-body:
+- `type: "uitnodiging"` → uitnodigingsmail met registratielink (ongewijzigd)
+- `type: "welkom"` → welkomstmail met directe app-link, verstuurd vanuit `index.html` na succesvolle registratie
+
+Als `type` ontbreekt of onbekend is, valt de Worker terug op de uitnodigingstekst.
+
+### RLS profielen: admin leest alle profielen (patch 28, mei 2026)
+De policy `eigen profiel lezen` (SELECT) gaf elke gebruiker alleen zijn eigen rij terug, waardoor de admin-tab de gebruikerslijst niet kon vullen. Nieuwe policy `admin_leest_alle_profielen` (SELECT, `TO authenticated`, `USING (true)`) geeft alle ingelogde gebruikers leestoegang tot alle profielen. Dit is veilig: de tabel bevat geen gevoelige gegevens.
+
+> ⚠️ Let op: een eerdere poging met `EXISTS (SELECT 1 FROM profielen WHERE rol = 'admin')` veroorzaakte een oneindige recursie (infinite recursion detected in policy). De oplossing `USING (true)` met `TO authenticated` vermijdt dit.
 
 ### 3-uurs-regel middenafstand (patch 27, mei 2026)
 Een atleet op de 800m of 1500m mag nooit automatisch ook worden opgesteld op de 300m of 300m horden (en omgekeerd) als de starttijden minder dan 180 minuten uit elkaar liggen.
@@ -139,6 +163,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 - **2FA verplicht:** TOTP via Google Authenticator, Authy e.d.
 - **RLS:** elke tabel heeft Row Level Security
 - **Auth guard:** app.html stuurt door naar index.html zonder geldige sessie
+- **SECURITY DEFINER functies:** `markeer_uitnodiging_gebruikt` en `koppel_trainer_aan_uitnodiging_categorie` werken sessie-onafhankelijk voor acties direct na registratie
 
 ---
 
@@ -147,7 +172,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | Service | Details |
 |---------|---------|
 | Atletiek.nu API | Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev` |
-| E-mail uitnodigingen | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo (API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker) |
+| E-mail (uitnodiging + welkom) | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo. POST-body: `{ email, link, type }` waarbij `type` = `"uitnodiging"` of `"welkom"`. API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker |
 | World Athletics PR | `worldathletics.nimarion.de` |
 | NAU scoretabellen | Ingebouwd (U14/U16, feb. 2022) |
 
@@ -211,10 +236,13 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 
 ---
 
-## ✅ Geteste features (april 2026)
+## ✅ Geteste features (mei 2026, patch 28)
 
 Alle 24 features getest en werkend: login, auth guard, atleet CRUD,
 prestatie CRUD, wedstrijd CRUD, programma, beschikbaarheid, opstelling,
 zoekfunctie, Excel import, atletiek.nu koppeling, admin panel
 (uitnodigingen + gebruikers + categorieën + toegang per trainer),
 categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
+
+Nieuw getest (patch 28): uitnodiging correct als "gebruikt" gemarkeerd na registratie,
+uitnodigingen-geschiedenis sectie, welkomstmail na registratie, gebruikerslijst toont alle trainers.
