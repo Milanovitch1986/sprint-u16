@@ -6,6 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 30] — 2026-05-15
+
+### 📲 Opstelling delen via WhatsApp
+
+Trainers kunnen de opstelling nu direct als leesbare tekst versturen via WhatsApp.
+
+**Hoe het werkt:**
+- Nieuwe knop `📲 Delen via WhatsApp` in de Opstelling-tab, naast de bestaande knoppen
+- Klikt de trainer op de knop, dan opent WhatsApp automatisch met de opstelling als kant-en-klare tekst
+- De tekst toont: clubnaam, wedstrijdnaam, datum, locatie, geslacht, en per ploeg alle onderdelen met atleten en starttijden
+- Lege onderdelen (geen atleet ingevuld) worden overgeslagen
+- Werkt op iOS (WhatsApp-app opent direct), Android (idem) en desktop (WhatsApp Web)
+
+**Technische details:**
+- Nieuwe functie `deelViaWhatsApp()` in `app.html`
+- Gebruikt de huidige weergave (geslacht + ploegen zoals ingesteld)
+- Opent `https://wa.me/?text=...` via `window.open()` — universele WhatsApp deep link
+- Geen externe afhankelijkheden; alles draait in de browser
+
+---
+
 ## [mei 2026 — patch 29] — 2026-05-11
 
 ### ✨ Gebruikers verwijderen vanuit Admin panel

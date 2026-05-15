@@ -1184,6 +1184,7 @@
         <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
         <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
         <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
+        <button class="btn btn-ghost btn-sm" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
       </div>
 
       <div id="ploegen-container" style="padding-bottom: 32px;"></div>
@@ -5078,6 +5079,64 @@ async function printOpstelling() {
   win.document.close();
   win.focus();
   setTimeout(() => win.print(), 600);
+}
+
+// ── WhatsApp delen ────────────────────────────────────────────
+function deelViaWhatsApp() {
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
+  if (!programma.length) { toast("Geen programma geladen.", "err"); return; }
+
+  const geslachtLabel = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
+  const gCode         = actiefGeslacht === "V" ? "V" : "M";
+  const ploegNamen    = ["A","B","C"].slice(0, aantalPloegen);
+
+  // Header
+  let tekst = "";
+  tekst += "⚡ AV SPRINT BREDA — U16\n";
+  tekst += `📋 ${wedstrijd.naam}\n`;
+  if (wedstrijd.datum)   tekst += `📅 ${formatDate(wedstrijd.datum)}\n`;
+  if (wedstrijd.locatie) tekst += `📍 ${wedstrijd.locatie}\n`;
+  tekst += `👟 ${geslachtLabel}\n`;
+  tekst += "\n";
+
+  // Per ploeg een blok
+  ploegNamen.forEach(ploeg => {
+    const ploegNr  = { A: 1, B: 2, C: 3 }[ploeg] || 1;
+    const opst     = opstellingData[ploeg] || {};
+    const teamNaam = `🏃 Team ${ploegNr} (AV Sprint U16-${gCode})`;
+
+    tekst += "─────────────────────\n";
+    tekst += teamNaam + "\n";
+    tekst += "─────────────────────\n";
+
+    programma.forEach((item, idx) => {
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+      const namen = [];
+      for (let s = 0; s < maxSlots; s++) {
+        const aid    = opst[`${ploeg}_${idx}_${s}`];
+        const atleet = aid ? atleten.find(a => String(a.id) === String(aid)) : null;
+        if (atleet) namen.push(atleet.naam);
+      }
+      if (!namen.length) return; // Sla lege onderdelen over
+
+      const tijdTekst = item.starttijd ? ` (${item.starttijd})` : "";
+      tekst += `\n${item.discipline}${tijdTekst}\n`;
+      namen.forEach(naam => {
+        tekst += `  • ${naam}\n`;
+      });
+    });
+
+    tekst += "\n";
+  });
+
+  // Footer
+  const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+  tekst += `_Gedeeld via Sprint U16 op ${nu}_`;
+
+  // Open WhatsApp deep link — werkt op iOS, Android en desktop
+  const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
+  window.open(url, "_blank");
 }
 
 // ── Atletiek.nu integratie ────────────────────────────────────
