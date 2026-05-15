@@ -33,8 +33,8 @@
     --success:   #16a34a;
   }
 
-  /* ── Theme knop ── */
-  .theme-btn {
+  /* Floating bottom nav — standaard verborgen (alleen op mobiel zichtbaar) */
+  #mob-nav { display: none; }
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
@@ -788,14 +788,12 @@
   /* ── Mobile ── */
   @media (max-width: 768px) {
 
-    /* Header: logo + iconen op één rij, nav eronder als scrollbare strip */
+    /* Header: logo + iconen op één strakke rij, nav is verplaatst naar floating bottom bar */
     header {
       padding: 0 12px;
-      height: auto;
-      flex-wrap: wrap;
+      height: 56px;
+      flex-wrap: nowrap;
       gap: 8px;
-      padding-top: 10px;
-      padding-bottom: 0;
     }
     .logo { font-size: 20px; }
     #categorie-switcher { order: 3; }
@@ -803,30 +801,63 @@
     /* Sync, theme en uitloggen knop rechts op eerste rij */
     .sync-btn { width: 36px; height: 36px; }
 
-    /* Nav wordt een scrollbare horizontale strip onder de eerste rij */
+    /* Nav in header verbergen op mobiel — vervangen door floating bottom nav */
     nav {
-      order: 99;
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 4px;
-      padding: 8px 0 10px 0;
-      /* Verberg scrollbar maar behoud scrollgedrag */
-      scrollbar-width: none;
-    }
-    nav::-webkit-scrollbar { display: none; }
-    nav button {
-      flex-shrink: 0;
-      padding: 10px 14px;
-      font-size: 13px;
-      min-height: 44px; /* Apple-richtlijn: minimaal 44px aantikbaar */
-      white-space: nowrap;
+      display: none;
     }
 
-    /* Main content iets minder padding */
-    main { padding: 14px; }
+    /* ── Floating bottom navigation bar ── */
+    #mob-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 300;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      /* iOS safe area (notch / home indicator) */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-shadow: 0 -4px 20px rgba(0,0,0,.35);
+    }
+    #mob-nav button {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 10px 4px 10px;
+      min-height: 60px;
+      font-family: 'Barlow', sans-serif;
+      transition: color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #mob-nav button .mob-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+    #mob-nav button .mob-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    #mob-nav button.active {
+      color: var(--accent);
+    }
+    #mob-nav button.active .mob-icon {
+      /* Kleine schaalvergroting voor actief item */
+      transform: scale(1.15);
+    }
+
+    /* Main content iets minder padding + ruimte voor floating nav */
+    main { padding: 14px; padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 
     /* Page headers wrappen netjes */
     .page-header {
@@ -881,9 +912,9 @@
       overflow-y: auto;
     }
 
-    /* Toast onderaan, volle breedte */
+    /* Toast boven de floating bottom nav */
     #toast {
-      bottom: 12px;
+      bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 8px);
       right: 12px;
       left: 12px;
       text-align: center;
@@ -1732,6 +1763,8 @@ async function checkAuth() {
   huidigeProfiel = profiel;
   if (profiel?.rol === "admin") {
     document.getElementById("tab-admin").style.display = "";
+    const mobAdmin = document.getElementById("mob-tab-admin");
+    if (mobAdmin) mobAdmin.style.display = "";
   }
   document.getElementById("profiel-naam").value  = profiel?.gebruikersnaam || "";
   document.getElementById("profiel-email").value = session.user.email || "";
@@ -1852,6 +1885,9 @@ function showTab(tab) {
     if (el) el.style.display = t === tab ? "" : "none";
     const tb = document.getElementById("tab-" + t);
     if (tb) tb.classList.toggle("active", t === tab);
+    // Ook de mobiele floating nav bijwerken
+    const mb = document.getElementById("mob-tab-" + t);
+    if (mb) mb.classList.toggle("active", t === tab);
   });
   if (tab === "home")        laadReleasenotes();
   if (tab === "prestaties")  populateAtleetSelects();
@@ -6824,6 +6860,8 @@ async function init() {
   const ok = await checkAuth();
   if (ok) {
     document.getElementById("tab-profiel").style.display = "";
+    const mobProfiel = document.getElementById("mob-tab-profiel");
+    if (mobProfiel) mobProfiel.style.display = "";
     await syncAll();
     showTab("home");
   }
@@ -6831,5 +6869,41 @@ async function init() {
 
 init();
 </script>
+
+<!-- ── Floating bottom navigation (alleen zichtbaar op mobiel) ── -->
+<nav id="mob-nav">
+  <button id="mob-tab-home" onclick="showTab('home')">
+    <span class="mob-icon">🏠</span>
+    <span class="mob-label">Home</span>
+  </button>
+  <button id="mob-tab-atleten" onclick="showTab('atleten')">
+    <span class="mob-icon">👟</span>
+    <span class="mob-label">Atleten</span>
+  </button>
+  <button id="mob-tab-prestaties" onclick="showTab('prestaties')">
+    <span class="mob-icon">📊</span>
+    <span class="mob-label">Prestaties</span>
+  </button>
+  <button id="mob-tab-wedstrijden" onclick="showTab('wedstrijden')">
+    <span class="mob-icon">🏟️</span>
+    <span class="mob-label">Wedstrijden</span>
+  </button>
+  <button id="mob-tab-opstelling" onclick="showTab('opstelling')">
+    <span class="mob-icon">📋</span>
+    <span class="mob-label">Opstelling</span>
+  </button>
+  <button id="mob-tab-punten" onclick="showTab('punten')">
+    <span class="mob-icon">🧮</span>
+    <span class="mob-label">Punten</span>
+  </button>
+  <button id="mob-tab-profiel" onclick="showTab('profiel')" style="display:none;">
+    <span class="mob-icon">👤</span>
+    <span class="mob-label">Profiel</span>
+  </button>
+  <button id="mob-tab-admin" onclick="showTab('admin')" style="display:none;">
+    <span class="mob-icon">⚙️</span>
+    <span class="mob-label">Admin</span>
+  </button>
+</nav>
 </body>
 </html>
