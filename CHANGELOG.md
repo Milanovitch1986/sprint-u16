@@ -6,6 +6,28 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 31] — 2026-05-19
+
+### 🖨️📲 Afdrukken en delen per team
+
+Trainers kunnen nu de opstelling van één specifiek team afdrukken of via WhatsApp delen, los van de bestaande knoppen die de volledige opstelling verwerken.
+
+**Hoe het werkt:**
+- In de header van elk team (Team 1, Team 2, Team 3) staan twee nieuwe icoonknoppen: `🖨️` en `📲`
+- `🖨️` opent een printvenster met alleen de onderdelen en atleten van dat ene team
+- `📲` opent WhatsApp met een kant-en-klare tekst voor dat ene team
+- De knoppen zijn alleen zichtbaar op scherm (verborgen bij afdrukken van de volledige opstelling)
+- Klikken op de knoppen opent/sluit het teamblok **niet** — ze werken onafhankelijk van de collapse-toggle
+
+**Technische details:**
+- Nieuwe functies `printPloeg(ploeg)` en `deelPloegViaWhatsApp(ploeg)` in `app.html`
+- `event.stopPropagation()` zorgt dat de collapsible header niet toggled bij klik op de knoppen
+- `printPloeg()` bouwt een zelfstandig HTML-document (zelfde stijl als de volledige print) voor één team
+- Lege onderdelen (geen atleet ingevuld) worden overgeslagen in zowel print als WhatsApp-tekst
+- CSS-klasse `.ploeg-acties` en `.ploeg-actie-btn` voor subtiele stijl passend bij de header
+
+---
+
 ## [mei 2026 — patch 30] — 2026-05-15
 
 ### 📲 Opstelling delen via WhatsApp

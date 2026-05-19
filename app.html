@@ -596,6 +596,24 @@
     font-weight: 700; font-size: 13px;
     padding: 3px 10px; border-radius: 20px;
   }
+  .ploeg-acties {
+    display: flex; gap: 6px; margin-left: 4px;
+  }
+  .ploeg-actie-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 3px 9px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    line-height: 1.4;
+  }
+  .ploeg-actie-btn:hover {
+    background: var(--accent)18;
+    border-color: var(--accent)66;
+  }
   .onderdeel-rij {
     display: grid;
     grid-template-columns: 140px 1fr 1fr auto;
@@ -4217,6 +4235,10 @@ function renderPloeg(ploeg, isOpen = false) {
       <div class="ploeg-header ${isOpen ? "open" : ""}" onclick="togglePloeg('${ploeg}')">
         <div class="ploeg-naam">${teamNaam}</div>
         <div class="ploeg-punten print-hide">~${totalePunten} pts</div>
+        <div class="ploeg-acties print-hide">
+          <button class="ploeg-actie-btn" title="Team ${ploegNr} afdrukken" onclick="event.stopPropagation();printPloeg('${ploeg}')">🖨️</button>
+          <button class="ploeg-actie-btn" title="Team ${ploegNr} delen via WhatsApp" onclick="event.stopPropagation();deelPloegViaWhatsApp('${ploeg}')">📲</button>
+        </div>
         <span class="ploeg-chevron print-hide">▼</span>
       </div>
       <div class="ploeg-body ${isOpen ? "open" : ""}" id="ploeg-body-${ploeg}">
@@ -5188,6 +5210,147 @@ function deelViaWhatsApp() {
   tekst += `_Gedeeld via Sprint U16 op ${nu}_`;
 
   // Open WhatsApp deep link — werkt op iOS, Android en desktop
+  const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
+  window.open(url, "_blank");
+}
+
+// ── Print / deel per team ─────────────────────────────────────
+async function printPloeg(ploeg) {
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
+  if (!programma.length) { toast("Geen programma geladen.", "err"); return; }
+
+  const ploegNr   = { A: 1, B: 2, C: 3 }[ploeg] || 1;
+  const gCode     = actiefGeslacht === "V" ? "V" : "M";
+  const gLabel    = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
+  const teamNaam  = `AV Sprint U16-${gCode} — Team ${ploegNr}`;
+  const printDatum = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+
+  const opst = opstellingData[ploeg] || {};
+
+  let rijen = "";
+  programma.forEach((item, idx) => {
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+    const sgLabel  = item.type === "technisch" && item.startgroep ? `Groep ${item.startgroep}` : "—";
+    let rijHtml = "";
+    let aantalAtleten = 0;
+    for (let s = 0; s < maxSlots; s++) {
+      const aid    = opst[`${ploeg}_${idx}_${s}`];
+      const atleet = aid ? atleten.find(a => String(a.id) === String(aid)) : null;
+      if (!atleet) continue;
+      const pr = bestePrestatie(atleet.id, item.discipline);
+      rijHtml += `<tr style="${aantalAtleten % 2 === 1 ? "background:#fafffe" : ""}">
+        <td class="discipline-cel">${aantalAtleten === 0 ? esc(item.discipline) : ""}</td>
+        <td>${aantalAtleten === 0 ? (item.starttijd || "—") : ""}</td>
+        <td>${aantalAtleten === 0 ? sgLabel : ""}</td>
+        <td>${esc(atleet.naam)}</td>
+        <td class="pr-cel">${pr ? pr.resultaat : "—"}</td>
+      </tr>`;
+      aantalAtleten++;
+    }
+    if (aantalAtleten > 0) rijen += rijHtml;
+  });
+
+  if (!rijen) {
+    toast("Geen atleten ingevuld voor dit team.", "warn");
+    return;
+  }
+
+  const printHtml = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>${teamNaam} — ${wedstrijd.naam}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; background: white; padding: 20mm 18mm; }
+  .doc-header { border-bottom: 3px solid #e8383d; padding-bottom: 10px; margin-bottom: 20px; }
+  .club-naam { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #e8383d; margin-bottom: 4px; }
+  .wedstrijd-titel { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; }
+  .wedstrijd-meta { font-size: 10px; color: #555; margin-top: 4px; }
+  .print-datum { font-size: 9px; color: #aaa; margin-top: 2px; }
+  .team-header { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; background: #222; padding: 5px 10px; margin: 20px 0 0; }
+  .ploeg-titel { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #e8383d; background: #fef2f2; border-left: 3px solid #e8383d; padding: 4px 8px; margin: 8px 0 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  thead tr { background: #f5f5f5; }
+  th { padding: 5px 8px; text-align: left; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4px; color: #666; border-bottom: 1px solid #ccc; border-right: 1px solid #e8e8e8; }
+  td { padding: 4px 8px; border-bottom: 1px solid #eee; border-right: 1px solid #f0f0f0; vertical-align: top; }
+  td:last-child, th:last-child { border-right: none; }
+  .discipline-cel { font-weight: 700; color: #111; white-space: nowrap; }
+  .pr-cel { color: #555; font-size: 10px; white-space: nowrap; }
+  @media print {
+    body { padding: 0; }
+    .team-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ploeg-titel  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead tr      { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="club-naam">AV Sprint Breda — U16</div>
+    <div class="wedstrijd-titel">${esc(wedstrijd.naam)}</div>
+    <div class="wedstrijd-meta">${[wedstrijd.datum ? formatDate(wedstrijd.datum) : "", wedstrijd.locatie || ""].filter(Boolean).join(" · ")}</div>
+    <div class="print-datum">Afgedrukt op ${printDatum}</div>
+  </div>
+  <div class="team-header">${gLabel}</div>
+  <div class="ploeg-titel">${teamNaam}</div>
+  <table>
+    <thead><tr>
+      <th>Onderdeel</th><th>Starttijd</th><th>Startgroep</th><th>Atleet</th><th>PR</th>
+    </tr></thead>
+    <tbody>${rijen}</tbody>
+  </table>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) { toast("Kon geen printvenster openen. Sta pop-ups toe.", "err"); return; }
+  win.document.write(printHtml);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 600);
+}
+
+function deelPloegViaWhatsApp(ploeg) {
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
+  if (!programma.length) { toast("Geen programma geladen.", "err"); return; }
+
+  const ploegNr  = { A: 1, B: 2, C: 3 }[ploeg] || 1;
+  const gCode    = actiefGeslacht === "V" ? "V" : "M";
+  const gLabel   = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
+  const teamNaam = `🏃 Team ${ploegNr} (AV Sprint U16-${gCode})`;
+  const opst     = opstellingData[ploeg] || {};
+
+  let tekst = "";
+  tekst += "⚡ AV SPRINT BREDA — U16\n";
+  tekst += `📋 ${wedstrijd.naam}\n`;
+  if (wedstrijd.datum)   tekst += `📅 ${formatDate(wedstrijd.datum)}\n`;
+  if (wedstrijd.locatie) tekst += `📍 ${wedstrijd.locatie}\n`;
+  tekst += `👟 ${gLabel}\n\n`;
+  tekst += "─────────────────────\n";
+  tekst += teamNaam + "\n";
+  tekst += "─────────────────────\n";
+
+  programma.forEach((item, idx) => {
+    const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+    const namen = [];
+    for (let s = 0; s < maxSlots; s++) {
+      const aid    = opst[`${ploeg}_${idx}_${s}`];
+      const atleet = aid ? atleten.find(a => String(a.id) === String(aid)) : null;
+      if (atleet) namen.push(atleet.naam);
+    }
+    if (!namen.length) return;
+    const tijdTekst = item.starttijd ? ` (${item.starttijd})` : "";
+    tekst += `\n${item.discipline}${tijdTekst}\n`;
+    namen.forEach(naam => { tekst += `  • ${naam}\n`; });
+  });
+
+  tekst += "\n";
+  const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+  tekst += `_Gedeeld via Sprint U16 op ${nu}_`;
+
   const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
   window.open(url, "_blank");
 }
