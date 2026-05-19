@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 19 mei 2026 (patch 31)*
+*AV Sprint Breda · Laatste update: 19 mei 2026 (patch 32)*
 
 ---
 
@@ -171,7 +171,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 
 | Service | Details |
 |---------|---------|
-| Atletiek.nu API | Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev` |
+| Atletiek.nu API | ~~Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev`~~ — **Verwijderd (patch 32)**, werkt niet door Cloudflare-beperkingen |
 | E-mail (uitnodiging + welkom) | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo. POST-body: `{ email, link, type }` waarbij `type` = `"uitnodiging"` of `"welkom"`. API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker |
 | World Athletics PR | `worldathletics.nimarion.de` |
 | NAU scoretabellen | Ingebouwd (U14/U16, feb. 2022) |

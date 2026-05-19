@@ -6,6 +6,24 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 32] — 2026-05-19
+
+### 🧹 Atletiek.nu API-koppeling verwijderd
+
+Alle functionaliteit die via de Cloudflare Worker (`atletiek-nu-api-milan.milande-maat.workers.dev`) communiceerde met atletiek.nu is verwijderd, omdat deze door Cloudflare-beperkingen structureel niet werkt.
+
+**Verwijderd:**
+- Knop "🌐 PRs ophalen van atletiek.nu" in de Prestaties-tab
+- Modal "Zoek op Atletiek.nu" (atleet + wedstrijd zoeken, PR's importeren per atleet)
+- Modal "PRs ophalen van atletiek.nu" (bulk PR-import via login of cookie-methode)
+- Constante `ATL_API` en alle bijbehorende JS-functies en variabelen
+
+**Bewaard (geen API-call):**
+- PDF-import van tijdschema (werkt lokaal via PDF.js, geen externe koppeling)
+- Opstelling exporteren in atletiek.nu-format (lokale Excel-export, geen API)
+
+---
+
 ## [mei 2026 — patch 31] — 2026-05-19
 
 ### 🖨️📲 Afdrukken en delen per team
