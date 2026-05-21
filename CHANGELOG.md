@@ -6,6 +6,20 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [mei 2026 — patch 33] — 2026-05-21
+
+### ✨ Aantal ploegen per geslacht instelbaar
+
+Het aantal ploegen (1, 2 of 3) is nu **per geslacht apart** in te stellen. Voorheen gold één instelling voor zowel jongens als meisjes tegelijk.
+
+**Gewijzigd:**
+- Variabele `aantalPloegen` vervangen door `aantalPloegenPerGeslacht` (object met sleutels `M` en `V`, standaard beide 3)
+- `setAantalPloegen()` slaat het gekozen aantal nu op voor het actieve geslacht
+- `setOpstellingGeslacht()` synchroniseert de dropdown bij het wisselen van geslacht-tab
+- Alle functies die `ploegNamen` opbouwen gebruiken nu `aantalPloegenPerGeslacht[actiefGeslacht]`
+
+---
+
 ## [mei 2026 — patch 32] — 2026-05-19
 
 ### 🧹 Atletiek.nu API-koppeling verwijderd

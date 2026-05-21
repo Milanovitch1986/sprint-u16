@@ -3459,7 +3459,7 @@ let programma     = [];
 let editWedstrijdId   = null;
 let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
-let aantalPloegen     = 3;
+let aantalPloegenPerGeslacht = { M: 3, V: 3 };
 let opstellingData    = {};
 let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 
@@ -3723,6 +3723,9 @@ function setOpstellingGeslacht(g) {
   actiefGeslacht = g;
   document.getElementById("opstelling-tab-M").className = g === "M" ? "btn btn-primary" : "btn btn-ghost";
   document.getElementById("opstelling-tab-V").className = g === "V" ? "btn btn-primary" : "btn btn-ghost";
+  // Synchroniseer de dropdown met het opgeslagen aantal voor dit geslacht
+  const sel = document.getElementById("aantal-ploegen-select");
+  if (sel) sel.value = String(aantalPloegenPerGeslacht[g] || 3);
   laadProgrammaEnOpstelling();
 }
 
@@ -3992,7 +3995,7 @@ async function saveProgrammaModal() {
 
 // ── Ploegen render ────────────────────────────────────────────
 function setAantalPloegen(n) {
-  aantalPloegen = parseInt(n);
+  aantalPloegenPerGeslacht[actiefGeslacht] = parseInt(n);
   renderPloegen();
 }
 
@@ -4004,7 +4007,7 @@ function renderPloegen() {
   }
 
   // Bewaar welke ploegen open zijn vóór de re-render
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   const wasOpen = {};
   ploegNamen.forEach(p => {
     const body = document.getElementById(`ploeg-body-${p}`);
@@ -4212,7 +4215,7 @@ function bouwConflictTooltip(ploeg, opst, huidigIdx, atleetId) {
 
 // Controleer of atleet al in een andere ploeg zit
 function zitInAnderePloeg(huidigePloeg, atleetId) {
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   return ploegNamen.some(ploeg => {
     if (ploeg === huidigePloeg) return false;
     const opst = opstellingData[ploeg] || {};
@@ -4321,7 +4324,7 @@ function filterSlotKeuze(input) {
 function zitInAndereStartgroep(huidigePloeg, opst, huidigIdx, atleetId) {
   const huidigDisc = programma[huidigIdx]?.discipline;
   if (!huidigDisc) return false;
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   return ploegNamen.some(p => {
     const opstP = p === huidigePloeg ? opst : (opstellingData[p] || {});
     return programma.some((item, idx) => {
@@ -4432,7 +4435,7 @@ async function alleenBeschikbaar(aan) {
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 function genereerOpstelling() {
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   opstellingData = {};
   ploegNamen.forEach(p => opstellingData[p] = {});
 
@@ -4580,7 +4583,7 @@ function genereerOpstelling() {
 
 // ── Aanvullen (behoudt handmatige keuzes, vult lege slots in) ─────────────────
 function aanvullenOpstelling() {
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
 
   // Bouw de huidige staat op uit opstellingData (wat al ingevuld is)
   const atleetInPloeg = {};           // atleetId → ploeg
@@ -4732,7 +4735,7 @@ function aanvullenOpstelling() {
 // ── Opslaan ───────────────────────────────────────────────────
 async function opslaanOpstelling() {
   const cid = actieveCategorie?.id;
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   try {
     const rows = ploegNamen.map(ploeg => ({
       categorie_id: cid,
@@ -5035,7 +5038,7 @@ function deelViaWhatsApp() {
 
   const geslachtLabel = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
   const gCode         = actiefGeslacht === "V" ? "V" : "M";
-  const ploegNamen    = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen    = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
 
   // Header
   let tekst = "";
@@ -5639,7 +5642,7 @@ async function exporteerOpstelling() {
 
   const wedstrijd  = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
   const bestandsnaam = wedstrijd ? wedstrijd.naam.replace(/[^a-zA-Z0-9 _-]/g, "") : "opstelling";
-  const ploegNamen   = ["A","B","C"].slice(0, aantalPloegen);
+  const ploegNamen   = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
 
   // ── Bouw gededupliceerde discipline-lijst ──────────────────────
   // Technische onderdelen kunnen meerdere keren voorkomen (één per startgroep).
