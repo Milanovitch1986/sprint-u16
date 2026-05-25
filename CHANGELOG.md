@@ -6,7 +6,21 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [mei 2026 — patch 33] — 2026-05-21
+## [mei 2026 — patch 34] — 2026-05-25
+
+### 🖨️ Afdrukken opstelling: verbeterde paginaopmaak
+
+Drie verbeteringen in de "Opstelling afdrukken" functie (`printOpstelling`):
+
+**Gewijzigd:**
+- Vaste kolombreedtes via `<colgroup>` in elke tabel (Onderdeel 22%, Starttijd 12%, Startgroep 14%, Atleet 38%, PR 14%) — alle teams hebben nu dezelfde uitlijning ongeacht het aantal atleten
+- Volledig lege teams worden niet meer afgedrukt — een team telt als leeg wanneer geen enkel slot een atleet bevat
+- Elk team begint op een nieuwe pagina (`page-break-before: always`) — het document-kopje (wedstrijdnaam, datum, locatie) staat boven het eerste ingevulde team
+- Overbodige hulpfunctie `bouwGeslachtHtml` verwijderd en vervangen door de nieuwe `bouwAlleTeams` + `isPloegLeeg`
+
+---
+
+
 
 ### ✨ Aantal ploegen per geslacht instelbaar
 

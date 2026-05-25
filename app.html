@@ -4809,28 +4809,65 @@ async function printOpstelling() {
     return ["A"]; // fallback: toon altijd minstens 1
   }
 
-  // Bouw HTML voor één geslacht → één sectie per ploeg (tabel: onderdeel → atleten)
-  function bouwGeslachtHtml(g, data) {
+  // Controleer of een ploeg volledig leeg is (geen enkele atleet ingevuld)
+  function isPloegLeeg(ploeg, prog, opD) {
+    for (let idx = 0; idx < prog.length; idx++) {
+      const item = prog[idx];
+      const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+      for (let s = 0; s < maxSlots; s++) {
+        const aid = opD[`${ploeg}_${idx}_${s}`];
+        if (aid) return false;
+      }
+    }
+    return true;
+  }
+
+  // Stel het volledige HTML-document samen voor het printvenster
+  const printDatum = new Date().toLocaleDateString("nl-NL", { day:"2-digit", month:"long", year:"numeric" });
+
+  // Bouw alle team-blokken (beide geslachten), eerste team krijgt de doc-header
+  let alleTeamBlokken = "";
+  let isAllereersteTeam = true;
+
+  function bouwAlleTeams(g, data) {
     const gCode  = g === "V" ? "V" : "M";
     const gLabel = g === "V" ? "Meisjes" : "Jongens";
     const { programma: prog, opstellingData: opst } = data;
     const ploegen = ploegNamenVoor(opst);
 
-    if (!prog.length) return `
-      <div class="sectie-header">${gLabel}</div>
-      <p style="color:#888;font-size:12px;font-style:italic;margin:8px 0 24px;">Geen programma ingevuld voor ${gLabel.toLowerCase()}.</p>`;
+    if (!prog.length) return "";
 
-    let html = `<div class="sectie-header">${gLabel}</div>`;
-
+    let html = "";
     ploegen.forEach(ploeg => {
       const ploegNr  = {"A":1,"B":2,"C":3}[ploeg] || 1;
       const teamNaam = `AV Sprint U16-${gCode} — Team ${ploegNr}`;
       const opD = opst[ploeg] || {};
 
+      if (isPloegLeeg(ploeg, prog, opD)) return;
+
+      const pageBreakStyle = isAllereersteTeam ? "" : `style="page-break-before: always;"`;
+      const headerHtml = isAllereersteTeam ? `
+        <div class="doc-header">
+          <div class="club-naam">AV Sprint Breda — U16</div>
+          <div class="wedstrijd-titel">${esc(wedstrijdNaam)}</div>
+          <div class="wedstrijd-meta">${[wedstrijdDatum, wedstrijdLoc].filter(Boolean).join(" · ")}</div>
+          <div class="print-datum">Afgedrukt op ${printDatum}</div>
+        </div>` : "";
+      isAllereersteTeam = false;
+
       html += `
-        <div class="ploeg-blok">
+        <div class="ploeg-blok" ${pageBreakStyle}>
+          ${headerHtml}
+          <div class="sectie-header">${gLabel}</div>
           <div class="ploeg-titel">${teamNaam}</div>
           <table>
+            <colgroup>
+              <col style="width:22%;">
+              <col style="width:12%;">
+              <col style="width:14%;">
+              <col style="width:38%;">
+              <col style="width:14%;">
+            </colgroup>
             <thead>
               <tr>
                 <th>Onderdeel</th>
@@ -4881,14 +4918,11 @@ async function printOpstelling() {
 
       html += `</tbody></table></div>`;
     });
-
     return html;
   }
 
-  // Stel het volledige HTML-document samen voor het printvenster
-  const printDatum = new Date().toLocaleDateString("nl-NL", { day:"2-digit", month:"long", year:"numeric" });
-  const jongensSectie = bouwGeslachtHtml("M", printData["M"]);
-  const meijesSectie  = bouwGeslachtHtml("V", printData["V"]);
+  alleTeamBlokken += bouwAlleTeams("M", printData["M"]);
+  alleTeamBlokken += bouwAlleTeams("V", printData["V"]);
 
   const printHtml = `<!DOCTYPE html>
 <html lang="nl">
@@ -4946,7 +4980,6 @@ async function printOpstelling() {
   }
   .ploeg-blok {
     margin-bottom: 16px;
-    page-break-inside: avoid;
   }
   .ploeg-titel {
     font-size: 10px;
@@ -5009,15 +5042,7 @@ async function printOpstelling() {
 </style>
 </head>
 <body>
-  <div class="doc-header">
-    <div class="club-naam">AV Sprint Breda — U16</div>
-    <div class="wedstrijd-titel">${esc(wedstrijdNaam)}</div>
-    <div class="wedstrijd-meta">${[wedstrijdDatum, wedstrijdLoc].filter(Boolean).join(" · ")}</div>
-    <div class="print-datum">Afgedrukt op ${printDatum}</div>
-  </div>
-
-  ${jongensSectie}
-  ${meijesSectie}
+  ${alleTeamBlokken}
 </body>
 </html>`;
 
