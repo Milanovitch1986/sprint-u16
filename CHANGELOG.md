@@ -6,7 +6,22 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
-## [mei 2026 — patch 34] — 2026-05-25
+## [mei 2026 — patch 35] — 2026-05-25
+
+### 🖨️ Afdrukken opstelling: leesbare paginagrootte
+
+De afdruk vulde voorheen slechts een deel van de pagina omdat de body grote vaste marges had (`20mm 18mm`) die de bruikbare breedte sterk beperkten.
+
+**Gewijzigd:**
+- Paginaformaat vastgezet op **A4 liggend (landscape)** via `@page { size: A4 landscape; }` — de tabel heeft nu altijd maximale breedte
+- Marges beheerd via `@page { margin: 12mm 14mm; }` in plaats van `body padding` — dit is de correcte manier voor printdocumenten
+- `body padding` verwijderd (veroorzaakte de kleine afdruk)
+- Aparte `@media print` blok verwijderd en samengevoegd met de `@page` regel
+- Lettertypes iets vergroot: tabelinhoud van 11px naar 12px, kolomkoppen van 9px naar 10px
+
+---
+
+
 
 ### 🖨️ Afdrukken opstelling: verbeterde paginaopmaak
 

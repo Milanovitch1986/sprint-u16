@@ -4930,18 +4930,21 @@ async function printOpstelling() {
 <meta charset="UTF-8">
 <title>Opstelling — ${wedstrijdNaam}</title>
 <style>
+  @page {
+    size: A4 landscape;
+    margin: 12mm 14mm;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11px;
     color: #111;
     background: white;
-    padding: 20mm 18mm;
   }
   .doc-header {
     border-bottom: 3px solid #e8383d;
     padding-bottom: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   .club-naam {
     font-size: 9px;
@@ -4976,10 +4979,12 @@ async function printOpstelling() {
     color: white;
     background: #222;
     padding: 5px 10px;
-    margin: 20px 0 0;
+    margin: 16px 0 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .ploeg-blok {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
   .ploeg-titel {
     font-size: 10px;
@@ -4990,20 +4995,24 @@ async function printOpstelling() {
     background: #fef2f2;
     border-left: 3px solid #e8383d;
     padding: 4px 8px;
-    margin: 8px 0 0;
+    margin: 6px 0 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 12px;
   }
   thead tr {
     background: #f5f5f5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   th {
     padding: 5px 8px;
     text-align: left;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.4px;
@@ -5012,7 +5021,7 @@ async function printOpstelling() {
     border-right: 1px solid #e8e8e8;
   }
   td {
-    padding: 4px 8px;
+    padding: 5px 8px;
     border-bottom: 1px solid #eee;
     border-right: 1px solid #f0f0f0;
     vertical-align: top;
@@ -5025,7 +5034,7 @@ async function printOpstelling() {
   }
   .pr-cel {
     color: #555;
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
   }
   .leeg-rij td {
@@ -5033,12 +5042,6 @@ async function printOpstelling() {
     background: #fafafa;
   }
   tr:nth-child(even):not(.leeg-rij) { background: #fafffe; }
-  @media print {
-    body { padding: 0; }
-    .sectie-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .ploeg-titel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
 </style>
 </head>
 <body>
