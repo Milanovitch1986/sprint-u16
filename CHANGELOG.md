@@ -6,6 +6,38 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 37] — 2026-06-09
+
+### 🔒 Opstelling van afgelopen wedstrijd raadplegen (alleen lezen)
+
+Een afgelopen wedstrijd kun je nu aanklikken om de bijbehorende opstelling te bekijken, zonder dat je hem per ongeluk wijzigt.
+
+**Nieuw:**
+- In de Wedstrijden-tab is een kaart onder "Afgelopen wedstrijden" nu **volledig klikbaar**. Klikken opent de opgeslagen opstelling in de Opstelling-tab in **alleen-lezen-modus**. (De knoppen ✏️ Bewerken, 📋 Programma en 📄 Importeer PDF op de kaart blijven gewoon werken; die openen niet de opstelling.)
+- In alleen-lezen-modus zijn alle bewerkacties **uitgeschakeld**: slots zijn niet aanklikbaar, er is geen ✕ om iemand te verwijderen, en de knoppen ⚡ Automatisch opstellen, 🧩 Aanvullen, 💾 Opslaan, het aantal-ploegen-keuzemenu en de beschikbaarheid-sectie zijn verborgen.
+- Wél beschikbaar blijven: ploegen in-/uitklappen, wisselen tussen 👦 Jongens / 👧 Meisjes, en 📥 Exporteren, 🖨️ Afdrukken en 📲 Delen via WhatsApp (handelingen die niets wijzigen).
+- Bovenaan verschijnt een **🔒 Alleen lezen — afgelopen wedstrijd**-badge.
+- De getoonde ploegen worden afgeleid uit de daadwerkelijk opgeslagen opstelling, zodat je exact ziet wat er destijds stond (ongeacht de algemene instelling voor het aantal ploegen). Is er voor dat geslacht niets opgeslagen, dan verschijnt de melding "Geen opstelling opgeslagen voor …".
+
+**Toegang:** ongewijzigd. Het raadplegen werkt op dezelfde, al-gefilterde data van de actieve categorie (RLS + categorie-filter). Een trainer kan dus alleen opstellingen van zijn eigen categorie(ën) inzien.
+
+**Technische details:**
+- Nieuwe statevariabele `opstellingAlleenLezen` (default `false`).
+- Nieuwe functies `bekijkOpstelling(wedstrijdId)` (opent vanuit de Wedstrijden-tab) en `pasOpstellingModusToe()` (toont/verbergt bewerk-elementen).
+- `openOpstelling()` kreeg een tweede parameter `alleenLezen` (default `false`); `terug_naar_wedstrijden()` reset de vlag.
+- `renderPloegen()` leidt in alleen-lezen-modus de ploegen af uit `opstellingData`; `renderPloeg()`-slots renderen zonder klik/✕.
+- `wedstrijdKaartHtml()`: afgelopen kaarten zijn klikbaar; kaartknoppen kregen `event.stopPropagation()`.
+- Bewerk-elementen gemarkeerd met class `bewerk-actie`; nieuwe CSS: `.readonly-badge`, `.atleet-slot.readonly`.
+
+**Niet kunnen testen door mij (handmatig te controleren in de browser):**
+- Het openen van een afgelopen opstelling, het correct verbergen van de bewerkknoppen en het wisselen van geslacht in alleen-lezen-modus (vereist Supabase-data van een eerder opgeslagen opstelling).
+
+**Geen Supabase-wijziging nodig** — deze patch gebruikt de bestaande tabel `opstelling`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 36] — 2026-06-09
 
 ### 🏆 Finale-markering + scheiding aankomende/afgelopen wedstrijden

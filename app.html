@@ -646,6 +646,22 @@
     position: relative;
   }
   .atleet-slot:hover { border-color: var(--accent); }
+  /* Alleen-lezen-modus (patch 37) */
+  .atleet-slot.readonly { cursor: default; }
+  .atleet-slot.readonly:hover { border-color: var(--border); }
+  .readonly-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
   .atleet-slot.bezet { border-style: solid; border-color: var(--border); background: var(--surface); }
   .atleet-slot.conflict { border-color: var(--accent2); background: var(--accent2)11; }
   .atleet-slot .slot-naam { flex: 1; }
@@ -1314,6 +1330,7 @@
         <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">← Terug</button>
         <div id="opstelling-wedstrijd-naam" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
         <span id="opstelling-finale-badge"></span>
+        <span id="opstelling-readonly-badge"></span>
       </div>
 
       <!-- Geslacht tabs -->
@@ -1337,14 +1354,14 @@
       <!-- Ploegen sectie -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
-        <select id="aantal-ploegen-select" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
+        <select id="aantal-ploegen-select" class="bewerk-actie" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
           <option value="1">1 ploeg</option>
           <option value="2">2 ploegen</option>
           <option value="3" selected>3 ploegen</option>
         </select>
-        <button class="btn btn-primary" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
-        <button class="btn btn-ghost" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
-        <button class="btn btn-ghost" onclick="opslaanOpstelling()">💾 Opslaan</button>
+        <button class="btn btn-primary bewerk-actie" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
+        <button class="btn btn-ghost bewerk-actie" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
+        <button class="btn btn-ghost bewerk-actie" onclick="opslaanOpstelling()">💾 Opslaan</button>
         <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
         <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
         <button class="btn btn-ghost btn-sm" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
@@ -3566,6 +3583,7 @@ let programma     = [];
 let editWedstrijdId   = null;
 let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
+let opstellingAlleenLezen = false; // true = afgelopen wedstrijd raadplegen (read-only)
 let aantalPloegenPerGeslacht = { M: 3, V: 3 };
 let opstellingData    = {};
 let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
@@ -3702,8 +3720,12 @@ function isWedstrijdAfgelopen(w) {
 
 function wedstrijdKaartHtml(w, afgelopen) {
   const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
+  // Afgelopen kaarten zijn klikbaar: ze openen de opstelling in alleen-lezen-modus.
+  // De knoppen krijgen stopPropagation zodat ze niet óók de opstelling openen.
+  const stop = afgelopen ? "event.stopPropagation();" : "";
+  const kaartKlik = afgelopen ? ` onclick="bekijkOpstelling('${w.id}')" style="cursor:pointer;" title="Klik om de opstelling te bekijken"` : "";
   return `
-    <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}">
+    <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}"${kaartKlik}>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span class="wedstrijd-datum" style="margin-bottom:0;">${formatDate(w.datum)}</span>
         ${finaleBadge}
@@ -3712,9 +3734,9 @@ function wedstrijdKaartHtml(w, afgelopen) {
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
       ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
-        <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
-        <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="${stop}openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
+        <button class="btn btn-ghost btn-sm" onclick="${stop}openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
+        <button class="btn btn-ghost btn-sm" onclick="${stop}openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
       </div>
     </div>`;
 }
@@ -3872,21 +3894,45 @@ function renderOpstellingWedstrijden() {
     </div>`).join("");
 }
 
-async function openOpstelling(wedstrijdId) {
+async function openOpstelling(wedstrijdId, alleenLezen = false) {
   actiefWedstrijdId = wedstrijdId;
+  opstellingAlleenLezen = alleenLezen;
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
   document.getElementById("opstelling-wedstrijd-naam").textContent = w ? w.naam : "";
   const finaleBadge = document.getElementById("opstelling-finale-badge");
   if (finaleBadge) finaleBadge.innerHTML = (w && w.is_finale) ? `<span class="finale-badge">🏆 FINALE</span>` : "";
+  pasOpstellingModusToe();
   document.getElementById("opstelling-stap1").style.display = "none";
   document.getElementById("opstelling-stap2").style.display = "";
   await laadProgrammaEnOpstelling();
+}
+
+// Opent de opstelling van een (afgelopen) wedstrijd in alleen-lezen-modus,
+// rechtstreeks vanuit de Wedstrijden-tab.
+function bekijkOpstelling(wedstrijdId) {
+  showTab("opstelling");
+  openOpstelling(wedstrijdId, true);
+}
+
+// Toont/verbergt de bewerk-elementen op basis van opstellingAlleenLezen.
+function pasOpstellingModusToe() {
+  const ro = opstellingAlleenLezen;
+  // Bewerkknoppen + beschikbaarheid verbergen in alleen-lezen-modus
+  document.querySelectorAll("#opstelling-stap2 .bewerk-actie").forEach(el => {
+    el.style.display = ro ? "none" : "";
+  });
+  const besch = document.getElementById("beschikbaarheid-sectie");
+  if (besch) besch.style.display = ro ? "none" : "";
+  // Alleen-lezen-badge in de kop
+  const badge = document.getElementById("opstelling-readonly-badge");
+  if (badge) badge.innerHTML = ro ? `<span class="readonly-badge">🔒 Alleen lezen — afgelopen wedstrijd</span>` : "";
 }
 
 function terug_naar_wedstrijden() {
   document.getElementById("opstelling-stap1").style.display = "";
   document.getElementById("opstelling-stap2").style.display = "none";
   actiefWedstrijdId = null;
+  opstellingAlleenLezen = false;
 }
 
 function setOpstellingGeslacht(g) {
@@ -4172,12 +4218,26 @@ function setAantalPloegen(n) {
 function renderPloegen() {
   const cont = document.getElementById("ploegen-container");
   if (!programma.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
+    cont.innerHTML = opstellingAlleenLezen
+      ? `<div class="empty-state"><div class="icon">📋</div>Geen opstelling opgeslagen voor deze wedstrijd.</div>`
+      : `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
     return;
   }
 
+  // In alleen-lezen-modus tonen we precies de ploegen die destijds gevuld waren
+  // (het aantal ploegen is een algemene instelling, geen per-wedstrijd waarde).
+  let ploegNamen;
+  if (opstellingAlleenLezen) {
+    ploegNamen = ["A","B","C"].filter(p => opstellingData[p] && Object.keys(opstellingData[p]).length > 0);
+    if (!ploegNamen.length) {
+      cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen opstelling opgeslagen voor ${actiefGeslacht === "V" ? "de meisjes" : "de jongens"} bij deze wedstrijd.</div>`;
+      return;
+    }
+  } else {
+    ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
+  }
+
   // Bewaar welke ploegen open zijn vóór de re-render
-  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   const wasOpen = {};
   ploegNamen.forEach(p => {
     const body = document.getElementById(`ploeg-body-${p}`);
@@ -4237,13 +4297,13 @@ function renderPloeg(ploeg, isOpen = false) {
         : "";
 
       slotsHtml += `
-        <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}"
-             onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)" id="slot_${slotKey}">
-          <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">+ Atleet kiezen</span>`}</span>
+        <div class="atleet-slot ${atleet ? "bezet" : ""} ${conflictWaarschuwing ? "conflict" : ""}${opstellingAlleenLezen ? " readonly" : ""}"
+             ${opstellingAlleenLezen ? "" : `onclick="openSlotKeuze('${ploeg}', ${idx}, ${s}, this)"`} id="slot_${slotKey}">
+          <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">${opstellingAlleenLezen ? "—" : "+ Atleet kiezen"}</span>`}</span>
           ${prTekst ? `<span class="slot-punten print-hide">${prTekst}</span>` : ""}
           ${prTekst ? `<span class="slot-punten print-only" style="display:none;">${prTekst}</span>` : ""}
           ${conflictWaarschuwing ? `<span class="conflict-badge" title="${esc(conflictTooltip)}" style="cursor:help;">${conflictWaarschuwing}</span>` : ""}
-          ${atleet ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
+          ${atleet && !opstellingAlleenLezen ? `<span class="slot-remove" onclick="clearSlot('${ploeg}',${idx},${s});event.stopPropagation()">✕</span>` : ""}
         </div>`;
     }
 
