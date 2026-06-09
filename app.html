@@ -3720,10 +3720,16 @@ function isWedstrijdAfgelopen(w) {
 
 function wedstrijdKaartHtml(w, afgelopen) {
   const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
-  // Afgelopen kaarten zijn klikbaar: ze openen de opstelling in alleen-lezen-modus.
-  // De knoppen krijgen stopPropagation zodat ze niet óók de opstelling openen.
-  const stop = afgelopen ? "event.stopPropagation();" : "";
+  // Afgelopen kaarten hebben geen knoppen: de hele kaart opent de opstelling
+  // in alleen-lezen-modus.
   const kaartKlik = afgelopen ? ` onclick="bekijkOpstelling('${w.id}')" style="cursor:pointer;" title="Klik om de opstelling te bekijken"` : "";
+  const onderkant = afgelopen
+    ? `<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:14px;">👁️ Bekijk opstelling</div>`
+    : `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
+        <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
+        <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
+      </div>`;
   return `
     <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}"${kaartKlik}>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
@@ -3733,11 +3739,7 @@ function wedstrijdKaartHtml(w, afgelopen) {
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
       ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
-      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="${stop}openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
-        <button class="btn btn-ghost btn-sm" onclick="${stop}openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
-        <button class="btn btn-ghost btn-sm" onclick="${stop}openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
-      </div>
+      ${onderkant}
     </div>`;
 }
 

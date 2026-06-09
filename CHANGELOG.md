@@ -13,7 +13,7 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 Een afgelopen wedstrijd kun je nu aanklikken om de bijbehorende opstelling te bekijken, zonder dat je hem per ongeluk wijzigt.
 
 **Nieuw:**
-- In de Wedstrijden-tab is een kaart onder "Afgelopen wedstrijden" nu **volledig klikbaar**. Klikken opent de opgeslagen opstelling in de Opstelling-tab in **alleen-lezen-modus**. (De knoppen ✏️ Bewerken, 📋 Programma en 📄 Importeer PDF op de kaart blijven gewoon werken; die openen niet de opstelling.)
+- In de Wedstrijden-tab is een kaart onder "Afgelopen wedstrijden" nu **volledig klikbaar** en heeft die **geen losse knoppen** meer (✏️ / 📋 / 📄 zijn weggelaten). Klikken op de kaart opent de opgeslagen opstelling in de Opstelling-tab in **alleen-lezen-modus**. Een hint "👁️ Bekijk opstelling" maakt duidelijk dat de kaart aanklikbaar is. (Aankomende wedstrijden houden hun knoppen.)
 - In alleen-lezen-modus zijn alle bewerkacties **uitgeschakeld**: slots zijn niet aanklikbaar, er is geen ✕ om iemand te verwijderen, en de knoppen ⚡ Automatisch opstellen, 🧩 Aanvullen, 💾 Opslaan, het aantal-ploegen-keuzemenu en de beschikbaarheid-sectie zijn verborgen.
 - Wél beschikbaar blijven: ploegen in-/uitklappen, wisselen tussen 👦 Jongens / 👧 Meisjes, en 📥 Exporteren, 🖨️ Afdrukken en 📲 Delen via WhatsApp (handelingen die niets wijzigen).
 - Bovenaan verschijnt een **🔒 Alleen lezen — afgelopen wedstrijd**-badge.
@@ -26,7 +26,7 @@ Een afgelopen wedstrijd kun je nu aanklikken om de bijbehorende opstelling te be
 - Nieuwe functies `bekijkOpstelling(wedstrijdId)` (opent vanuit de Wedstrijden-tab) en `pasOpstellingModusToe()` (toont/verbergt bewerk-elementen).
 - `openOpstelling()` kreeg een tweede parameter `alleenLezen` (default `false`); `terug_naar_wedstrijden()` reset de vlag.
 - `renderPloegen()` leidt in alleen-lezen-modus de ploegen af uit `opstellingData`; `renderPloeg()`-slots renderen zonder klik/✕.
-- `wedstrijdKaartHtml()`: afgelopen kaarten zijn klikbaar; kaartknoppen kregen `event.stopPropagation()`.
+- `wedstrijdKaartHtml()`: afgelopen kaarten zijn klikbaar en tonen geen knoppen; aankomende kaarten houden hun knoppen.
 - Bewerk-elementen gemarkeerd met class `bewerk-actie`; nieuwe CSS: `.readonly-badge`, `.atleet-slot.readonly`.
 
 **Niet kunnen testen door mij (handmatig te controleren in de browser):**
