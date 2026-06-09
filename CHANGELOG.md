@@ -6,6 +6,48 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 36] — 2026-06-09
+
+### 🏆 Finale-markering + scheiding aankomende/afgelopen wedstrijden
+
+Een wedstrijd kan nu als **finale** worden gemarkeerd, en de Wedstrijden-tab maakt onderscheid tussen aankomende en afgelopen wedstrijden.
+
+**Nieuw:**
+- **Finale-schakelaar** in de wedstrijd-modal (tussen Locatie en Notities). Aan/uit per wedstrijd, opgeslagen in de nieuwe kolom `is_finale` op de tabel `wedstrijden`.
+- Wedstrijden die als finale zijn gemarkeerd krijgen een gouden **🏆 FINALE**-badge en een subtiele oranje rand. De badge verschijnt op:
+  - de wedstrijdkaart in de Wedstrijden-tab
+  - de wedstrijd-keuzelijst in de Opstelling-tab (stap 1)
+  - de kop van de gekozen wedstrijd in de Opstelling-tab (stap 2)
+- **Scheiding aankomende/afgelopen**: de Wedstrijden-tab toont twee secties — "📅 Aankomende wedstrijden" en "✅ Afgelopen wedstrijden". Een wedstrijd telt als afgelopen wanneer de datum vóór vandaag ligt; wedstrijden zonder datum staan bij aankomend.
+  - Aankomend gesorteerd op eerstvolgende bovenaan, afgelopen op meest recente bovenaan.
+  - De afgelopen-lijst is **inklapbaar** (chevron ▾/▸ in de kop), maar standaard **opengeklapt**.
+  - De afgelopen-kaarten worden iets gedimd weergegeven (vol contrast bij hover).
+
+**Toegang (ongewijzigd, bewust):** de scheiding werkt over de al-gefilterde lijst van de actieve categorie. Een trainer ziet dus alleen afgelopen wedstrijden van categorieën waarvoor hij rechten heeft; een admin kan via de categorie-switcher bij alle categorieën. Er is geen nieuwe query toegevoegd die categorieën samenvoegt — RLS en het bestaande categorie-filter blijven leidend.
+
+**Technische details:**
+- Nieuwe helperfuncties `isWedstrijdAfgelopen(w)` en `wedstrijdKaartHtml(w, afgelopen)`; `renderWedstrijden()` herschreven met twee secties.
+- Nieuwe statevariabele `afgelopenIngeklapt` (standaard `false`) + functie `toggleAfgelopen()`.
+- `openWedstrijdModal()` laadt `is_finale` in de checkbox `#w-finale`; `saveWedstrijd()` slaat `is_finale` mee op.
+- `openOpstelling()` en `renderOpstellingWedstrijden()` tonen de finale-badge.
+- Nieuwe CSS-klassen: `.finale-badge`, `.wedstrijd-card.is-finale`, `.wedstrijd-card.afgelopen`, `.wedstrijd-sectie-kop`, `.toggle-switch`/`.toggle-slider`. De buitenste `#wedstrijden-grid` is geen CSS-grid meer; de twee secties hebben elk een eigen `.grid`.
+
+**Niet kunnen testen door mij (handmatig te controleren in de browser):**
+- De Supabase-update/insert met de nieuwe kolom `is_finale` (vereist dat de SQL hieronder is uitgevoerd).
+- Het in/uitklappen van de afgelopen-lijst en de weergave van de badges in de live app.
+
+**Supabase SQL (zelf uitvoeren vóór gebruik):**
+```sql
+ALTER TABLE public.wedstrijden
+  ADD COLUMN IF NOT EXISTS is_finale boolean NOT NULL DEFAULT false;
+```
+> `wedstrijden` is een bestaande tabel, dus er zijn geen extra `GRANT`- of RLS-regels nodig.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Supabase: kolom `is_finale` toegevoegd aan tabel `wedstrijden`.
+
+---
+
 ## [mei 2026 — patch 35] — 2026-05-25
 
 ### 🖨️ Afdrukken opstelling: leesbare paginagrootte

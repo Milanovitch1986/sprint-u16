@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 25 mei 2026 (patch 35)*
+*AV Sprint Breda · Laatste update: 9 juni 2026 (patch 36)*
 
 ---
 
@@ -28,7 +28,7 @@
 | `trainer_categorieen` | Koppeling trainer ↔ categorie (many-to-many) |
 | `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr) |
 | `prestaties` | PR's per atleet per discipline |
-| `wedstrijden` | Wedstrijden (naam, datum, locatie) |
+| `wedstrijden` | Wedstrijden (naam, datum, locatie, notities, `is_finale`) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
 | `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
@@ -40,6 +40,10 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Finale-markering + aankomende/afgelopen wedstrijden (patch 36, juni 2026)
+Een wedstrijd kan als finale worden gemarkeerd via de boolean-kolom `is_finale` (default `false`) op `wedstrijden`. Een 🏆 FINALE-badge verschijnt op de wedstrijdkaart, in de opstelling-keuzelijst en in de kop van de gekozen opstelling. De Wedstrijden-tab splitst op datum in "Aankomende" en "Afgelopen" (afgelopen = datum vóór vandaag; geen datum = aankomend). De afgelopen-lijst is inklapbaar (`afgelopenIngeklapt`, default open). **Toegang is bewust niet aangepast:** de splitsing werkt over de al-gefilterde lijst van de actieve categorie, dus RLS + categorie-filter blijven leidend — geen samenvoegende query over categorieën. Kernfuncties: `isWedstrijdAfgelopen()`, `wedstrijdKaartHtml()`, `toggleAfgelopen()`.
+
 
 ### Gebruikers verwijderen: SECURITY DEFINER RPC (patch 29, mei 2026)
 Auth-accounts kunnen alleen worden verwijderd via de Supabase Service Role — die sleutel mag nooit in de frontend. Oplossing: database-functie `verwijder_gebruiker(p_gebruiker_id uuid)` met `SECURITY DEFINER`. De functie controleert zelf of de aanroeper admin is en blokkeert zelfverwijdering. Volgorde van verwijdering: `trainer_categorieen` → `uitnodigingen` → `profielen` → `auth.users`. Data gekoppeld aan categorieën (atleten, wedstrijden, prestaties) blijft bewaard.

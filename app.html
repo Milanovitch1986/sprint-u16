@@ -766,6 +766,103 @@
   .wedstrijd-naam { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 4px; }
   .wedstrijd-locatie { font-size: 13px; color: var(--muted); }
 
+  /* ── Finale & wedstrijd-secties (patch 36) ── */
+  .finale-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--accent)22;
+    color: var(--accent);
+    border: 1px solid var(--accent)44;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .wedstrijd-card.is-finale { border-color: var(--accent)66; }
+  .wedstrijd-card.afgelopen { opacity: .62; }
+  .wedstrijd-card.afgelopen:hover { opacity: 1; }
+  .wedstrijd-card.afgelopen .wedstrijd-datum { color: var(--muted); }
+
+  .wedstrijd-sectie-kop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text);
+    padding-left: 10px;
+    border-left: 3px solid var(--accent);
+    margin: 4px 0 14px;
+  }
+  .wedstrijd-sectie-kop.afgelopen {
+    color: var(--muted);
+    border-left-color: var(--border);
+    cursor: pointer;
+    user-select: none;
+    margin-top: 28px;
+  }
+  .wedstrijd-sectie-kop .sectie-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 1px 8px;
+    border-radius: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .wedstrijd-sectie-kop .chevron {
+    display: inline-block;
+    width: 14px;
+    font-size: 12px;
+  }
+  .wedstrijd-sectie-leeg {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 2px 0 8px;
+  }
+
+  /* ── Toggle-switch (patch 36) ── */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    transition: background .2s, border-color .2s;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    top: 2px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform .2s, background .2s;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: #fff;
+  }
+
   /* ── Print styles ── */
   @media print {
     header, nav, .btn, #opstelling-stap1, .page-header,
@@ -1196,7 +1293,7 @@
         <button class="btn btn-primary" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
       </div>
     </div>
-    <div id="wedstrijden-grid" class="grid"></div>
+    <div id="wedstrijden-grid"></div>
   </div>
 
   <!-- PROGRAMMA MODAL (tijdschema per wedstrijd) -->
@@ -1216,6 +1313,7 @@
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="terug_naar_wedstrijden()">← Terug</button>
         <div id="opstelling-wedstrijd-naam" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
+        <span id="opstelling-finale-badge"></span>
       </div>
 
       <!-- Geslacht tabs -->
@@ -1466,6 +1564,15 @@
     <div class="field">
       <label>Locatie</label>
       <input type="text" id="w-locatie" placeholder="bijv. Atletiekbaan Breda">
+    </div>
+    <div class="field">
+      <label for="w-finale" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;margin-bottom:0;">
+        <span>🏆 Dit is een finale</span>
+        <span class="toggle-switch">
+          <input type="checkbox" id="w-finale">
+          <span class="toggle-slider"></span>
+        </span>
+      </label>
     </div>
     <div class="field">
       <label>Notities</label>
@@ -3582,16 +3689,25 @@ function getDisciplineType(naam) {
 }
 
 // ── Wedstrijden render ────────────────────────────────────────
-function renderWedstrijden() {
-  document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
-  const grid = document.getElementById("wedstrijden-grid");
-  if (!wedstrijden.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
-    return;
-  }
-  grid.innerHTML = wedstrijden.map(w => `
-    <div class="wedstrijd-card">
-      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+let afgelopenIngeklapt = false; // afgelopen-lijst standaard opengeklapt
+
+// Bepaalt of een wedstrijd al geweest is (datum vóór vandaag).
+// Wedstrijden zonder datum tellen als aankomend.
+function isWedstrijdAfgelopen(w) {
+  if (!w.datum) return false;
+  const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
+  const d = new Date(w.datum); d.setHours(0, 0, 0, 0);
+  return d < vandaag;
+}
+
+function wedstrijdKaartHtml(w, afgelopen) {
+  const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
+  return `
+    <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="wedstrijd-datum" style="margin-bottom:0;">${formatDate(w.datum)}</span>
+        ${finaleBadge}
+      </div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
       ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
@@ -3600,7 +3716,53 @@ function renderWedstrijden() {
         <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
         <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
       </div>
-    </div>`).join("");
+    </div>`;
+}
+
+function renderWedstrijden() {
+  document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
+  const grid = document.getElementById("wedstrijden-grid");
+  if (!wedstrijden.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
+    return;
+  }
+
+  // Splitsen op datum. De rechten zijn al afgehandeld: 'wedstrijden' bevat
+  // alleen de wedstrijden van de actieve categorie (RLS + categorie-filter).
+  const aankomend = wedstrijden.filter(w => !isWedstrijdAfgelopen(w))
+    .sort((a, b) => (a.datum || "9999").localeCompare(b.datum || "9999")); // eerstvolgende bovenaan
+  const afgelopen = wedstrijden.filter(isWedstrijdAfgelopen)
+    .sort((a, b) => (b.datum || "").localeCompare(a.datum || "")); // meest recente bovenaan
+
+  let html = "";
+
+  // Aankomende sectie (altijd zichtbaar)
+  html += `<div class="wedstrijd-sectie-kop">📅 Aankomende wedstrijden <span class="sectie-count">${aankomend.length}</span></div>`;
+  if (aankomend.length) {
+    html += `<div class="grid">${aankomend.map(w => wedstrijdKaartHtml(w, false)).join("")}</div>`;
+  } else {
+    html += `<div class="wedstrijd-sectie-leeg">Geen aankomende wedstrijden.</div>`;
+  }
+
+  // Afgelopen sectie (inklapbaar, alleen tonen als er afgelopen wedstrijden zijn)
+  if (afgelopen.length) {
+    html += `<div class="wedstrijd-sectie-kop afgelopen" onclick="toggleAfgelopen()">
+               <span class="chevron" id="afgelopen-chevron">${afgelopenIngeklapt ? "▸" : "▾"}</span>
+               ✅ Afgelopen wedstrijden <span class="sectie-count">${afgelopen.length}</span>
+             </div>`;
+    html += `<div class="grid" id="afgelopen-grid"${afgelopenIngeklapt ? ' style="display:none;"' : ""}>${afgelopen.map(w => wedstrijdKaartHtml(w, true)).join("")}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+// Klapt de lijst met afgelopen wedstrijden in/uit (standaard opengeklapt).
+function toggleAfgelopen() {
+  afgelopenIngeklapt = !afgelopenIngeklapt;
+  const lijst = document.getElementById("afgelopen-grid");
+  const chevron = document.getElementById("afgelopen-chevron");
+  if (lijst)   lijst.style.display = afgelopenIngeklapt ? "none" : "";
+  if (chevron) chevron.textContent = afgelopenIngeklapt ? "▸" : "▾";
 }
 
 // ── Wedstrijd Modal ───────────────────────────────────────────
@@ -3615,12 +3777,14 @@ function openWedstrijdModal(id = null) {
       document.getElementById("w-datum").value    = w.datum    || "";
       document.getElementById("w-locatie").value  = w.locatie  || "";
       document.getElementById("w-notities").value = w.notities || "";
+      document.getElementById("w-finale").checked = !!w.is_finale;
     }
   } else {
     document.getElementById("w-naam").value     = "";
     document.getElementById("w-datum").value    = "";
     document.getElementById("w-locatie").value  = "";
     document.getElementById("w-notities").value = "";
+    document.getElementById("w-finale").checked = false;
   }
   openModal("wedstrijdModal");
 }
@@ -3633,7 +3797,8 @@ async function saveWedstrijd() {
   const body = {
     naam, datum: document.getElementById("w-datum").value || null,
     locatie: document.getElementById("w-locatie").value.trim(),
-    notities: document.getElementById("w-notities").value.trim()
+    notities: document.getElementById("w-notities").value.trim(),
+    is_finale: document.getElementById("w-finale").checked
   };
   try {
     if (editWedstrijdId) {
@@ -3697,8 +3862,11 @@ function renderOpstellingWedstrijden() {
     return;
   }
   lijst.innerHTML = wedstrijden.map(w => `
-    <div class="wedstrijd-card" onclick="openOpstelling('${w.id}')">
-      <div class="wedstrijd-datum">${formatDate(w.datum)}</div>
+    <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}" onclick="openOpstelling('${w.id}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="wedstrijd-datum" style="margin-bottom:0;">${formatDate(w.datum)}</span>
+        ${w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : ""}
+      </div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")} &nbsp;→ Opstelling maken</div>
     </div>`).join("");
@@ -3708,6 +3876,8 @@ async function openOpstelling(wedstrijdId) {
   actiefWedstrijdId = wedstrijdId;
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
   document.getElementById("opstelling-wedstrijd-naam").textContent = w ? w.naam : "";
+  const finaleBadge = document.getElementById("opstelling-finale-badge");
+  if (finaleBadge) finaleBadge.innerHTML = (w && w.is_finale) ? `<span class="finale-badge">🏆 FINALE</span>` : "";
   document.getElementById("opstelling-stap1").style.display = "none";
   document.getElementById("opstelling-stap2").style.display = "";
   await laadProgrammaEnOpstelling();
