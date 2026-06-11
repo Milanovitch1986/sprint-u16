@@ -4666,7 +4666,41 @@ async function alleenBeschikbaar(aan) {
     toast(aan ? "Alle atleten beschikbaar" : "Alle atleten uitgeschakeld");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
-function genereerOpstelling() {
+// Haalt de atleet-id's op die al zijn ingedeeld in een OPGESLAGEN opstelling van
+// een andere finale-wedstrijd op dezelfde datum (zelfde categorie + geslacht).
+// Deze atleten mogen bij finales niet automatisch dubbel worden ingezet.
+async function laadAndereFinaleAtleten(wedstrijdId, datum, geslacht) {
+  const set = new Set();
+  if (!datum) return set; // zonder datum kunnen we geen "zelfde dag" bepalen
+  const andereFinales = wedstrijden.filter(w =>
+    w.is_finale && w.datum === datum && String(w.id) !== String(wedstrijdId)
+  );
+  if (!andereFinales.length) return set;
+  try {
+    const { data, error } = await sb.from("opstelling")
+      .select("data")
+      .eq("categorie_id", actieveCategorie?.id)
+      .eq("geslacht", geslacht)
+      .in("wedstrijd_id", andereFinales.map(w => w.id));
+    if (error) throw error;
+    (data || []).forEach(row => {
+      Object.values(row.data || {}).forEach(aid => { if (aid) set.add(String(aid)); });
+    });
+  } catch (e) {
+    console.error("Kon andere finale-opstellingen niet laden:", e);
+    toast("⚠️ Kon andere finale-opstellingen niet controleren", "warn", 5000);
+  }
+  return set;
+}
+
+async function genereerOpstelling() {
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  const isFinale = !!wedstrijd?.is_finale;
+  // Bij finales: atleten die al in een andere finale-opstelling op dezelfde dag staan, uitsluiten.
+  const geblokkeerdeAtleten = isFinale
+    ? await laadAndereFinaleAtleten(actiefWedstrijdId, wedstrijd?.datum, actiefGeslacht)
+    : new Set();
+
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
   opstellingData = {};
   ploegNamen.forEach(p => opstellingData[p] = {});
@@ -4697,16 +4731,18 @@ function genereerOpstelling() {
     // Bij technisch: maar in 1 startgroep per discipline (over alle ploegen heen)
     if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) return false;
 
-    // Geen tijdconflict binnen 15 min
+    // Geen tijdconflict binnen 15 min — bij finales laten we deze regel vallen (sterkst mogelijke opstelling)
     if (item.starttijd) {
-      const hMin = tijdNaarMinuten(item.starttijd);
-      const conflict = (atleetIngepland[aid] || []).some(ingepland => {
-        if (!ingepland.starttijd) return false;
-        return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
-      });
-      if (conflict) return false;
+      if (!isFinale) {
+        const hMin = tijdNaarMinuten(item.starttijd);
+        const conflict = (atleetIngepland[aid] || []).some(ingepland => {
+          if (!ingepland.starttijd) return false;
+          return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
+        });
+        if (conflict) return false;
+      }
 
-      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden
+      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden (ook bij finales)
       if (heeftDrieUurConflict(item.discipline, item.starttijd, atleetIngepland[aid] || [])) return false;
     }
 
@@ -4732,7 +4768,7 @@ function genereerOpstelling() {
     const atleetIngepland       = {}; // atleetId → [{idx, starttijd}]
 
     const beschikbareAtleten = atleten.filter(
-      a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
+      a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id) && !geblokkeerdeAtleten.has(String(a.id))
     );
 
     // Kandidatenlijst voor een programma-item: alleen atleten die nog vrij zijn (geen andere ploeg),
@@ -4765,6 +4801,8 @@ function genereerOpstelling() {
       }
     });
 
+    // Bij finales slaan we ronde 2 én de min-2-waarschuwing over: puur de sterkste atleet per onderdeel.
+    if (!isFinale) {
     // ── Ronde 2: atleten die aan deze ploeg zijn toegewezen maar nog maar 1 onderdeel hebben
     //            krijgen een extra kans bij onderdelen die nog vrije slots hebben ──
     programma.forEach((item, idx) => {
@@ -4807,6 +4845,7 @@ function genereerOpstelling() {
         toast(`⚠️ Ploeg ${ploeg}: controleer handmatig — ${namen} ${teWeinig.length === 1 ? "heeft" : "hebben"} maar 1 onderdeel`, "warn", 8000);
       }, 300 * (ploegNamen.indexOf(ploeg) + 1));
     }
+    } // einde 'if (!isFinale)' — ronde 2 + waarschuwing
   });
 
   renderPloegen();
@@ -4814,7 +4853,13 @@ function genereerOpstelling() {
 }
 
 // ── Aanvullen (behoudt handmatige keuzes, vult lege slots in) ─────────────────
-function aanvullenOpstelling() {
+async function aanvullenOpstelling() {
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  const isFinale = !!wedstrijd?.is_finale;
+  const geblokkeerdeAtleten = isFinale
+    ? await laadAndereFinaleAtleten(actiefWedstrijdId, wedstrijd?.datum, actiefGeslacht)
+    : new Set();
+
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
 
   // Bouw de huidige staat op uit opstellingData (wat al ingevuld is)
@@ -4867,14 +4912,16 @@ function aanvullenOpstelling() {
     if ((atleetOnderdeelTeller[aid] || 0) >= 3) return false;
     if (isTechnisch && technischGeblokkeerd.has(`${aid}|${item.discipline}`)) return false;
     if (item.starttijd) {
-      const hMin = tijdNaarMinuten(item.starttijd);
-      const conflict = (atleetIngepland[aid] || []).some(ingepland => {
-        if (!ingepland.starttijd) return false;
-        return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
-      });
-      if (conflict) return false;
+      if (!isFinale) {
+        const hMin = tijdNaarMinuten(item.starttijd);
+        const conflict = (atleetIngepland[aid] || []).some(ingepland => {
+          if (!ingepland.starttijd) return false;
+          return Math.abs(tijdNaarMinuten(ingepland.starttijd) - hMin) <= 15;
+        });
+        if (conflict) return false;
+      }
 
-      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden
+      // Speciale 3-uurs-regel: 800m/1500m nooit binnen 3 uur gecombineerd met 300m/300m horden (ook bij finales)
       if (heeftDrieUurConflict(item.discipline, item.starttijd, atleetIngepland[aid] || [])) return false;
     }
     for (let s = 0; s < maxSlots; s++) {
@@ -4890,8 +4937,21 @@ function aanvullenOpstelling() {
   }
 
   const beschikbareAtleten = atleten.filter(
-    a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id)
+    a => a.geslacht === actiefGeslacht && isBeschikbaar(a.id) && !geblokkeerdeAtleten.has(String(a.id))
   );
+
+  // Waarschuw als er al (handmatig) iemand staat die óók in een andere finale op deze dag zit.
+  // Die keuze laten we staan, maar de gebruiker moet er even naar kijken.
+  if (isFinale && geblokkeerdeAtleten.size) {
+    const dubbel = Object.keys(atleetInPloeg).filter(aid => geblokkeerdeAtleten.has(String(aid)));
+    if (dubbel.length) {
+      const namen = dubbel.map(aid => {
+        const a = atleten.find(x => String(x.id) === String(aid));
+        return a ? (a.naam || `atleet ${aid}`) : `atleet ${aid}`;
+      }).join(", ");
+      setTimeout(() => toast(`⚠️ ${namen} ${dubbel.length === 1 ? "staat" : "staan"} ook in een andere finale op deze dag — controleer handmatig`, "warn", 8000), 300);
+    }
+  }
 
   ploegNamen.forEach(ploeg => {
     if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
@@ -4932,6 +4992,8 @@ function aanvullenOpstelling() {
       }
     });
 
+    // Bij finales geen ronde 2: puur de sterkste atleet per onderdeel.
+    if (!isFinale) {
     // Ronde 2: extra kans voor atleten met maar 1 onderdeel die al aan deze ploeg zijn gekoppeld
     programma.forEach((item, idx) => {
       const maxSlots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
@@ -4958,6 +5020,7 @@ function aanvullenOpstelling() {
         }
       }
     });
+    } // einde 'if (!isFinale)' — ronde 2
   });
 
   renderPloegen();

@@ -6,6 +6,54 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 39] — 2026-06-11
+
+### 🏆 Sterkst mogelijke opstelling bij finales
+
+Voor wedstrijden met de finale-markering werken **⚡ Automatisch opstellen** en **🧩 Aanvullen** anders: ze stellen het sterkst mogelijke team samen. Bij alle niet-finale wedstrijden verandert er niets aan de opstellingslogica.
+
+**Nieuw gedrag bij finales:**
+- **Puur de sterkste atleet per onderdeel.** De "iedereen minstens 2 onderdelen"-stap (ronde 2) vervalt, net als de bijbehorende oranje waarschuwing. Een atleet mag dus 1 onderdeel doen als dat tot het beste team leidt.
+- **De 15-minutenregel vervalt** bij finales, zodat een atleet ook voor twee kort op elkaar volgende onderdelen kan worden ingezet.
+- **Geen dubbele inzet over finales op dezelfde dag.** Een atleet die al in een *opgeslagen* opstelling van een andere finale op dezelfde datum staat (zelfde categorie + geslacht), wordt niet automatisch ingedeeld. Bij Aanvullen blijft een eventuele handmatige keuze staan, met een waarschuwing.
+
+**Blijft ook bij finales gelden:** maximaal 3 onderdelen per atleet, de 800m/1500m-vs-300m 3-uursregel, technische onderdelen in één startgroep, en een atleet zit in maar één ploeg.
+
+**Belangrijk over de volgorde:** omdat de uitsluiting op *opgeslagen* opstellingen werkt, bepaalt de volgorde van opslaan wie waar terechtkomt. Stel finale A op en sla op, daarna finale B → B laat A's atleten weg. Genereer je A daarna opnieuw, dan vallen B's atleten weg.
+
+**Technische details:**
+- Nieuwe helper `laadAndereFinaleAtleten(wedstrijdId, datum, geslacht)` haalt via de `opstelling`-tabel de atleet-id's op uit andere finale-opstellingen op dezelfde datum.
+- `genereerOpstelling()` en `aanvullenOpstelling()` zijn nu `async`; ze bepalen `isFinale` en sluiten de geblokkeerde atleten uit `beschikbareAtleten` uit. De 15-minutencheck en ronde 2 zijn in `if (!isFinale)` gezet.
+
+**Niet kunnen testen door mij (handmatig te controleren in de browser):**
+- Het effect op een echte finale met opgeslagen opstellingen, en de uitsluiting tussen twee finales op dezelfde dag (vereist Supabase-data). De kernlogica (finale-detectie, datum-filter, atleten verzamelen, 15-min/ronde 2 overslaan) is wel los getest.
+
+**Geen Supabase-wijziging nodig** — gebruikt de bestaande tabellen `wedstrijden` (kolom `is_finale`) en `opstelling`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
+## [juni 2026 — patch 38] — 2026-06-09
+
+### 🧹 Afgelopen-wedstrijdkaarten: knoppen verwijderd
+
+Verfijning van patch 37. Op de kaarten onder "Afgelopen wedstrijden" zijn de losse knoppen verwijderd; de kaart zelf is de enige interactie.
+
+**Gewijzigd:**
+- De knoppen ✏️ Bewerken, 📋 Programma en 📄 Importeer PDF zijn **weggelaten** op afgelopen-wedstrijdkaarten. De volledige kaart blijft klikbaar en opent de opstelling in alleen-lezen-modus (patch 37).
+- Onderaan de kaart staat nu een hint **👁️ Bekijk opstelling**.
+- **Aankomende** wedstrijden houden hun knoppen ongewijzigd.
+
+**Technische details:**
+- `wedstrijdKaartHtml()`: de onderkant van de kaart is afhankelijk van `afgelopen` — bij afgelopen een hint-tekst i.p.v. de knoppenrij.
+
+**Geen Supabase-wijziging nodig.**
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 37] — 2026-06-09
 
 ### 🔒 Opstelling van afgelopen wedstrijd raadplegen (alleen lezen)
