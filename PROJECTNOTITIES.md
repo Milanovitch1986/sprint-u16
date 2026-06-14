@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 11 juni 2026 (patch 39)*
+*AV Sprint Breda · Laatste update: 14 juni 2026 (patch 40)*
 
 ---
 
@@ -28,6 +28,7 @@
 | `trainer_categorieen` | Koppeling trainer ↔ categorie (many-to-many) |
 | `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr) |
 | `prestaties` | PR's per atleet per discipline |
+| `onderdelen` | Zelf toegevoegde onderdelen per categorie (naam, type, geslacht) — patch 40 |
 | `wedstrijden` | Wedstrijden (naam, datum, locatie, notities, `is_finale`) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
 | `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
@@ -41,8 +42,11 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
-### supabase_setup.sql opnieuw gegenereerd + opgeschoond (11 juni 2026)
-Het setup-script `supabase_setup.sql` is opnieuw opgebouwd op basis van het actuele live-schema en bewust opgeschoond. **Weggelaten t.o.v. live:** de slapende `eigenaar_id`-kolommen + bijbehorende "eigen …"-policies (de app gebruikt ze niet meer, alles loopt op `categorie_id`), de ongebruikte tabel `release_notes` (de app gebruikt alleen `releasenotes`), en twee paar dubbele `uitnodigingen`-policies (per paar bleef er één over). **Behouden:** de `profielen`-policies op de eigen profiel-id (`auth.uid() = id`), alle vier SECURITY DEFINER-functies en de `on_auth_user_created`-trigger. Het script is bedoeld voor een NIEUWE, lege database en wijkt dus bewust af van de huidige live-database (die de oude resten nog bevat) — niet op de bestaande database draaien. Gevalideerd door het in een lokale PostgreSQL te draaien (schema-opbouw + functionele inserts). 2FA staat los in Supabase Auth en niet in dit script.
+### Eigen onderdelen + onderdeel-ranglijst (patch 40, juni 2026)
+De Prestaties-tab kent zelf toegevoegde onderdelen, bewaard in de tabel `onderdelen` (`categorie_id`, `naam`, `type` ∈ `tijd_sec`/`tijd_min`/`afstand`, `geslacht` ∈ `M`/`V`/`B`). Geladen in `syncAll()` (faalt zacht) in `customOnderdelen`; ook los te herladen via `laadOnderdelen()`. Beheer via `openOnderdeelModal()` → `saveOnderdeel()` / `deleteOnderdeel()` / `renderOnderdeelLijst()`. De helpers `vindCustomOnderdeel()`, `isLagerBeter()` en `isMinutenFormaat()` bepalen richting (lager vs hoger = beter) en weergave; `getPREenheid`, `getPRPlaceholder`, `normaliserenResultaat`, `formateerResultaatWeergave`, `bestePrestatie` en de PR-bepaling in `renderPrestatieTable` raadplegen deze. `getPRDisciplinesVoorAtleet()` voegt eigen onderdelen (op geslacht) toe aan het invoerformulier; de bulk-PR-velden gebruiken index-gebaseerde id's. Bij het kiezen van een onderdeel-filter (zonder atleet) toont `renderOnderdeelRanglijst()` de beste PR per atleet, gesorteerd. **Bewust afgebakend tot de Prestaties-tab:** eigen onderdelen komen niet in het wedstrijdprogramma, de opstelling of de puntenrekentool, omdat daar geen Atletiekunie-puntenformule voor bestaat (`berekenPunten` geeft 0 terug voor onbekende onderdelen).
+
+### 60m geen U16-onderdeel (patch 40, juni 2026)
+`60m` is uit `U16_DISCIPLINES` verwijderd (verdween daarmee uit het programma-keuzemenu en de PDF-import-keuzelijst). In de Excel-PR-import (`DISC_MAP`) staan `60 meter` en `60 meter horden` (alle varianten) nu op `null` = overslaan; in `PDF_DISCIPLINE_VERTALING` stonden `60m`, `60mh` en `60m horden` al op `null`. Wie 60m toch wil bijhouden, kan het als eigen onderdeel toevoegen.
 
 ### Afgelopen opstelling raadplegen: alleen-lezen-modus (patch 37–38, juni 2026)
 Een afgelopen-wedstrijdkaart in de Wedstrijden-tab is volledig klikbaar (`bekijkOpstelling()`) en opent de opstelling read-only. De vlag `opstellingAlleenLezen` (default `false`) stuurt dit aan: `openOpstelling(wedstrijdId, alleenLezen)` zet de vlag, `pasOpstellingModusToe()` verbergt bewerk-elementen (class `bewerk-actie`) + de beschikbaarheid-sectie en toont een 🔒-badge, en `renderPloeg()`-slots renderen zonder klik/✕. **Belangrijk:** in alleen-lezen-modus leidt `renderPloegen()` de te tonen ploegen af uit de opgeslagen `opstellingData` (niet uit de algemene instelling `aantalPloegenPerGeslacht`), zodat alle destijds gevulde ploegen zichtbaar zijn. Op afgelopen kaarten zijn de losse knoppen (✏️/📋/📄) weggelaten (patch 38); de hele kaart is de klikzone, met een hint "👁️ Bekijk opstelling". Aankomende kaarten houden hun knoppen. Geen schemawijziging — gebruikt bestaande tabel `opstelling`.

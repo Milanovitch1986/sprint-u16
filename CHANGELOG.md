@@ -6,6 +6,39 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 40] — 2026-06-14
+
+### 🏅 Onderdeel-filter met ranglijst + eigen onderdelen + 60m verwijderd
+
+Drie wijzigingen in de Prestaties-tab.
+
+**1. Filteren op onderdeel = ranglijst.**
+Kies je in de Prestaties-tab een onderdeel (zonder een specifieke atleet), dan zie je nu één ranglijst met de beste PR per atleet, beste bovenaan. Voor loop-/tijdonderdelen geldt sneller = beter, voor veld-/afstandonderdelen verder of hoger = beter. De atleet-filter werkt ongewijzigd; kies je géén filter, dan zie je nog steeds de gegroepeerde lijst per atleet.
+
+**2. Eigen onderdelen toevoegen (knop ➕ Nieuw onderdeel).**
+Staat een onderdeel niet in de standaardlijst, dan kun je het zelf toevoegen via een nieuw beheerscherm. Je kiest een naam, een type (tijd in seconden, tijd in minuten, of afstand/hoogte in meters) en voor wie het geldt (jongens, meisjes of beide). Een toegevoegd onderdeel verschijnt daarna automatisch bij het invoeren van PR's en in het onderdeel-filter, en kan ook weer verwijderd worden (reeds ingevoerde prestaties blijven dan bestaan). Onderdelen worden per categorie in de database bewaard (nieuwe tabel `onderdelen`).
+
+*Afbakening:* eigen onderdelen werken alléén in de Prestaties-tab (PR's vastleggen + filteren/ranglijst). Ze komen bewust niet in het wedstrijdprogramma, de opstelling of de puntenrekentool, omdat daar geen officiële Atletiekunie-puntenformule voor bestaat. Voor eigen onderdelen worden dus geen punten berekend.
+
+**3. 60m (en 60m horden / 60mh) verwijderd.**
+`60m` is uit de centrale lijst `U16_DISCIPLINES` gehaald, waardoor het verdwijnt uit het wedstrijdprogramma-keuzemenu én de keuzelijst bij PDF-import. In de Excel-PR-import worden `60 meter` en `60 meter horden` (alle varianten) nu overgeslagen in plaats van geïmporteerd. `60mh` / `60m horden` stonden al op overslaan bij de PDF-import; dat blijft zo.
+
+**Technische details:**
+- Nieuwe tabel `onderdelen` (`categorie_id`, `naam`, `type`, `geslacht`, `aangemaakt`), geladen in `syncAll()` (faalt zacht als de tabel ontbreekt). Globale state `customOnderdelen`.
+- Nieuwe helpers `vindCustomOnderdeel()`, `isLagerBeter()` en `isMinutenFormaat()`; `getPREenheid`, `getPRPlaceholder`, `normaliserenResultaat`, `formateerResultaatWeergave`, `bestePrestatie` en de PR-bepaling in `renderPrestatieTable` zijn custom-bewust gemaakt.
+- `getPRDisciplinesVoorAtleet()` plakt eigen onderdelen (op geslacht) achter de standaardlijst; de bulk-PR-velden gebruiken nu index-gebaseerde id's (veilig bij speciale tekens in namen).
+- `renderPrestaties()` vult het filter met onderdelen-met-data + eigen onderdelen en roept bij een gekozen onderdeel de nieuwe `renderOnderdeelRanglijst()` aan.
+- Beheerscherm: `openOnderdeelModal()`, `renderOnderdeelLijst()`, `saveOnderdeel()`, `deleteOnderdeel()`, `laadOnderdelen()`.
+
+**Niet kunnen testen door mij (handmatig te controleren in de browser):**
+- De echte Supabase-queries en of de RLS-policy van de nieuwe tabel in jouw project precies zo werkt; het opslaan/verwijderen/laden van een eigen onderdeel. De pure logica (ranglijst-sortering, lager/hoger = beter, eenheid per type, 60m eruit) is wel los getest.
+
+**Supabase-wijziging nodig** — eenmalig de nieuwe tabel `onderdelen` aanmaken met `GRANT` + RLS (zie chat / `supabase_setup.sql`).
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 39] — 2026-06-11
 
 ### 🏆 Sterkst mogelijke opstelling bij finales
