@@ -7226,7 +7226,7 @@ function openFinaleImportModal(wedstrijdId) {
   finaleParsedM  = [];
   finaleParsedV  = [];
   finaleOnbekend = [];
-  finaleKeuze    = "beide";
+  finaleKeuze    = null;
 
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
   const catNaam = actieveCategorie?.naam || "?";
@@ -7467,11 +7467,15 @@ function toonFinaleKeuze() {
   document.getElementById("finale-keuze-sub").textContent =
     `In dit bestand (categorie ${catNaam}): ${nM} regels voor jongens, ${nV} regels voor meisjes.`;
 
-  // Standaardkeuze: allebei als beide gevuld zijn, anders het gevulde geslacht
-  if (nM && nV) finaleKeuze = "beide";
-  else if (nM)  finaleKeuze = "M";
-  else if (nV)  finaleKeuze = "V";
-  else          finaleKeuze = "beide";
+  // Standaardkeuze alléén bij de eerste weergave (finaleKeuze nog niet gezet).
+  // Bij een herteken ná een klik mag de keuze van de gebruiker NIET gereset worden,
+  // anders springt de selectie meteen terug en lijkt klikken niets te doen.
+  if (finaleKeuze == null) {
+    if (nM && nV) finaleKeuze = "beide";
+    else if (nM)  finaleKeuze = "M";
+    else if (nV)  finaleKeuze = "V";
+    else          finaleKeuze = "beide";
+  }
 
   function knop(keuze, icoon, titel, aantal, uit) {
     const actief = finaleKeuze === keuze;

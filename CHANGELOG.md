@@ -6,6 +6,20 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 43] — 2026-06-15
+
+### 🐛 Bugfix: keuze jongens/meisjes bij finale-import bleef niet staan
+
+In de finale-Excel-import (patch 42) deed klikken op **Alleen jongens** of **Alleen meisjes** niets — de knop werd niet geselecteerd en de keuze sprong terug naar "Allebei".
+
+**Oorzaak:** `toonFinaleKeuze()` bepaalde de standaardkeuze bij élke herteken. Na een klik riep `kiesFinaleGeslacht()` opnieuw `toonFinaleKeuze()` aan, waardoor de net gemaakte keuze meteen werd overschreven met de standaard ("Allebei" wanneer beide geslachten gevuld zijn).
+
+**Oplossing:** de standaardkeuze wordt nu alléén bij de eerste weergave bepaald (`finaleKeuze` start op `null` in `openFinaleImportModal()` en wordt alleen gezet als die nog `null` is). Bij een herteken na een klik blijft de keuze van de gebruiker staan.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 42] — 2026-06-15
 
 ### 📊 Finale-tijdschema importeren uit Excel
