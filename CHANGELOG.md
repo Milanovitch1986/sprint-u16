@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 41] — 2026-06-15
+
+### 🎯 Eigen onderdelen per atleet + tijden boven de minuut als m:ss
+
+Twee wijzigingen, beide in de Prestaties-tab.
+
+**1. Onderdeel toevoegen voor één specifieke atleet.**
+In het scherm **+ Prestatie invoeren** (per atleet) staat nu onderaan een sectie **➕ Onderdeel toevoegen voor deze atleet**. Je geeft een naam (bijv. 100m) en een type (tijd in seconden, tijd in minuten, of afstand/hoogte) op; het onderdeel verschijnt meteen als extra regel in de lijst van die atleet en je vult er direct een PR in. Zo'n eigen onderdeel geldt **alléén voor die ene atleet** en is herkenbaar met het label *eigen* en een ✕ om het weer te verwijderen (een eventueel ingevoerde tijd wordt dan ook verwijderd; standaardonderdelen kun je niet verwijderen).
+
+Dit lost ook een eerder knelpunt op: een meisje kon geen 100m krijgen, omdat 100m wel in de jongenslijst staat maar niet in de meisjeslijst, én de categorie-brede knop "Nieuw onderdeel" meldde "bestaat al". Via dit nieuwe scherm kan een meisje nu gewoon een 100m (of elk ander onderdeel) krijgen, los van de standaardlijst voor haar geslacht.
+
+De bestaande knop **➕ Nieuw onderdeel** (voor de hele categorie) blijft ongewijzigd. Atleet-eigen onderdelen verschijnen niet in dat beheerscherm en pas in het algemene onderdeel-filter zodra er een PR voor is ingevoerd.
+
+**2. Tijden vanaf 60 seconden worden als m:ss.hh getoond.**
+Tijd-in-seconden onderdelen (sprintnummers en eigen onderdelen van het type "seconden") worden vanaf 60 seconden weergegeven als minuten:seconden, net als de lange loopnummers. Voorbeeld: een 300m van 64,32 sec verschijnt nu als `1:04.32`; onder de minuut blijft het gewoon in seconden (`14.20`). Dit geldt voor de weergave overal — overzicht, ranglijst, opstelling, invoerveld, print/WhatsApp en Excel — en óók voor PR's die je eerder al in seconden had ingevoerd. Afstand-/hoogteonderdelen (bijv. 65,00 m kogel) blijven uiteraard in meters. Bij het invoeren mag je voortaan zowel `64.32` als `1:04.32` typen.
+
+#### Technisch
+- **Database:** kolom `atleet_id` toegevoegd aan tabel `onderdelen` (nullable, `REFERENCES atleten(id) ON DELETE CASCADE`). Leeg = categorie-breed onderdeel (zoals voorheen); gevuld = onderdeel alleen voor die atleet.
+- `getPRDisciplinesVoorAtleet()` neemt nu zowel categorie-brede eigen onderdelen (voor het juiste geslacht of "beide") als atleet-eigen onderdelen (`atleet_id` == deze atleet) mee. Nieuwe helper `isAtleetEigenOnderdeel()`.
+- Nieuwe functies `voegAtleetOnderdeelToe()` en `verwijderAtleetOnderdeel(idx)`; `herlaadBulkPRForm()` toont de toevoeg-sectie en markeert eigen onderdelen. `renderOnderdeelLijst()` en het algemene onderdeel-filter filteren op `atleet_id == null`.
+- Nieuwe helpers `isTijdSecondenOnderdeel()` en `secondenNaarMinFormaat()`. `normaliserenResultaat()` accepteert nu ook m:ss-invoer voor seconden-onderdelen en slaat ≥ 60 sec op als `m:ss.hh`; `formateerResultaatWeergave()` doet dezelfde omzetting bij weergave (ook voor oudere, plat opgeslagen tijden). De ruwe PR-weergave in de opstelling/slotkeuze/print/tabel loopt nu ook via `formateerResultaatWeergave()`.
+- Sortering en puntenberekening blijven ongewijzigd: `parseResultaat()` zet zowel `m:ss.hh` als platte seconden naar hetzelfde aantal seconden om.
+
+#### Wat niet getest kon worden
+- De echte Supabase-queries (insert/delete van een atleet-eigen onderdeel via de nieuwe kolom, en of de bestaande RLS-policy de nieuwe rijen correct afdekt) en het opnieuw importeren van een geëxporteerd Excel-PR-overzicht waarin een 300m als `m:ss.hh` staat. De pure logica (weergave-omzetting vanaf 60 sec, m:ss-invoer normaliseren, onderdelenlijst per atleet, sortering blijft gelijk) is wel los getest.
+
+---
+
 ## [juni 2026 — patch 40] — 2026-06-14
 
 ### 🏅 Onderdeel-filter met ranglijst + eigen onderdelen + 60m verwijderd

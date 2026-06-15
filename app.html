@@ -2232,9 +2232,10 @@ function renderPrestaties() {
   if (atleetId) list = list.filter(p => String(p.atleetId) === atleetId);
   if (disc)     list = list.filter(p => p.discipline === disc);
 
-  // Update disc dropdown: onderdelen met prestaties + zelf toegevoegde onderdelen
+  // Update disc dropdown: onderdelen met prestaties + categorie-brede eigen onderdelen.
+  // Atleet-eigen onderdelen (atleet_id gevuld) komen alleen in beeld via hun eigen PR-data.
   const discsUitData = prestaties.map(p => p.discipline).filter(Boolean);
-  const discsCustom  = customOnderdelen.map(o => o.naam).filter(Boolean);
+  const discsCustom  = customOnderdelen.filter(o => o.atleet_id == null).map(o => o.naam).filter(Boolean);
   const allDiscs = [...new Set([...discsUitData, ...discsCustom])].sort((a,b)=>a.localeCompare(b,"nl"));
   const discSel  = document.getElementById("prestatie-disc-filter");
   const curDisc  = discSel.value;
@@ -2498,13 +2499,27 @@ const PR_DISCIPLINES_V = [
 function getPRDisciplinesVoorAtleet(atleetId) {
   const atleet = atleten.find(a => String(a.id) === String(atleetId));
   const basis = (atleet && atleet.geslacht === "V") ? PR_DISCIPLINES_V : PR_DISCIPLINES_M;
-  // Zelf toegevoegde onderdelen voor dit geslacht (of 'B' = beide) erachter plakken
+  // Eigen onderdelen erachter plakken:
+  //  - categorie-breed (atleet_id leeg): voor dit geslacht of 'B' = beide
+  //  - atleet-eigen (atleet_id == deze atleet): alleen voor deze atleet
   const geslacht = atleet ? atleet.geslacht : "M";
   const extra = customOnderdelen
-    .filter(o => o.geslacht === "B" || o.geslacht === geslacht)
+    .filter(o => {
+      if (o.atleet_id != null) return String(o.atleet_id) === String(atleetId);
+      return o.geslacht === "B" || o.geslacht === geslacht;
+    })
     .map(o => o.naam)
     .filter(naam => !basis.some(b => b.toLowerCase() === (naam||"").toLowerCase()));
   return [...basis, ...extra];
+}
+
+// Is dit een onderdeel dat speciaal voor déze atleet is toegevoegd? (atleet_id gevuld)
+function isAtleetEigenOnderdeel(disc, atleetId) {
+  const n = String(disc||"").trim().toLowerCase();
+  return customOnderdelen.some(o =>
+    o.atleet_id != null &&
+    String(o.atleet_id) === String(atleetId) &&
+    (o.naam||"").trim().toLowerCase() === n);
 }
 
 function getPRPlaceholder(disc) {
@@ -2533,19 +2548,24 @@ function herlaadBulkPRForm() {
   const disciplines = getPRDisciplinesVoorAtleet(atleetId);
   const html = disciplines.map((disc, idx) => {
     const bestaandePR = bestePrestatie(atleetId, disc);
-    const huidigeWaarde = bestaandePR ? bestaandePR.resultaat : "";
+    const huidigeWaarde = bestaandePR ? formateerResultaatWeergave(bestaandePR.resultaat, disc) : "";
     const eenheid = getPREenheid(disc);
     const placeholder = getPRPlaceholder(disc);
     // Discipline label met eenheid
     const eenheidLabel = eenheid === "min" ? "min" : eenheid === "m" ? "m" : "sec";
+    const eigen = isAtleetEigenOnderdeel(disc, atleetId);
+    // Derde kolom: bij eigen onderdelen een verwijderknop, anders de eenheid
+    const derdeKolom = eigen
+      ? `<button type="button" title="Eigen onderdeel verwijderen voor deze atleet" onclick="verwijderAtleetOnderdeel(${idx})" style="background:none;border:none;color:#e05252;font-size:15px;cursor:pointer;padding:2px;line-height:1;">✕</button>`
+      : `<span style="font-size:12px;color:var(--muted);">${eenheidLabel}</span>`;
     return `
-      <div class="field" style="display:grid;grid-template-columns:140px 1fr 40px;align-items:center;gap:8px;margin-bottom:10px;">
-        <label style="margin:0;font-size:13px;font-weight:700;color:var(--text);">${esc(disc)}</label>
+      <div class="field" style="display:grid;grid-template-columns:140px 1fr 40px;align-items:center;gap:8px;margin-bottom:10px;${eigen ? "background:var(--surface2);border-radius:var(--radius);padding:6px 8px;" : ""}">
+        <label style="margin:0;font-size:13px;font-weight:700;color:var(--text);">${esc(disc)}${eigen ? ` <span style="font-size:10px;font-weight:600;color:var(--muted);">eigen</span>` : ""}</label>
         <input type="text" id="bulk-pr-${idx}"
           value="${esc(huidigeWaarde)}"
           placeholder="${placeholder}"
           style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 10px;font-family:'Barlow',sans-serif;font-size:14px;outline:none;">
-        <span style="font-size:12px;color:var(--muted);">${eenheidLabel}</span>
+        ${derdeKolom}
       </div>`;
   }).join("");
 
@@ -2553,7 +2573,106 @@ function herlaadBulkPRForm() {
     <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
       Vul voor elk onderdeel het PR in. Laat leeg als er geen PR is. Bestaande PR's worden overschreven bij opslaan.
     </div>
-    ${html}`;
+    ${html}
+    ${bulkExtraOnderdeelHtml()}`;
+}
+
+// HTML voor "Onderdeel toevoegen voor deze atleet" onderaan het invoerformulier
+function bulkExtraOnderdeelHtml() {
+  return `
+  <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:12px;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">➕ Onderdeel toevoegen voor deze atleet</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <input type="text" id="extra-onderdeel-naam" placeholder="Naam, bijv. 100m"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 10px;font-family:'Barlow',sans-serif;font-size:14px;outline:none;">
+      <select id="extra-onderdeel-type"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 10px;font-family:'Barlow',sans-serif;font-size:14px;outline:none;">
+        <option value="tijd_sec">Tijd in seconden</option>
+        <option value="tijd_min">Tijd in minuten</option>
+        <option value="afstand">Afstand / hoogte</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" style="width:100%;" onclick="voegAtleetOnderdeelToe()">+ Toevoegen aan lijst</button>
+    <span id="extra-onderdeel-fout" style="color:#e05252;font-size:12px;display:none;margin-top:6px;"></span>
+  </div>`;
+}
+
+// Voeg een onderdeel toe dat alléén voor deze atleet geldt (atleet_id gevuld)
+async function voegAtleetOnderdeelToe() {
+  const atleetId = document.getElementById("f-atleetId").value;
+  const foutEl = document.getElementById("extra-onderdeel-fout");
+  if (foutEl) foutEl.style.display = "none";
+  if (!atleetId) return;
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast("Geen categorie actief", "err"); return; }
+  const atleet = atleten.find(a => String(a.id) === String(atleetId));
+  const naam = document.getElementById("extra-onderdeel-naam").value.trim();
+  const type = document.getElementById("extra-onderdeel-type").value;
+  if (!naam) {
+    foutEl.textContent = "Geef het onderdeel een naam.";
+    foutEl.style.display = "";
+    return;
+  }
+  // Staat dit onderdeel al in de lijst van deze atleet (standaard of eigen)?
+  const reeds = getPRDisciplinesVoorAtleet(atleetId)
+    .some(d => d.trim().toLowerCase() === naam.toLowerCase());
+  if (reeds) {
+    foutEl.textContent = "Dit onderdeel staat al in de lijst van deze atleet.";
+    foutEl.style.display = "";
+    return;
+  }
+  try {
+    const { data, error } = await sb.from("onderdelen")
+      .insert({ categorie_id: cid, naam, type, geslacht: (atleet && atleet.geslacht) || "B", atleet_id: atleetId })
+      .select().single();
+    if (error) throw error;
+    customOnderdelen.push(data);
+    herlaadBulkPRForm();
+    toast(`✓ "${naam}" toegevoegd voor deze atleet`);
+  } catch (e) {
+    foutEl.textContent = "Fout bij opslaan: " + e.message;
+    foutEl.style.display = "";
+  }
+}
+
+// Verwijder een atleet-eigen onderdeel (op basis van de rij-index in het formulier).
+// Een eventueel ingevoerde PR voor dit onderdeel wordt ook verwijderd.
+async function verwijderAtleetOnderdeel(idx) {
+  const atleetId = document.getElementById("f-atleetId").value;
+  if (!atleetId) return;
+  const disc = getPRDisciplinesVoorAtleet(atleetId)[idx];
+  if (!disc) return;
+  const cid = actieveCategorie?.id;
+  const onderdeel = customOnderdelen.find(o =>
+    o.atleet_id != null &&
+    String(o.atleet_id) === String(atleetId) &&
+    (o.naam||"").trim().toLowerCase() === disc.trim().toLowerCase());
+  if (!onderdeel) return;
+  const heeftPR = !!bestePrestatie(atleetId, disc);
+  const vraag = heeftPR
+    ? `Wil je het eigen onderdeel "${disc}" voor deze atleet verwijderen? Een ingevoerde tijd voor dit onderdeel wordt dan ook verwijderd.`
+    : `Wil je het eigen onderdeel "${disc}" voor deze atleet verwijderen?`;
+  if (!await bevestig("Onderdeel verwijderen", vraag)) return;
+  try {
+    // Verwijder eerst eventuele prestaties van deze atleet voor dit onderdeel
+    const bijbehorend = prestaties.filter(p =>
+      String(p.atleetId) === String(atleetId) &&
+      p.discipline.trim().toLowerCase() === disc.trim().toLowerCase());
+    if (bijbehorend.length) {
+      const ids = bijbehorend.map(p => p.id);
+      await sb.from("prestaties").delete().eq("categorie_id", cid).in("id", ids);
+      prestaties = prestaties.filter(p => !ids.map(String).includes(String(p.id)));
+    }
+    // Verwijder de onderdeel-definitie
+    const { error } = await sb.from("onderdelen").delete().eq("id", onderdeel.id).eq("categorie_id", cid);
+    if (error) throw error;
+    customOnderdelen = customOnderdelen.filter(o => String(o.id) !== String(onderdeel.id));
+    herlaadBulkPRForm();
+    renderPrestaties();
+    toast("Onderdeel verwijderd");
+  } catch (e) {
+    toast("Fout: " + e.message, "err");
+  }
 }
 
 // ── Onderdelen beheren (zelf toegevoegde onderdelen) ──────────
@@ -2578,13 +2697,16 @@ function openOnderdeelModal() {
 function renderOnderdeelLijst() {
   const el = document.getElementById("onderdeel-lijst");
   if (!el) return;
-  if (!customOnderdelen.length) {
+  // Alleen categorie-brede eigen onderdelen (atleet_id leeg). Atleet-eigen onderdelen
+  // worden bij de atleet zelf beheerd (in het PR-invoerscherm).
+  const lijst = customOnderdelen.filter(o => o.atleet_id == null);
+  if (!lijst.length) {
     el.innerHTML = `<div style="color:var(--muted);font-size:13px;font-style:italic;">Nog geen eigen onderdelen toegevoegd.</div>`;
     return;
   }
   const typeLabel = { tijd_sec: "tijd (sec)", tijd_min: "tijd (min)", afstand: "afstand (m)" };
   const geslLabel = { B: "beide", M: "jongens", V: "meisjes" };
-  el.innerHTML = customOnderdelen.map(o => `
+  el.innerHTML = lijst.map(o => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
       <div style="flex:1;">
         <div style="font-weight:600;">${esc(o.naam)}</div>
@@ -2784,6 +2906,20 @@ function isMinutenFormaat(disc) {
   if (c) return c.type === "tijd_min";
   return isMiddellangeAfstandDiscipline(disc);
 }
+// Tijd-in-seconden onderdeel? (sprint of eigen onderdeel type seconden) — dus géén veld/afstand en géén minuten-onderdeel.
+// Deze onderdelen worden vanaf 60 sec als m:ss.hh getoond.
+function isTijdSecondenOnderdeel(disc) {
+  return isLagerBeter(disc) && !isMinutenFormaat(disc);
+}
+// Zet een plat secondengetal (string) om naar m:ss.hh; decimalen blijven exact behouden. Geeft null bij ongeldige invoer.
+function secondenNaarMinFormaat(secStr) {
+  const m = String(secStr).trim().match(/^(\d+)(\.\d+)?$/);
+  if (!m) return null;
+  const totaal = parseInt(m[1], 10);
+  const minuten = Math.floor(totaal / 60);
+  const sec = totaal % 60;
+  return `${minuten}:${String(sec).padStart(2, "0")}${m[2] || ""}`;
+}
 
 // Normaliseer ingevoerd resultaat naar World Athletics standaard:
 // Sprintnummers → sec (bijv. "10,84" → "10.84")
@@ -2812,23 +2948,46 @@ function normaliserenResultaat(rawVal, disc) {
     // Fallback: vervang komma door punt
     return s.replace(',', '.');
   }
-  // Sprint en veld: komma → punt, verwijder overige niet-numerieke tekens
+  // Tijd-in-seconden onderdelen: m:ss-invoer wordt genormaliseerd, en platte seconden
+  // vanaf 60 worden opgeslagen als m:ss.hh (zelfde formaat als de lange loopnummers).
+  if (isTijdSecondenOnderdeel(disc)) {
+    const driedelig = s.match(/^(\d+)[:.;,](\d{1,2})[.,;](\d+)$/);
+    if (driedelig) {
+      return `${driedelig[1]}:${driedelig[2].padStart(2,'0')}.${driedelig[3]}`;
+    }
+    const tweedelig = s.match(/^(\d+):(\d+(?:[.,]\d+)?)$/);
+    if (tweedelig) {
+      return `${tweedelig[1]}:${tweedelig[2].replace(',','.')}`;
+    }
+    const plat = s.replace(',', '.');
+    const sec = parseFloat(plat);
+    if (!isNaN(sec) && sec >= 60) {
+      const mmss = secondenNaarMinFormaat(plat);
+      if (mmss) return mmss;
+    }
+    return plat;
+  }
+  // Veld/afstand: komma → punt, verder ongewijzigd
   s = s.replace(',', '.');
   return s;
 }
 
 
 // Formatteer opgeslagen resultaat voor weergave in World Athletics standaard
-// Sprintnummers: "10.84" (sec), Lange afstand: "2:14.69" (min), Veld: "1.50" (m)
+// Sprintnummers: "10.84" (sec) of "1:04.32" (vanaf 60 sec), Lange afstand: "2:14.69" (min), Veld: "1.50" (m)
 function formateerResultaatWeergave(resultaat, disc) {
   if (!resultaat) return "";
   const s = String(resultaat).trim();
   // Minuten-onderdelen — zorg dat het formaat m:ss.hh is
   if (isMinutenFormaat(disc)) {
-    // Als het al minuten:seconden formaat heeft, normaliseer het
     return normaliserenResultaat(s, disc);
   }
-  // Sprint en veld: zorg dat decimaalteken een punt is
+  // Tijd-in-seconden onderdelen: laat normaliserenResultaat de m:ss.hh-omzetting doen
+  // (vanaf 60 sec). Werkt ook voor oudere PR's die nog plat in seconden zijn opgeslagen.
+  if (isTijdSecondenOnderdeel(disc)) {
+    return normaliserenResultaat(s, disc);
+  }
+  // Veld/afstand: zorg dat decimaalteken een punt is
   return s.replace(",", ".");
 }
 
@@ -4529,7 +4688,7 @@ function renderPloeg(ploeg, isOpen = false) {
       }
 
       const prVal = atleet ? bestePrestatie(atleet.id, item.discipline) : null;
-      const prTekst = prVal ? `PR: ${prVal.resultaat}` : "";
+      const prTekst = prVal ? `PR: ${formateerResultaatWeergave(prVal.resultaat, item.discipline)}` : "";
       // Bouw tooltip tekst voor tijdconflict
       const conflictTooltip = conflictWaarschuwing
         ? bouwConflictTooltip(ploeg, opst, idx, atleetId)
@@ -4749,7 +4908,7 @@ function openSlotKeuze(ploeg, idx, slotNr, el) {
         data-naam="${esc(k.atleet.naam).toLowerCase()}"
         ${clickHandler}>
         <span>${esc(k.atleet.naam)} ${waarsch ? `<small style="color:var(--accent2)">(${waarsch})</small>` : ""}</span>
-        <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${k.pr.resultaat}` : "geen PR"}</span>
+        <span class="si-punten">${k.pr ? `${k.pts}pts · PR: ${formateerResultaatWeergave(k.pr.resultaat, item.discipline)}` : "geen PR"}</span>
       </div>`;
     }).join("") +
     `<div class="slot-select-item" onclick="kiesAtleet('${ploeg}',${idx},${slotNr},null)">
@@ -5423,7 +5582,7 @@ async function printOpstelling() {
           const atleet = atleten.find(a => String(a.id) === String(aid));
           if (!atleet) continue;
           const pr = bestePrestatie(atleet.id, item.discipline);
-          rijen.push({ naam: atleet.naam, pr: pr ? pr.resultaat : "—" });
+          rijen.push({ naam: atleet.naam, pr: pr ? formateerResultaatWeergave(pr.resultaat, item.discipline) : "—" });
         }
 
         if (!rijen.length) {
@@ -5678,7 +5837,7 @@ async function printPloeg(ploeg) {
         <td>${aantalAtleten === 0 ? (item.starttijd || "—") : ""}</td>
         <td>${aantalAtleten === 0 ? sgLabel : ""}</td>
         <td>${esc(atleet.naam)}</td>
-        <td class="pr-cel">${pr ? pr.resultaat : "—"}</td>
+        <td class="pr-cel">${pr ? formateerResultaatWeergave(pr.resultaat, item.discipline) : "—"}</td>
       </tr>`;
       aantalAtleten++;
     }
