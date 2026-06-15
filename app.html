@@ -1168,7 +1168,7 @@
     </g>
   </g>
 </svg>
-      <div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Atletiekbeheertool · U16</div>
+      <div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Atletiekbeheertool · <span id="home-subtitle-cat">U16</span></div>
     </div>
 
     <!-- Releasenotes sectie -->
@@ -1693,12 +1693,12 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <!-- Jongens -->
         <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👦 Jongens (U16-M) — <span id="pdf-preview-m-count">0</span> rijen</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👦 Jongens (<span id="pdf-cat-m">U16</span>-M) — <span id="pdf-preview-m-count">0</span> rijen</div>
           <div id="pdf-preview-m" style="font-size:12px;max-height:300px;overflow-y:auto;"></div>
         </div>
         <!-- Meisjes -->
         <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👧 Meisjes (U16-V) — <span id="pdf-preview-v-count">0</span> rijen</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">👧 Meisjes (<span id="pdf-cat-v">U16</span>-V) — <span id="pdf-preview-v-count">0</span> rijen</div>
           <div id="pdf-preview-v" style="font-size:12px;max-height:300px;overflow-y:auto;"></div>
         </div>
       </div>
@@ -1920,6 +1920,14 @@ function renderCategorieSwitcher() {
   const switcher = document.getElementById("categorie-switcher");
   const logo = document.getElementById("logo-cat");
   if (logo && actieveCategorie) logo.textContent = actieveCategorie.naam;
+  // Branding bijwerken naar de actieve categorie (patch 45)
+  if (actieveCategorie) {
+    const _cn = actieveCategorie.naam;
+    const _sub = document.getElementById("home-subtitle-cat"); if (_sub) _sub.textContent = _cn;
+    const _pm = document.getElementById("pdf-cat-m"); if (_pm) _pm.textContent = _cn;
+    const _pv = document.getElementById("pdf-cat-v"); if (_pv) _pv.textContent = _cn;
+    document.title = "Sprint " + _cn + " — Atletiek";
+  }
   if (!switcher) return;
 
   if (beschikbareCategorieen.length <= 1) {
@@ -3228,14 +3236,14 @@ async function verwerkLangeLijst(rows) {
 
   // Discipline-mapping: bestandsnamen → app-namen
   const DISC_MAP = {
-    "60 meter":null,"60 meter handtijd":null,"60 meter ontbrekende windmeting":null,"60 meter ongeldige windmeting":null,
+    "60 meter":"60m","60 meter handtijd":"60m","60 meter ontbrekende windmeting":"60m","60 meter ongeldige windmeting":"60m",
     "80 meter":"80m","80 meter ontbrekende windmeting":"80m","80 meter ongeldige windmeting":"80m",
     "100 meter":"100m","100 meter ongeldige windmeting":"100m",
     "150 meter":"150m","200 meter":"200m","200 meter ongeldige windmeting":"200m",
     "300 meter":"300m","400 meter":"400m","600 meter":"600m",
     "800 meter":"800m","1000 meter":"1000m","1500 meter":"1500m",
-    "60 meter horden 76.2cm":null,"60 meter horden76.2cm":null,
-    "60 meter horden76.2cm (12m-8m)":null,"60 meter horden76.2cm ongeldige windmeting":null,
+    "60 meter horden 76.2cm":"60m horden","60 meter horden76.2cm":"60m horden",
+    "60 meter horden76.2cm (12m-8m)":"60m horden","60 meter horden76.2cm ongeldige windmeting":"60m horden",
     "60 meter horden 83.8cm":null,"60 meter horden83.8cm":null,
     "80 meter horden 76.2cm":"80m horden","80 meter horden76.2cm":"80m horden",
     "80 meter horden76.2cm ongeldige windmeting":"80m horden",
@@ -3247,7 +3255,7 @@ async function verwerkLangeLijst(rows) {
     "speerwerpen 400gr":"Speerwerpen","speerwerpen400gr":"Speerwerpen","speerwerpen500gr":"Speerwerpen",
     "verspringen":"Verspringen","verspringen ongeldige windmeting":"Verspringen","verspringen ontbrekende windmeting":"Verspringen",
     "hoogspringen":"Hoogspringen",
-    "4 x 100 meter":"4x100m","4x100m":"4x100m","4 x 80 meter":"4x80m","4x80m":"4x80m",
+    "4 x 100 meter":"4x100m","4x100m":"4x100m","4 x 80 meter":"4x80m","4x80m":"4x80m","4 x 60 meter":"4x60m","4x60m":"4x60m",
   };
 
   function mapDisc(naam) {
@@ -4026,7 +4034,7 @@ let opstellingData    = {};
 let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 
 // ── U16 Disciplines definitie ─────────────────────────────────
-const U16_DISCIPLINES = [
+const DISC_U16 = [
   // Loop
   { naam:"80m",         type:"loop",      duur:15 },
   { naam:"100m",        type:"loop",      duur:20 },
@@ -4050,6 +4058,40 @@ const U16_DISCIPLINES = [
   { naam:"Discuswerpen",  type:"technisch", duur:60 },
   { naam:"Speerwerpen",   type:"technisch", duur:60 },
 ];
+// U14: jongens 80m/80mH/4x80m, meisjes 60m/60mH/4x60m; rest gelijk aan U16.
+const DISC_U14 = [
+  // Loop
+  { naam:"60m",         type:"loop",      duur:15 },
+  { naam:"80m",         type:"loop",      duur:15 },
+  { naam:"600m",        type:"loop",      duur:40 },
+  { naam:"1000m",       type:"loop",      duur:50 },
+  { naam:"60m horden",  type:"loop",      duur:20 },
+  { naam:"80m horden",  type:"loop",      duur:20 },
+  { naam:"4x60m",       type:"estafette", duur:20 },
+  { naam:"4x80m",       type:"estafette", duur:20 },
+  // Technisch - springen
+  { naam:"Hoogspringen",  type:"technisch", duur:90 },
+  { naam:"Verspringen",   type:"technisch", duur:60 },
+  // Technisch - werpen
+  { naam:"Kogelstoten",   type:"technisch", duur:60 },
+  { naam:"Discuswerpen",  type:"technisch", duur:60 },
+  { naam:"Speerwerpen",   type:"technisch", duur:60 },
+];
+// Centrale config per categorie (uitbreidbaar: U18/U20 later).
+const CATEGORIE_CONFIG = {
+  "U16": { disciplines: DISC_U16 },
+  "U14": { disciplines: DISC_U14 },
+};
+// Onderdelenlijst van de actieve categorie (valt terug op U16 bij onbekende categorie).
+function getDisciplines() {
+  const naam = (typeof actieveCategorie !== "undefined" && actieveCategorie) ? actieveCategorie.naam : null;
+  const cfg = naam && CATEGORIE_CONFIG[naam];
+  return (cfg && cfg.disciplines) || DISC_U16;
+}
+// Naam van de actieve categorie voor labels/branding (valt terug op U16).
+function catNaam() {
+  return (typeof actieveCategorie !== "undefined" && actieveCategorie && actieveCategorie.naam) ? actieveCategorie.naam : "U16";
+}
 
 // ── U16 Puntentelling (Atletiekunie formule, pag 10-11 doc) ───
 function berekenPunten(discipline, resultaat, geslacht) {
@@ -4073,14 +4115,16 @@ function berekenPunten(discipline, resultaat, geslacht) {
     "300m horden": { A:70800.0,  B:872.5   },
     "4x100m":      { A:95150.0,  B:1189.5  },
     "4x80m":       { A:77325.0,  B:1168.0  },
+    "4x60m":       { A:59225.0,  B:1130.0  },
+    "60m horden":  { A:14050.0,  B:795.5   },
   };
   // Spring/werp: INT(A * SQRT(afstand) - B)
   const veldConst = {
     "Kogelstoten":  { A:303.73, B:437.5 },
     "Discuswerpen": { A:166.79, B:438.5 },
     "Speerwerpen":  { A:170.39, B:437.5 },
-    "Verspringen":  { A:887.99, B:1364.5, drempel:4.41, drempelA:200, drempelB:1.91 },
-    "Hoogspringen": { A:1977.53,B:1798.5, drempel:1.35, drempelA:733.33333, drempelB:0.67 },
+    "Verspringen":  { A:887.99, B:1364.5, drempel:4.41, drempelA:200, drempelB:1.91, drempelPlus:0.5 },
+    "Hoogspringen": { A:1977.53,B:1798.5, drempel:1.35, drempelA:733.33333, drempelB:0.67, drempelPlus:0.7 },
   };
 
   const disc = discipline.trim();
@@ -4093,7 +4137,7 @@ function berekenPunten(discipline, resultaat, geslacht) {
     const c = veldConst[disc];
     if (c.drempel && r <= c.drempel) {
       // Speciale formule voor lage waarden
-      return Math.max(0, Math.floor((r - c.drempelB) * c.drempelA + 0.5));
+      return Math.max(0, Math.floor((r - c.drempelB) * c.drempelA + c.drempelPlus));
     }
     return Math.max(0, Math.floor(c.A * Math.sqrt(r) - c.B));
   }
@@ -4138,7 +4182,7 @@ function bestePrestatie(atleetId, discipline) {
 }
 
 function getDisciplineType(naam) {
-  const d = U16_DISCIPLINES.find(d => d.naam.toLowerCase() === naam.trim().toLowerCase());
+  const d = getDisciplines().find(d => d.naam.toLowerCase() === naam.trim().toLowerCase());
   return d ? d.type : "loop";
 }
 
@@ -4479,7 +4523,7 @@ function printProgramma() {
   let html = `
     <div style="font-family:Arial,sans-serif;font-size:12px;color:black;padding:20px;">
       <h2 style="font-size:18px;margin-bottom:4px;">${esc(wedstrijdNaam)}${esc(wedstrijdDatum)}</h2>
-      <div style="font-size:12px;color:#555;margin-bottom:4px;">AV Sprint U16 — ${geslachtLabel}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:4px;">AV Sprint ${catNaam()} — ${geslachtLabel}</div>
       <div style="font-size:11px;color:#999;margin-bottom:20px;">Wedstrijdprogramma</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
@@ -4570,7 +4614,7 @@ function addProgrammaRijMet(p) {
   const lijst = document.getElementById("programma-items-list");
   const div = document.createElement("div");
   div.className = "programma-rij";
-  const discOpties = U16_DISCIPLINES.map(d =>
+  const discOpties = getDisciplines().map(d =>
     `<option value="${d.naam}" ${p.discipline === d.naam ? "selected" : ""}>${d.naam}</option>`
   ).join("");
   const isTechnisch = p.type === "technisch";
@@ -4595,7 +4639,7 @@ function addProgrammaRijMet(p) {
 
 function updateProgrammaType(sel) {
   const rij = sel.parentElement;
-  const disc = U16_DISCIPLINES.find(d => d.naam === sel.value);
+  const disc = getDisciplines().find(d => d.naam === sel.value);
   const type = disc ? disc.type : "loop";
   rij.querySelector(".pr-type").textContent = type;
   const groepSel = rij.querySelector(".pr-groep");
@@ -4610,7 +4654,7 @@ async function saveProgrammaModal() {
     const disc = rij.querySelector(".pr-disc").value;
     const tijd = rij.querySelector(".pr-tijd").value;
     const groepSel = rij.querySelector(".pr-groep");
-    const d = U16_DISCIPLINES.find(x => x.naam === disc);
+    const d = getDisciplines().find(x => x.naam === disc);
     const type = d ? d.type : "loop";
     const startgroep = (type === "technisch" && groepSel) ? groepSel.value : null;
     items.push({ discipline: disc, type, starttijd: tijd || null, startgroep });
@@ -4772,7 +4816,7 @@ function renderPloeg(ploeg, isOpen = false) {
 
   const ploegNr = {"A":1,"B":2,"C":3}[ploeg] || 1;
   const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
-  const teamNaam = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
+  const teamNaam = `AV Sprint ${catNaam()}-${geslachtCode} Team ${ploegNr}`;
   return `
     <div class="ploeg-container" id="ploeg-container-${ploeg}">
       <div class="ploeg-header ${isOpen ? "open" : ""}" onclick="togglePloeg('${ploeg}')">
@@ -5572,7 +5616,7 @@ async function printOpstelling() {
     let html = "";
     ploegen.forEach(ploeg => {
       const ploegNr  = {"A":1,"B":2,"C":3}[ploeg] || 1;
-      const teamNaam = `AV Sprint U16-${gCode} — Team ${ploegNr}`;
+      const teamNaam = `AV Sprint ${catNaam()}-${gCode} — Team ${ploegNr}`;
       const opD = opst[ploeg] || {};
 
       if (isPloegLeeg(ploeg, prog, opD)) return;
@@ -5813,7 +5857,7 @@ function deelViaWhatsApp() {
   ploegNamen.forEach(ploeg => {
     const ploegNr  = { A: 1, B: 2, C: 3 }[ploeg] || 1;
     const opst     = opstellingData[ploeg] || {};
-    const teamNaam = `🏃 Team ${ploegNr} (AV Sprint U16-${gCode})`;
+    const teamNaam = `🏃 Team ${ploegNr} (AV Sprint ${catNaam()}-${gCode})`;
 
     tekst += "─────────────────────\n";
     tekst += teamNaam + "\n";
@@ -5841,7 +5885,7 @@ function deelViaWhatsApp() {
 
   // Footer
   const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
-  tekst += `_Gedeeld via Sprint U16 op ${nu}_`;
+  tekst += `_Gedeeld via Sprint ${catNaam()} op ${nu}_`;
 
   // Open WhatsApp deep link — werkt op iOS, Android en desktop
   const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
@@ -5857,7 +5901,7 @@ async function printPloeg(ploeg) {
   const ploegNr   = { A: 1, B: 2, C: 3 }[ploeg] || 1;
   const gCode     = actiefGeslacht === "V" ? "V" : "M";
   const gLabel    = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
-  const teamNaam  = `AV Sprint U16-${gCode} — Team ${ploegNr}`;
+  const teamNaam  = `AV Sprint ${catNaam()}-${gCode} — Team ${ploegNr}`;
   const printDatum = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
 
   const opst = opstellingData[ploeg] || {};
@@ -5954,7 +5998,7 @@ function deelPloegViaWhatsApp(ploeg) {
   const ploegNr  = { A: 1, B: 2, C: 3 }[ploeg] || 1;
   const gCode    = actiefGeslacht === "V" ? "V" : "M";
   const gLabel   = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
-  const teamNaam = `🏃 Team ${ploegNr} (AV Sprint U16-${gCode})`;
+  const teamNaam = `🏃 Team ${ploegNr} (AV Sprint ${catNaam()}-${gCode})`;
   const opst     = opstellingData[ploeg] || {};
 
   let tekst = "";
@@ -5983,7 +6027,7 @@ function deelPloegViaWhatsApp(ploeg) {
 
   tekst += "\n";
   const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
-  tekst += `_Gedeeld via Sprint U16 op ${nu}_`;
+  tekst += `_Gedeeld via Sprint ${catNaam()} op ${nu}_`;
 
   const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
   window.open(url, "_blank");
@@ -6523,7 +6567,7 @@ async function exporteerOpstelling() {
 
         const ploegNr       = {"A":1,"B":2,"C":3}[ploeg] || 1;
         const geslachtCode  = geslacht === "V" ? "V" : "M";
-        const teamNaam      = `AV Sprint U16-${geslachtCode} Team ${ploegNr}`;
+        const teamNaam      = `AV Sprint ${catNaam()}-${geslachtCode} Team ${ploegNr}`;
         const categorieNaam = actieveCategorie?.naam || "U16";
 
         const { voornaam, tussenvoegsel, achternaam } = splitsNaam(atleet.naam || "");
@@ -6788,27 +6832,28 @@ const PDF_DISCIPLINE_VERTALING = {
   "speerwerpen":   "Speerwerpen",
   "4x100m":        "4x100m",
   "4x80m":         "4x80m",
-  "4x60m":         null,
+  "4x60m":         "4x60m",
   "100mh":         "100m horden",
   "100m horden":   "100m horden",
   "100mhorden":    "100m horden",
   "80mh":          "80m horden",
   "80m horden":    "80m horden",
   "80mhorden":     "80m horden",
-  "60mh":          null,
-  "60m horden":    null,
+  "60mh":          "60m horden",
+  "60m horden":    "60m horden",
   "1500m":         "1500m",
   "150m":          "150m",
   "100m":          "100m",
   "800m":          "800m",
   "600m":          "600m",
+  "1000m":         "1000m",
   "300m horden":   "300m horden",
   "300mh":         "300m horden",
   "300mhorden":    "300m horden",
   "300m":          "300m",
   "200m":          "200m",
   "80m":           "80m",
-  "60m":           null,
+  "60m":           "60m",
 };
 
 // Bekende locatienamen die na de discipline kunnen staan — worden genegeerd
@@ -6919,12 +6964,13 @@ function parseerTijdschema(tekst) {
     const starttijd = tijdMatch[1];
     const rest      = regel.slice(tijdMatch[0].length).trim();
 
-    const isM = /U16-?M\b/i.test(rest);
-    const isV = /U16-?V\b/i.test(rest);
+    const _catN = catNaam();
+    const isM = new RegExp(_catN + "-?M\\b", "i").test(rest);
+    const isV = new RegExp(_catN + "-?V\\b", "i").test(rest);
     if (!isM && !isV) continue;
 
-    // Verwijder categorie-aanduiding (bijv. "U16-M - groep A" of "U16-V")
-    let resterend = rest.replace(/U16-?[MV]\b\s*[-–]?\s*/i, "").trim();
+    // Verwijder categorie-aanduiding (bijv. "U16-M - groep A" of "U14-V")
+    let resterend = rest.replace(new RegExp(_catN + "-?[MV]\\b\\s*[-–]?\\s*", "i"), "").trim();
 
     // Startgroep detecteren
     let startgroep = null;
@@ -6969,7 +7015,7 @@ function parseerTijdschema(tekst) {
       continue;
     }
 
-    const discDef = U16_DISCIPLINES.find(d => d.naam === appDiscipline);
+    const discDef = getDisciplines().find(d => d.naam === appDiscipline);
     if (!discDef) continue;
 
     const rij = { discipline: appDiscipline, type: discDef.type, starttijd, startgroep };
@@ -7009,7 +7055,7 @@ function toonVraagscherm(rijM, rijV, nietHerkend) {
   document.getElementById("pdf-import-opslaan-btn").style.display = "";
   document.getElementById("pdf-import-terug-btn").style.display = "";
 
-  const discOpties = U16_DISCIPLINES.map(d =>
+  const discOpties = getDisciplines().map(d =>
     `<option value="${d.naam}">${d.naam}</option>`
   ).join("");
 
@@ -7040,7 +7086,7 @@ function verwerkVraagschermAntwoorden() {
     const gekozen = sel.value;
     if (gekozen === "__overslaan__") return;
 
-    const discDef = U16_DISCIPLINES.find(d => d.naam === gekozen);
+    const discDef = getDisciplines().find(d => d.naam === gekozen);
     if (!discDef) return;
 
     const rij = {
@@ -7200,7 +7246,7 @@ async function slaImportOp() {
 const FINALE_DISC_MAP = {
   "4x100m":"4x100m","4x100":"4x100m",
   "4x80m":"4x80m","4x80":"4x80m",
-  "4x60m":null,"4x60":null,
+  "4x60m":"4x60m","4x60":"4x60m",
   "hoogspringen":"Hoogspringen","hoog":"Hoogspringen",
   "verspringen":"Verspringen","ver":"Verspringen",
   "kogelstoten":"Kogelstoten","kogel":"Kogelstoten",
@@ -7209,9 +7255,9 @@ const FINALE_DISC_MAP = {
   "100mh":"100m horden","100mhorden":"100m horden",
   "80mh":"80m horden","80mhorden":"80m horden",
   "300mh":"300m horden","300mhorden":"300m horden",
-  "60mh":null,"60mhorden":null,
+  "60mh":"60m horden","60mhorden":"60m horden",
   "1500m":"1500m","1000m":"1000m","800m":"800m","600m":"600m",
-  "300m":"300m","200m":"200m","150m":"150m","100m":"100m","80m":"80m","60m":null,
+  "300m":"300m","200m":"200m","150m":"150m","100m":"100m","80m":"80m","60m":"60m",
 };
 
 // State voor de finale-import
@@ -7301,7 +7347,7 @@ function ontleedFinaleCel(tekst, catNaam) {
   let app = FINALE_DISC_MAP.hasOwnProperty(sleutel) ? FINALE_DISC_MAP[sleutel] : undefined;
   // Niet in de mapping? Misschien matcht de naam direct een bestaand U16-onderdeel.
   if (app === undefined) {
-    const direct = U16_DISCIPLINES.find(d => d.naam.toLowerCase() === naam.toLowerCase());
+    const direct = getDisciplines().find(d => d.naam.toLowerCase() === naam.toLowerCase());
     if (direct) app = direct.naam;
   }
   return { naam, groep, app };
@@ -7435,7 +7481,7 @@ function parseerFinaleSchema(ws) {
       } else if (res.app === null) {
         // bewust overslaan
       } else {
-        const def = U16_DISCIPLINES.find(d => d.naam === res.app);
+        const def = getDisciplines().find(d => d.naam === res.app);
         const rij = { discipline: res.app, type: def ? def.type : "loop", starttijd: tijd, startgroep: res.groep };
         if (b.geslacht === "M") parsedM.push(rij); else parsedV.push(rij);
       }
@@ -7551,7 +7597,7 @@ function naarFinalePreview() {
     (o.geslacht === "M" && toonM) || (o.geslacht === "V" && toonV));
   const vraagWrap = document.getElementById("finale-vraag-wrap");
   if (relevanteOnbekend.length) {
-    const discOpties = U16_DISCIPLINES.map(d => `<option value="${d.naam}">${d.naam}</option>`).join("");
+    const discOpties = getDisciplines().map(d => `<option value="${d.naam}">${d.naam}</option>`).join("");
     vraagWrap.style.display = "";
     vraagWrap.innerHTML = `
       <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);">
@@ -7639,7 +7685,7 @@ async function slaFinaleImportOp() {
   document.querySelectorAll("#finale-vraag-wrap select").forEach(sel => {
     const gekozen = sel.value;
     if (gekozen === "__overslaan__") return;
-    const def = U16_DISCIPLINES.find(d => d.naam === gekozen);
+    const def = getDisciplines().find(d => d.naam === gekozen);
     if (!def) return;
     const rij = {
       discipline: gekozen,
