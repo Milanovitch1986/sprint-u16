@@ -6,6 +6,42 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 42] — 2026-06-15
+
+### 📊 Finale-tijdschema importeren uit Excel
+
+Naast de bestaande PDF-import kun je nu het **vaste finale-tijdschema** uit een Excel-bestand (`.xls` of `.xlsx`) importeren. Op elke aankomende wedstrijdkaart staat hiervoor een nieuwe knop **📊 Importeer finale (Excel)** (naast 📄 Importeer PDF).
+
+**Hoe het werkt:**
+1. Je kiest het Excel-bestand. De app vindt automatisch het tabblad met het tijdschema (bij voorkeur een blad met "tijdschema" in de naam, anders het blad met een kop-rij "Onderdeel").
+2. De app leest het schema: de **jongens** staan links (kolommen Meld/Tijd/Onderdeel/Series) en de **meisjes** rechts (idem). De kolom **"Tijd"** wordt de starttijd (niet "Meld").
+3. Er wordt gefilterd op de **naam van de actieve categorie**. Sta je in U16, dan komen alléén de U16-regels binnen; regels van andere categorieën (bijv. U14) worden overgeslagen. Activeer je later een U14-categorie, dan pakt dezelfde knop automatisch de U14-regels.
+4. **Nieuwe keuzestap:** je kiest of je het **jongens-**, het **meisjes-** of **beide** schema's importeert (handig wanneer de jongens en de meisjes naar verschillende finales gaan). Per optie zie je hoeveel regels erin zitten; een leeg geslacht is niet aanklikbaar.
+5. Preview van het gekozen geslacht, plus — net als bij de PDF-import — een vraagscherm voor onderdelen die niet automatisch herkend zijn (zelf koppelen of overslaan).
+6. Importeren. **Alleen het/de gekozen geslacht(en) wordt/worden overschreven**: kies je "Alleen jongens", dan blijft een eerder geïmporteerd meisjes-programma gewoon staan (en andersom).
+
+**Slimme details bij het inlezen:**
+- "groep A" / "groep B" wordt de **startgroep** van een technisch onderdeel.
+- Baan-/matnummers zoals "Hoogspringen **1**" / "Hoogspringen **2**" worden eruit gefilterd (de naam wordt "Hoogspringen").
+- Niet-wedstrijdregels (juryvergadering, ploegleidersvergadering, vlaggenparade, overlopen estafettes, prijsuitreiking) worden genegeerd, omdat ze geen categorie-aanduiding bevatten.
+- Onderdeelnamen worden vertaald naar de app-namen (`100mH` → 100m horden, `4x80` → 4x80m, enz.).
+
+#### Technisch
+- Nieuwe knop in `wedstrijdKaartHtml()` (alleen op aankomende kaarten): `openFinaleImportModal()`.
+- Nieuwe modal `finaleImportModal` met drie stappen: bestand kiezen → geslacht kiezen → preview/vraagscherm.
+- Nieuwe state: `finaleImportWedstrijdId`, `finaleParsedM`, `finaleParsedV`, `finaleOnbekend`, `finaleKeuze`.
+- Nieuwe functies: `openFinaleImportModal()`, `verwerkFinaleBestand()` (SheetJS lazy-load + tabblad detecteren), `parseerFinaleSchema()` (kop-rij + onderdeel-/tijd-kolommen + jongens/meisjes-blok detecteren), `ontleedFinaleCel()` (categorie-filter, groep, baannummer eruit, naam-mapping), `leesFinaleTijd()` / `leesFinaleTekst()` (cel-uitlezing via `.w`), `toonFinaleKeuze()` / `kiesFinaleGeslacht()`, `naarFinalePreview()` / `finalePreviewKolom()`, `controleerFinaleBestaandeData()`, `slaFinaleImportOp()` (delete + insert **per gekozen geslacht**).
+- Nieuwe mapping `FINALE_DISC_MAP`. De jongens-/meisjes-blokken worden bepaald via de labels "Jongens"/"Meisjes" in het blad; valt terug op links = jongens, rechts = meisjes.
+
+#### Wat niet getest kon worden
+- De echte Supabase insert/delete van het geïmporteerde programma in jouw project (RLS). De parser-logica (kolomdetectie, categorie-filter op U16, groep/baannummer, "Tijd"-kolom, namen-mapping) is wel los getest tegen het echte bestand `U16-U14-Finale-1.xls`: 12 jongens · 12 meisjes · 0 onbekend, alle U14-regels overgeslagen.
+
+**Geen Supabase-wijziging nodig** — gebruikt de bestaande tabel `programma`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 41] — 2026-06-15
 
 ### 🎯 Eigen onderdelen per atleet + tijden boven de minuut als m:ss

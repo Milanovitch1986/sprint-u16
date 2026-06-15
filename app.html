@@ -1722,6 +1722,46 @@
   </div>
 </div>
 
+<!-- ── FINALE EXCEL IMPORT MODAL ── -->
+<div class="modal-overlay" id="finaleImportModal" style="align-items:flex-start;padding-top:40px;">
+  <div class="modal" style="max-width:720px;max-height:85vh;overflow-y:auto;width:95vw;">
+    <div class="modal-title">📊 Importeer finale-tijdschema (Excel)</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="finale-import-sub"></div>
+
+    <!-- Stap 1: bestand kiezen -->
+    <div id="finale-import-stap1">
+      <div style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;"
+           onclick="document.getElementById('finale-bestand-input').click()">
+        <div style="font-size:36px;margin-bottom:8px;">📊</div>
+        <div style="font-weight:600;margin-bottom:4px;">Klik om een Excel-bestand te kiezen</div>
+        <div style="font-size:12px;color:var(--muted);">Vast finale-tijdschema (.xls of .xlsx)</div>
+        <input type="file" id="finale-bestand-input" accept=".xls,.xlsx" style="display:none;" onchange="verwerkFinaleBestand(this.files[0])">
+      </div>
+      <div id="finale-laad-status" style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center;display:none;"></div>
+    </div>
+
+    <!-- Stap 2: kies welk schema (jongens / meisjes / allebei) -->
+    <div id="finale-import-keuze" style="display:none;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Welk tijdschema wil je importeren?</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;" id="finale-keuze-sub"></div>
+      <div id="finale-keuze-knoppen" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
+    <!-- Stap 3: preview (alleen het gekozen geslacht) + eventueel vraagscherm -->
+    <div id="finale-import-stap3" style="display:none;">
+      <div id="finale-import-waarschuwing" style="display:none;background:var(--accent2)22;border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+      <div id="finale-preview-wrap"></div>
+      <div id="finale-vraag-wrap" style="display:none;margin-top:16px;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('finaleImportModal')">Annuleren</button>
+      <button class="btn btn-ghost" id="finale-terug-btn" style="display:none;" onclick="finaleImportTerug()">← Terug</button>
+      <button class="btn btn-primary" id="finale-import-btn" style="display:none;" onclick="slaFinaleImportOp()">✅ Importeren</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── PRINT VIEW ── -->
 <div id="print-view" style="display:none;">
 </div>
@@ -4125,6 +4165,7 @@ function wedstrijdKaartHtml(w, afgelopen) {
         <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
         <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
         <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="openFinaleImportModal('${w.id}')" title="Importeer een vast finale-tijdschema uit Excel">📊 Importeer finale (Excel)</button>
       </div>`;
   return `
     <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}"${kaartKlik}>
@@ -7138,6 +7179,526 @@ async function slaImportOp() {
 
     closeModal("pdfImportModal");
     toast(`Programma geïmporteerd ✓ (${rijM.length} jongens · ${rijV.length} meisjes)`);
+  } catch(e) {
+    toast("Fout bij opslaan: " + e.message, "err");
+    btn.disabled = false;
+    btn.textContent = "✅ Importeren";
+  }
+}
+
+
+// ── Finale-tijdschema import uit Excel ────────────────────────
+// Importeert een vast finale-tijdschema (.xls/.xlsx) met de jongens links
+// (kolommen Meld/Tijd/Onderdeel/Series) en de meisjes rechts (idem). Er wordt
+// gefilterd op de NAAM van de actieve categorie (nu "U16"); regels van andere
+// categorieën (bijv. U14) worden overgeslagen. De kolom "Tijd" is de starttijd.
+// De gebruiker kiest of de jongens, de meisjes of allebei geïmporteerd worden;
+// alleen het/de gekozen geslacht(en) wordt/worden overschreven.
+
+// Mapping: ruwe onderdeelnaam (lowercase, zonder spaties) → app-discipline.
+// null = bewust overslaan (geen U16-onderdeel).
+const FINALE_DISC_MAP = {
+  "4x100m":"4x100m","4x100":"4x100m",
+  "4x80m":"4x80m","4x80":"4x80m",
+  "4x60m":null,"4x60":null,
+  "hoogspringen":"Hoogspringen","hoog":"Hoogspringen",
+  "verspringen":"Verspringen","ver":"Verspringen",
+  "kogelstoten":"Kogelstoten","kogel":"Kogelstoten",
+  "discuswerpen":"Discuswerpen","discus":"Discuswerpen",
+  "speerwerpen":"Speerwerpen","speer":"Speerwerpen",
+  "100mh":"100m horden","100mhorden":"100m horden",
+  "80mh":"80m horden","80mhorden":"80m horden",
+  "300mh":"300m horden","300mhorden":"300m horden",
+  "60mh":null,"60mhorden":null,
+  "1500m":"1500m","1000m":"1000m","800m":"800m","600m":"600m",
+  "300m":"300m","200m":"200m","150m":"150m","100m":"100m","80m":"80m","60m":null,
+};
+
+// State voor de finale-import
+let finaleImportWedstrijdId = null;
+let finaleParsedM   = []; // [{discipline, type, starttijd, startgroep}]
+let finaleParsedV   = [];
+let finaleOnbekend  = []; // [{starttijd, tekst, geslacht, startgroep}]
+let finaleKeuze     = "beide"; // "M" | "V" | "beide"
+
+function openFinaleImportModal(wedstrijdId) {
+  finaleImportWedstrijdId = wedstrijdId;
+  finaleParsedM  = [];
+  finaleParsedV  = [];
+  finaleOnbekend = [];
+  finaleKeuze    = "beide";
+
+  const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
+  const catNaam = actieveCategorie?.naam || "?";
+  document.getElementById("finale-import-sub").textContent =
+    w ? `Wedstrijd: ${w.naam} — gefilterd op categorie ${catNaam}` : "";
+
+  document.getElementById("finale-import-stap1").style.display = "";
+  document.getElementById("finale-import-keuze").style.display = "none";
+  document.getElementById("finale-import-stap3").style.display = "none";
+  document.getElementById("finale-terug-btn").style.display = "none";
+  document.getElementById("finale-import-btn").style.display = "none";
+  document.getElementById("finale-laad-status").style.display = "none";
+  document.getElementById("finale-bestand-input").value = "";
+
+  openModal("finaleImportModal");
+}
+
+// Lees een tijd-cel uit de worksheet als "uu:mm" (gebruikt de geformatteerde
+// celtekst .w; valt terug op de numerieke fractie van een dag).
+function leesFinaleTijd(ws, r, c) {
+  const addr = XLSX.utils.encode_cell({ r, c });
+  const cel = ws[addr];
+  if (!cel) return "";
+  if (cel.w) {
+    const m = String(cel.w).match(/(\d{1,2}):(\d{2})/);
+    if (m) return `${m[1].padStart(2,"0")}:${m[2]}`;
+  }
+  if (typeof cel.v === "number" && cel.v > 0 && cel.v < 1.5) {
+    const totMin = Math.round(cel.v * 24 * 60);
+    const h = Math.floor(totMin / 60) % 24;
+    const mm = totMin % 60;
+    return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+  }
+  const m = String(cel.v ?? "").match(/(\d{1,2}):(\d{2})/);
+  return m ? `${m[1].padStart(2,"0")}:${m[2]}` : "";
+}
+
+// Lees ruwe tekst uit een cel
+function leesFinaleTekst(ws, r, c) {
+  const addr = XLSX.utils.encode_cell({ r, c });
+  const cel = ws[addr];
+  if (!cel) return "";
+  return String(cel.w !== undefined ? cel.w : (cel.v !== undefined ? cel.v : "")).trim();
+}
+
+// Ontleed één onderdeel-cel. Geeft terug:
+//   null                        → geen wedstrijdregel (geen U.. erin, bijv. vergadering)
+//   { skipCat: true }           → wel een onderdeel, maar andere categorie → overslaan
+//   { naam, groep, app }        → app = app-discipline of undefined (= onbekend)
+function ontleedFinaleCel(tekst, catNaam) {
+  if (!tekst) return null;
+  const s = String(tekst).trim();
+  if (!s) return null;
+  const m = s.match(/U\s*(\d{2})/i);
+  if (!m) return null; // geen categorie-aanduiding → geen onderdeel
+  const cat = "U" + m[1];
+  if (cat.toLowerCase() !== String(catNaam).toLowerCase()) return { skipCat: true };
+
+  let groep = null;
+  const g = s.match(/groep\s+([AB])/i);
+  if (g) groep = g[1].toUpperCase();
+
+  let rest = s
+    .replace(/groep\s+[AB]/ig, "")
+    .replace(/U\s*\d{2}/ig, "")
+    .replace(/\d+\s*atleten.*$/i, "");
+  // Losstaande cijfers (baan-/matnummer zoals "Hoogspringen 1") verwijderen
+  const toks = rest.split(/\s+/).filter(t => t && !/^\d+$/.test(t));
+  const naam = toks.join(" ").trim();
+
+  const sleutel = naam.toLowerCase().replace(/\s+/g, "");
+  let app = FINALE_DISC_MAP.hasOwnProperty(sleutel) ? FINALE_DISC_MAP[sleutel] : undefined;
+  // Niet in de mapping? Misschien matcht de naam direct een bestaand U16-onderdeel.
+  if (app === undefined) {
+    const direct = U16_DISCIPLINES.find(d => d.naam.toLowerCase() === naam.toLowerCase());
+    if (direct) app = direct.naam;
+  }
+  return { naam, groep, app };
+}
+
+async function verwerkFinaleBestand(bestand) {
+  if (!bestand) return;
+  const statusEl = document.getElementById("finale-laad-status");
+  statusEl.style.display = "";
+  statusEl.textContent = "Excel wordt gelezen…";
+
+  // SheetJS lazy laden
+  if (!window.XLSX) {
+    try {
+      await new Promise((res, rej) => {
+        const sc = document.createElement("script");
+        sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+        sc.onload = res; sc.onerror = rej;
+        document.head.appendChild(sc);
+      });
+    } catch(e) {
+      statusEl.textContent = "❌ Kon de Excel-bibliotheek niet laden.";
+      return;
+    }
+  }
+
+  try {
+    const buf = await bestand.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: "array", cellDates: false });
+
+    // Zoek het juiste tabblad: bij voorkeur eentje met "tijdschema" in de naam,
+    // anders het eerste blad waarin een kop-rij met "onderdeel" staat.
+    let ws = null;
+    const tsNaam = wb.SheetNames.find(n => n.toLowerCase().includes("tijdschema"));
+    if (tsNaam) ws = wb.Sheets[tsNaam];
+    if (!ws) {
+      for (const n of wb.SheetNames) {
+        const w2 = wb.Sheets[n];
+        const ref2 = w2["!ref"];
+        if (!ref2) continue;
+        const rng2 = XLSX.utils.decode_range(ref2);
+        let gevonden = false;
+        for (let r = rng2.s.r; r <= Math.min(rng2.e.r, rng2.s.r + 40); r++) {
+          for (let c = rng2.s.c; c <= rng2.e.c; c++) {
+            if (leesFinaleTekst(w2, r, c).toLowerCase() === "onderdeel") { gevonden = true; break; }
+          }
+          if (gevonden) break;
+        }
+        if (gevonden) { ws = w2; break; }
+      }
+    }
+    if (!ws) { statusEl.textContent = "❌ Geen tijdschema-tabblad gevonden in dit bestand."; return; }
+
+    statusEl.textContent = "Onderdelen herkennen…";
+    parseerFinaleSchema(ws);
+  } catch(e) {
+    statusEl.textContent = "❌ Fout bij lezen Excel: " + e.message;
+    console.error("Finale-import fout:", e);
+  }
+}
+
+function parseerFinaleSchema(ws) {
+  const catNaam = actieveCategorie?.naam || "";
+  const ref = ws["!ref"];
+  if (!ref) { document.getElementById("finale-laad-status").textContent = "❌ Leeg tabblad."; return; }
+  const rng = XLSX.utils.decode_range(ref);
+
+  // 1) Kop-rij zoeken: de eerste rij met één of meer cellen "Onderdeel".
+  let headerRij = -1;
+  let onderdeelKolommen = [];
+  for (let r = rng.s.r; r <= rng.e.r; r++) {
+    const cols = [];
+    for (let c = rng.s.c; c <= rng.e.c; c++) {
+      if (leesFinaleTekst(ws, r, c).toLowerCase() === "onderdeel") cols.push(c);
+    }
+    if (cols.length) { headerRij = r; onderdeelKolommen = cols; break; }
+  }
+
+  if (headerRij < 0 || !onderdeelKolommen.length) {
+    document.getElementById("finale-laad-status").textContent = "❌ Geen kolom 'Onderdeel' gevonden.";
+    return;
+  }
+  onderdeelKolommen.sort((a, b) => a - b);
+
+  // 2) Bepaal per onderdeel-kolom de bijbehorende "Tijd"-kolom (de kolom links
+  //    ervan met kop "Tijd"; valt terug op onderdeelKol-1).
+  function tijdKolomVoor(odKol) {
+    for (let c = odKol - 1; c >= rng.s.c; c--) {
+      const kop = leesFinaleTekst(ws, headerRij, c).toLowerCase();
+      if (kop === "tijd") return c;
+      if (kop === "meld" || kop === "") continue;
+      break;
+    }
+    return odKol - 1;
+  }
+
+  // 3) Welk blok is jongens / meisjes? Zoek labels "jongens"/"meisjes" in het blad.
+  let jongensKol = null, meisjesKol = null;
+  for (let r = rng.s.r; r <= headerRij; r++) {
+    for (let c = rng.s.c; c <= rng.e.c; c++) {
+      const t = leesFinaleTekst(ws, r, c).toLowerCase();
+      if (jongensKol === null && t === "jongens") jongensKol = c;
+      if (meisjesKol === null && t === "meisjes") meisjesKol = c;
+    }
+  }
+  const blokken = onderdeelKolommen.map(odKol => ({ odKol, tijdKol: tijdKolomVoor(odKol), geslacht: null }));
+  if (jongensKol !== null || meisjesKol !== null) {
+    blokken.forEach(b => {
+      const dJ = jongensKol !== null ? Math.abs(b.odKol - jongensKol) : Infinity;
+      const dM = meisjesKol !== null ? Math.abs(b.odKol - meisjesKol) : Infinity;
+      b.geslacht = dJ <= dM ? "M" : "V";
+    });
+  } else {
+    // Geen labels: eerste blok = jongens, tweede = meisjes
+    if (blokken[0]) blokken[0].geslacht = "M";
+    if (blokken[1]) blokken[1].geslacht = "V";
+  }
+
+  // 4) Regels ontleden
+  const parsedM = [], parsedV = [], onbekend = [];
+  for (let r = headerRij + 1; r <= rng.e.r; r++) {
+    for (const b of blokken) {
+      if (!b.geslacht) continue;
+      const tekst = leesFinaleTekst(ws, r, b.odKol);
+      const res = ontleedFinaleCel(tekst, catNaam);
+      if (!res || res.skipCat) continue; // andere categorie / geen onderdeel
+      const tijd = leesFinaleTijd(ws, r, b.tijdKol);
+      if (res.app === undefined) {
+        // Niet herkend → naar vraagscherm
+        onbekend.push({ starttijd: tijd, tekst: res.naam || tekst, geslacht: b.geslacht, startgroep: res.groep });
+      } else if (res.app === null) {
+        // bewust overslaan
+      } else {
+        const def = U16_DISCIPLINES.find(d => d.naam === res.app);
+        const rij = { discipline: res.app, type: def ? def.type : "loop", starttijd: tijd, startgroep: res.groep };
+        if (b.geslacht === "M") parsedM.push(rij); else parsedV.push(rij);
+      }
+    }
+  }
+
+  parsedM.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
+  parsedV.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
+
+  finaleParsedM  = parsedM;
+  finaleParsedV  = parsedV;
+  finaleOnbekend = onbekend;
+
+  toonFinaleKeuze();
+}
+
+// ── Stap 2: kies jongens / meisjes / allebei ──────────────────
+function toonFinaleKeuze() {
+  document.getElementById("finale-import-stap1").style.display = "none";
+  document.getElementById("finale-import-keuze").style.display = "";
+  document.getElementById("finale-import-stap3").style.display = "none";
+  document.getElementById("finale-terug-btn").style.display = "none";
+  document.getElementById("finale-import-btn").style.display = "none";
+
+  const nM = finaleParsedM.length + finaleOnbekend.filter(o => o.geslacht === "M").length;
+  const nV = finaleParsedV.length + finaleOnbekend.filter(o => o.geslacht === "V").length;
+  const catNaam = actieveCategorie?.naam || "U16";
+
+  document.getElementById("finale-keuze-sub").textContent =
+    `In dit bestand (categorie ${catNaam}): ${nM} regels voor jongens, ${nV} regels voor meisjes.`;
+
+  // Standaardkeuze: allebei als beide gevuld zijn, anders het gevulde geslacht
+  if (nM && nV) finaleKeuze = "beide";
+  else if (nM)  finaleKeuze = "M";
+  else if (nV)  finaleKeuze = "V";
+  else          finaleKeuze = "beide";
+
+  function knop(keuze, icoon, titel, aantal, uit) {
+    const actief = finaleKeuze === keuze;
+    const rand = actief ? "var(--accent)" : "var(--border)";
+    const kleurTitel = actief ? "color:var(--accent);" : "";
+    const dis = uit ? "opacity:.4;cursor:not-allowed;" : "cursor:pointer;";
+    const klik = uit ? "" : `onclick="kiesFinaleGeslacht('${keuze}')"`;
+    const sub = uit
+      ? "Geen regels in dit bestand"
+      : (keuze === "beide"
+          ? `Overschrijft beide programma's · ${aantal} regels`
+          : `Overschrijft alleen het ${keuze === "M" ? "jongens" : "meisjes"}-programma · ${aantal} regels`);
+    return `
+      <div ${klik} style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid ${rand};border-radius:10px;padding:14px 16px;${dis}">
+        <span style="font-size:22px;">${icoon}</span>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;${kleurTitel}">${titel}</div>
+          <div style="font-size:12px;color:var(--muted);">${sub}</div>
+        </div>
+        ${actief && !uit ? `<span style="font-size:18px;color:var(--accent);">✓</span>` : ""}
+      </div>`;
+  }
+
+  document.getElementById("finale-keuze-knoppen").innerHTML =
+      knop("M", "👦", "Alleen jongens", nM, nM === 0)
+    + knop("V", "👧", "Alleen meisjes", nV, nV === 0)
+    + knop("beide", "👦👧", "Allebei", nM + nV, (nM === 0 || nV === 0));
+
+  // Knop "Volgende" hergebruikt de import-knop met label "Volgende →"
+  const volgende = document.getElementById("finale-import-btn");
+  volgende.style.display = (nM || nV) ? "" : "none";
+  volgende.textContent = "Volgende →";
+  volgende.onclick = naarFinalePreview;
+
+  document.getElementById("finale-terug-btn").style.display = "";
+  document.getElementById("finale-terug-btn").onclick = () => {
+    document.getElementById("finale-import-keuze").style.display = "none";
+    document.getElementById("finale-import-stap1").style.display = "";
+    document.getElementById("finale-terug-btn").style.display = "none";
+    document.getElementById("finale-import-btn").style.display = "none";
+  };
+}
+
+function kiesFinaleGeslacht(keuze) {
+  finaleKeuze = keuze;
+  toonFinaleKeuze(); // herteken met de nieuwe selectie gemarkeerd
+}
+
+// ── Stap 3: preview van het gekozen geslacht + vraagscherm ────
+function naarFinalePreview() {
+  document.getElementById("finale-import-keuze").style.display = "none";
+  document.getElementById("finale-import-stap3").style.display = "";
+
+  const toonM = finaleKeuze === "M" || finaleKeuze === "beide";
+  const toonV = finaleKeuze === "V" || finaleKeuze === "beide";
+
+  // Preview-tabellen
+  let html = "";
+  if (toonM && toonV) {
+    html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      ${finalePreviewKolom("👦 Jongens", finaleParsedM)}
+      ${finalePreviewKolom("👧 Meisjes", finaleParsedV)}
+    </div>`;
+  } else if (toonM) {
+    html = finalePreviewKolom("👦 Jongens", finaleParsedM);
+  } else {
+    html = finalePreviewKolom("👧 Meisjes", finaleParsedV);
+  }
+  document.getElementById("finale-preview-wrap").innerHTML = html;
+
+  // Vraagscherm voor onbekende onderdelen van het gekozen geslacht
+  const relevanteOnbekend = finaleOnbekend.filter(o =>
+    (o.geslacht === "M" && toonM) || (o.geslacht === "V" && toonV));
+  const vraagWrap = document.getElementById("finale-vraag-wrap");
+  if (relevanteOnbekend.length) {
+    const discOpties = U16_DISCIPLINES.map(d => `<option value="${d.naam}">${d.naam}</option>`).join("");
+    vraagWrap.style.display = "";
+    vraagWrap.innerHTML = `
+      <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--muted);">
+        De volgende onderdelen zijn niet automatisch herkend. Kies per onderdeel wat er bedoeld wordt, of laat op "Overslaan" staan.
+      </div>
+      ${relevanteOnbekend.map((item, idx) => `
+        <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="flex:0 0 auto;">
+            <span style="color:var(--accent);font-weight:700;">${item.starttijd || "—"}</span>
+            <span style="color:var(--muted);font-size:12px;margin-left:6px;">${item.geslacht === "M" ? "👦 Jongens" : "👧 Meisjes"}${item.startgroep ? " · Groep " + item.startgroep : ""}</span>
+          </div>
+          <div style="flex:1;min-width:140px;">
+            <span style="font-weight:600;color:var(--accent2);">"${esc(item.tekst)}"</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Niet herkend — wat bedoel je?</div>
+          </div>
+          <select id="finale-vraag-${idx}" data-gesl="${item.geslacht}" data-tijd="${esc(item.starttijd||"")}" data-groep="${item.startgroep||""}"
+            style="flex:0 0 auto;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;font-size:13px;">
+            <option value="__overslaan__">— Overslaan —</option>
+            ${discOpties}
+          </select>
+        </div>`).join("")}`;
+  } else {
+    vraagWrap.style.display = "none";
+    vraagWrap.innerHTML = "";
+  }
+
+  document.getElementById("finale-terug-btn").style.display = "";
+  document.getElementById("finale-terug-btn").onclick = () => toonFinaleKeuze();
+  const btn = document.getElementById("finale-import-btn");
+  btn.style.display = "";
+  btn.textContent = "✅ Importeren";
+  btn.onclick = slaFinaleImportOp;
+
+  controleerFinaleBestaandeData(toonM, toonV);
+}
+
+function finalePreviewKolom(titel, rijen) {
+  const kop = `<div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:8px;color:var(--accent);">${titel} — ${rijen.length} rijen</div>`;
+  if (!rijen.length) {
+    return kop + `<div style="color:var(--muted);font-style:italic;padding:8px;font-size:12px;">Geen onderdelen gevonden.</div>`;
+  }
+  const body = rijen.map(r => `
+    <tr style="border-top:1px solid var(--border);">
+      <td style="padding:4px 6px;color:var(--accent);font-weight:600;">${r.starttijd || "—"}</td>
+      <td style="padding:4px 6px;">${esc(r.discipline)}</td>
+      <td style="padding:4px 6px;color:var(--muted);">${r.startgroep ? "Groep " + r.startgroep : "—"}</td>
+    </tr>`).join("");
+  return kop + `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="color:var(--muted);font-size:11px;text-transform:uppercase;">
+      <th style="text-align:left;padding:4px 6px;">Tijd</th>
+      <th style="text-align:left;padding:4px 6px;">Onderdeel</th>
+      <th style="text-align:left;padding:4px 6px;">Groep</th>
+    </tr></thead><tbody>${body}</tbody></table>`;
+}
+
+async function controleerFinaleBestaandeData(toonM, toonV) {
+  const waarschEl = document.getElementById("finale-import-waarschuwing");
+  const cid = actieveCategorie?.id;
+  try {
+    const { data } = await sb.from("programma").select("geslacht")
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", finaleImportWedstrijdId);
+    if (!data || !data.length) { waarschEl.style.display = "none"; return; }
+    const delen = [];
+    if (toonM && data.some(r => r.geslacht === "M")) delen.push("jongens");
+    if (toonV && data.some(r => r.geslacht === "V")) delen.push("meisjes");
+    if (!delen.length) { waarschEl.style.display = "none"; return; }
+    waarschEl.style.display = "";
+    waarschEl.innerHTML = `⚠️ <strong>Let op:</strong> Er is al een programma opgeslagen voor de ${delen.join(" en ")} van deze wedstrijd. Als je importeert, wordt dat <strong>overschreven</strong>. Het andere geslacht blijft ongewijzigd.`;
+  } catch(e) {
+    waarschEl.style.display = "none";
+  }
+}
+
+function finaleImportTerug() {
+  // Wordt per stap dynamisch ingesteld; deze fallback gaat terug naar de keuze.
+  toonFinaleKeuze();
+}
+
+async function slaFinaleImportOp() {
+  const cid = actieveCategorie?.id;
+  if (!cid || !finaleImportWedstrijdId) return;
+
+  // 1) Verwerk de antwoorden uit het vraagscherm
+  document.querySelectorAll("#finale-vraag-wrap select").forEach(sel => {
+    const gekozen = sel.value;
+    if (gekozen === "__overslaan__") return;
+    const def = U16_DISCIPLINES.find(d => d.naam === gekozen);
+    if (!def) return;
+    const rij = {
+      discipline: gekozen,
+      type:       def.type,
+      starttijd:  sel.dataset.tijd || null,
+      startgroep: sel.dataset.groep || null
+    };
+    if (sel.dataset.gesl === "M") finaleParsedM.push(rij);
+    else finaleParsedV.push(rij);
+  });
+  finaleParsedM.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
+  finaleParsedV.sort((a, b) => (a.starttijd || "").localeCompare(b.starttijd || ""));
+
+  const doelen = finaleKeuze === "beide" ? ["M", "V"] : [finaleKeuze];
+
+  const btn = document.getElementById("finale-import-btn");
+  btn.disabled = true;
+  btn.textContent = "Bezig…";
+
+  try {
+    for (const g of doelen) {
+      const rijen = (g === "M" ? finaleParsedM : finaleParsedV).map(item => ({
+        categorie_id: cid,
+        wedstrijd_id: finaleImportWedstrijdId,
+        geslacht:     g,
+        discipline:   item.discipline,
+        type:         item.type,
+        starttijd:    item.starttijd || null,
+        startgroep:   item.startgroep || null
+      }));
+
+      // Alleen het gekozen geslacht overschrijven
+      const { error: delErr } = await sb.from("programma").delete()
+        .eq("categorie_id", cid)
+        .eq("wedstrijd_id", finaleImportWedstrijdId)
+        .eq("geslacht", g);
+      if (delErr) throw delErr;
+
+      if (rijen.length) {
+        const { error: insErr } = await sb.from("programma").insert(rijen);
+        if (insErr) throw insErr;
+      }
+    }
+
+    // Herlaad de opstelling-tab als deze wedstrijd/geslacht actief is
+    if (String(actiefWedstrijdId) === String(finaleImportWedstrijdId) && doelen.includes(actiefGeslacht)) {
+      const { data } = await sb.from("programma").select("*")
+        .eq("categorie_id", cid)
+        .eq("wedstrijd_id", finaleImportWedstrijdId)
+        .eq("geslacht", actiefGeslacht)
+        .order("starttijd", { ascending: true });
+      programma = data || [];
+      renderProgrammaOverzicht();
+      renderPloegen();
+    }
+
+    closeModal("finaleImportModal");
+    const aantalM = doelen.includes("M") ? finaleParsedM.length : 0;
+    const aantalV = doelen.includes("V") ? finaleParsedV.length : 0;
+    const delen = [];
+    if (doelen.includes("M")) delen.push(`${aantalM} jongens`);
+    if (doelen.includes("V")) delen.push(`${aantalV} meisjes`);
+    toast(`Finale-programma geïmporteerd ✓ (${delen.join(" · ")})`);
   } catch(e) {
     toast("Fout bij opslaan: " + e.message, "err");
     btn.disabled = false;
