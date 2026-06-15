@@ -6,6 +6,36 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 45] — 2026-06-15
+
+### 🏃 U14 als tweede categorie + puntencorrectie hoogspringen
+
+De app is nu echt meerdere-categorieën-proof. Maak je in de **Admin-tab** een categorie met de naam **`U14`** aan (en geef jezelf toegang), dan past de hele app zich automatisch aan zodra je bovenin naar U14 wisselt:
+
+- **Onderdelenlijst per categorie.** Voor U14 verschijnen de juiste onderdelen: 60m, 80m, 600m, 1000m, 60m horden, 80m horden, 4x60m, 4x80m, hoogspringen, verspringen, kogelstoten, discuswerpen en speerwerpen. (Jongens lopen 80m/80mH/4x80m, meisjes 60m/60mH/4x60m.) Bij U16 blijft de lijst exact zoals hij was.
+- **Punten.** U14 gebruikt dezelfde officiële Atletiekunie-telling als U16 (één gezamenlijke tabel volgens het NAU-document). De ontbrekende onderdelen **4x60m** (A=59225, B=1130) en **60m horden 76,2 cm / 6 horden** (A=14050, B=795,5) zijn aan de puntenberekening toegevoegd.
+- **Branding.** Logo, ondertitel, tabbladtitel, PDF-labels (jongens/meisjes), teamnamen en de "Gedeeld via Sprint …"-teksten tonen voortaan de actieve categorie in plaats van een vast "U16".
+- **Import.** Het importeren van een tijdschema (PDF), een finale-tijdschema (Excel) en een PR-/uitslagenbestand herkent nu ook U14-regels en -onderdelen, in plaats van ze over te slaan.
+
+### 🐛 Correctie hoogspringen-punten
+De puntenformule voor hoogspringen onder de 1,35 m gebruikte `+0,5` waar het NAU-document `+0,7` voorschrijft. Dit is gecorrigeerd (verspringen onder 4,41 m blijft terecht `+0,5`). Effect is hooguit 1 punt en alleen bij lage hoogtes.
+
+#### Technisch
+- Nieuwe centrale `CATEGORIE_CONFIG` met `DISC_U16` en `DISC_U14`. `U16_DISCIPLINES` is vervangen door `getDisciplines()` (geeft de onderdelenlijst van de actieve categorie, valt terug op U16). Nieuwe helper `catNaam()` voor labels/branding.
+- `berekenPunten`: loop-constanten `4x60m` (A=59225, B=1130) en `60m horden` (A=14050, B=795,5 — 76,2 cm / 6 horden) toegevoegd; de drempel-additieve waarde is nu per onderdeel instelbaar (`drempelPlus`: verspringen 0,5, hoogspringen 0,7).
+- `renderCategorieSwitcher()` werkt nu ook de ondertitel (`#home-subtitle-cat`), `document.title` en de PDF-labels (`#pdf-cat-m`/`#pdf-cat-v`) bij; teamnamen en share-teksten gebruiken `catNaam()`.
+- PDF-schema-import: de `U16-M`/`U16-V`-herkenning is vervangen door een regex op de naam van de actieve categorie. In `PDF_DISCIPLINE_VERTALING`, `FINALE_DISC_MAP` en `DISC_MAP` (PR-import) zijn de U14-onderdelen (60m, 60m horden 76,2 cm, 4x60m) van `null` naar echte waarden gezet; `1000m` toegevoegd aan de PDF-map.
+- Geen nieuwe Supabase-tabel; geen SQL-migratie nodig.
+
+#### Wat niet getest kon worden
+- De Supabase-kant en auth, de werkelijke PDF-/printweergave, en een echte import-/exportronde met atletiek.nu voor een U14-schema. De pure logica (onderdelen per categorie, nieuwe constanten, hoogspringen-correctie, branding-omschakeling, import-mapping) is wel los gecontroleerd; JavaScript-syntax is gevalideerd met `node --check`.
+
+> ℹ️ U14 verschijnt pas in de categorie-switcher als de categorie met **exact** de naam `U14` is aangemaakt in de Admin-tab én de trainer er toegang toe heeft. Een categorie zonder eigen config valt terug op de U16-onderdelenlijst.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 44] — 2026-06-15
 
 ### 🐛 Bugfix: app bleef hangen op oude versie (service worker cachte te agressief)
@@ -698,6 +728,8 @@ geregistreerd te worden en het onderdeel hoort niet thuis in het wedstrijdprogra
 
 > ⚠️ Bestaande 60m-prestaties in Supabase worden **niet** verwijderd, maar zijn
 > nergens meer zichtbaar in de app.
+
+> ℹ️ Update (patch 45): 60m, 60m horden en 4x60m zijn weer beschikbaar — maar uitsluitend binnen de **U14**-categorie. De puntenconstante voor 60m is in patch 45 ook hersteld.
 
 **Bestanden gewijzigd:** `app.html`
 

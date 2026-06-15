@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 15 juni 2026 (patch 44)*
+*AV Sprint Breda · Laatste update: 15 juni 2026 (patch 45)*
 
 ---
 
@@ -42,6 +42,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Categorie-afhankelijke onderdelen + branding; U14 actief (patch 45, juni 2026)
+De onderdelenlijst, de branding en (deels) de puntenberekening zijn nu categorie-afhankelijk in plaats van vast op U16.
+- **Centrale config:** `CATEGORIE_CONFIG` bevat per categorie een onderdelenlijst (`DISC_U16`, `DISC_U14`). `U16_DISCIPLINES` bestaat niet meer als losse lijst; overal in de code wordt nu `getDisciplines()` gebruikt, die de lijst van `actieveCategorie.naam` teruggeeft en bij een onbekende categorie terugvalt op `DISC_U16`. Helper `catNaam()` geeft de categorienaam voor labels (fallback "U16").
+- **U14-onderdelen:** jongens 80m/80mH/4x80m, meisjes 60m/60mH/4x60m; beide 600m, 1000m, hoog, ver, kogel, discus, speer. (Géén 150m/300m/800m/1500m — die staan niet op het U14-programma.) Het verschil M/V is niet hard gesplitst in de code; net als bij U16 is het één gecombineerde lijst waaruit de trainer per atleet kiest.
+- **Punten gedeeld U14/U16:** het NAU-document hanteert één gezamenlijke "U14 én U16"-telling, dus `berekenPunten` gebruikt dezelfde constanten voor beide. Toegevoegd in patch 45: `4x60m` (A=59225, B=1130) en `60m horden` (A=14050, B=795,5 — 76,2 cm / 6 horden). **Let op voor de toekomst:** U18/U20 heeft een *eigen* NAU-tabel; bij het activeren daarvan moeten de constanten zélf categorie-afhankelijk worden gemaakt (nu zijn ze nog gedeeld).
+- **Branding dynamisch:** `renderCategorieSwitcher()` werkt logo, ondertitel (`#home-subtitle-cat`), `document.title` en de PDF-labels (`#pdf-cat-m`/`#pdf-cat-v`) bij; teamnamen en de "Gedeeld via Sprint …"-teksten gebruiken `catNaam()`.
+- **Import categorie-bewust:** de PDF-schema-import zocht hard naar `U16-M`/`U16-V`; dat is nu een regex op `catNaam()`. In `PDF_DISCIPLINE_VERTALING`, `FINALE_DISC_MAP` en `DISC_MAP` (PR-import) zijn de U14-onderdelen (60m, 60m horden 76,2 cm, 4x60m) van `null` naar echte waarden gezet; `1000m` toegevoegd aan de PDF-map. De 83,8 cm-hordevariant blijft op `null` (U14-meisjes lopen 76,2 cm).
+- **Hoogspringen-correctie:** de drempelformule onder 1,35 m gebruikte `+0,5`; dat is `+0,7` volgens het NAU-document. Opgelost via een per-onderdeel `drempelPlus` in `veldConst` (verspringen 0,5, hoogspringen 0,7).
+- **Activeren:** een categorie verschijnt pas in de switcher als hij in de Admin-tab is aangemaakt met **exact** de juiste naam (bijv. `U14`) én de trainer er toegang toe heeft. Zonder eigen config in `CATEGORIE_CONFIG` valt een categorie terug op de U16-onderdelenlijst. Geen schemawijziging nodig.
+
 ### Service worker: netwerk-eerst voor de app (patch 44, juni 2026)
 `pwa_sw.js` was cache-first en bewaarde `app.html` permanent in cache `sprint-u16-v1` (naam veranderde nooit) → nieuwe patches kwamen niet door in de browser. Opgelost: **netwerk-eerst** voor HTML/navigatie (`app.html`/`index.html`/`/`), cache alleen als offline-terugval; statische assets blijven cache-eerst. Cachenaam verhoogd naar `sprint-u16-v2` zodat de oude cache bij `activate` wordt opgeruimd. **Eenmalig bij uitrol:** de oude service worker moet nog vervangen worden — de browser pikt de nieuwe `pwa_sw.js` op bij een volgende navigatie (kan 1–2 keer verversen vergen), of forceer via incognito / "sitegegevens wissen" / PWA opnieuw openen. Daarna ziet elke gebruiker na een patch automatisch de nieuwste versie zodra online. **Les:** bij in-browser testen van een net-gepushte patch kan een cache-first SW een oude versie tonen — verifieer desnoods in een incognitovenster.
 
@@ -54,6 +64,7 @@ Naast de PDF-import kan een vast finale-tijdschema (`.xls`/`.xlsx`) worden geïm
 - **Opschoning:** "groep A/B" → startgroep; losstaande cijfers (baan-/matnummer, bijv. "Hoogspringen 1") worden verwijderd; "X atleten" eruit; niet-wedstrijdregels (vergaderingen, vlaggenparade, overlopen estafettes, prijsuitreiking) hebben geen `U\d\d` en vallen vanzelf weg. Namen via `FINALE_DISC_MAP` (`100mH`→100m horden, `4x80`→4x80m, enz.); niet-herkende namen gaan naar een vraagscherm.
 - **Geslachtskeuze:** de gebruiker kiest jongens / meisjes / beide (`finaleKeuze`). `slaFinaleImportOp()` doet delete+insert op `programma` **alléén voor het/de gekozen geslacht(en)** — het andere geslacht blijft ongemoeid. Zo kunnen jongens en meisjes uit verschillende finale-bestanden geïmporteerd worden zonder elkaar te overschrijven.
 - Geen schemawijziging — gebruikt de bestaande tabel `programma`.
+- *Patch 45:* `FINALE_DISC_MAP` herkent nu ook 60m, 60m horden en 4x60m (waren `null`), zodat een U14-finale volledig binnenkomt.
 
 
 ### Eigen onderdelen per atleet (patch 41, juni 2026)
@@ -65,8 +76,8 @@ Tijd-in-seconden onderdelen (sprint + eigen onderdelen type `tijd_sec`) worden v
 ### Eigen onderdelen + onderdeel-ranglijst (patch 40, juni 2026)
 De Prestaties-tab kent zelf toegevoegde onderdelen, bewaard in de tabel `onderdelen` (`categorie_id`, `naam`, `type` ∈ `tijd_sec`/`tijd_min`/`afstand`, `geslacht` ∈ `M`/`V`/`B`). Geladen in `syncAll()` (faalt zacht) in `customOnderdelen`; ook los te herladen via `laadOnderdelen()`. Beheer via `openOnderdeelModal()` → `saveOnderdeel()` / `deleteOnderdeel()` / `renderOnderdeelLijst()`. De helpers `vindCustomOnderdeel()`, `isLagerBeter()` en `isMinutenFormaat()` bepalen richting (lager vs hoger = beter) en weergave; `getPREenheid`, `getPRPlaceholder`, `normaliserenResultaat`, `formateerResultaatWeergave`, `bestePrestatie` en de PR-bepaling in `renderPrestatieTable` raadplegen deze. `getPRDisciplinesVoorAtleet()` voegt eigen onderdelen (op geslacht) toe aan het invoerformulier; de bulk-PR-velden gebruiken index-gebaseerde id's. Bij het kiezen van een onderdeel-filter (zonder atleet) toont `renderOnderdeelRanglijst()` de beste PR per atleet, gesorteerd. **Bewust afgebakend tot de Prestaties-tab:** eigen onderdelen komen niet in het wedstrijdprogramma, de opstelling of de puntenrekentool, omdat daar geen Atletiekunie-puntenformule voor bestaat (`berekenPunten` geeft 0 terug voor onbekende onderdelen).
 
-### 60m geen U16-onderdeel (patch 40, juni 2026)
-`60m` is uit `U16_DISCIPLINES` verwijderd (verdween daarmee uit het programma-keuzemenu en de PDF-import-keuzelijst). In de Excel-PR-import (`DISC_MAP`) staan `60 meter` en `60 meter horden` (alle varianten) nu op `null` = overslaan; in `PDF_DISCIPLINE_VERTALING` stonden `60m`, `60mh` en `60m horden` al op `null`. Wie 60m toch wil bijhouden, kan het als eigen onderdeel toevoegen.
+### 60m geen U16-onderdeel — wél U14 (patch 40 + 45, juni 2026)
+`60m` is in patch 40 uit `U16_DISCIPLINES` verwijderd (verdween daarmee uit het programma-keuzemenu en de PDF-import-keuzelijst voor U16). **Patch 45:** 60m, 60m horden (76,2 cm) en 4x60m zijn weer beschikbaar, maar uitsluitend binnen de **U14**-onderdelenlijst (`DISC_U14`). In `DISC_MAP` (Excel-PR-import) zijn `60 meter` en `60 meter horden 76,2 cm` (varianten) van `null` naar `60m` / `60m horden` gezet; de 83,8 cm-variant blijft op `null`. In `PDF_DISCIPLINE_VERTALING` en `FINALE_DISC_MAP` idem. Wie 60m bij U16 toch wil bijhouden, kan het als eigen onderdeel toevoegen.
 
 ### Afgelopen opstelling raadplegen: alleen-lezen-modus (patch 37–38, juni 2026)
 Een afgelopen-wedstrijdkaart in de Wedstrijden-tab is volledig klikbaar (`bekijkOpstelling()`) en opent de opstelling read-only. De vlag `opstellingAlleenLezen` (default `false`) stuurt dit aan: `openOpstelling(wedstrijdId, alleenLezen)` zet de vlag, `pasOpstellingModusToe()` verbergt bewerk-elementen (class `bewerk-actie`) + de beschikbaarheid-sectie en toont een 🔒-badge, en `renderPloeg()`-slots renderen zonder klik/✕. **Belangrijk:** in alleen-lezen-modus leidt `renderPloegen()` de te tonen ploegen af uit de opgeslagen `opstellingData` (niet uit de algemene instelling `aantalPloegenPerGeslacht`), zodat alle destijds gevulde ploegen zichtbaar zijn. Op afgelopen kaarten zijn de losse knoppen (✏️/📋/📄) weggelaten (patch 38); de hele kaart is de klikzone, met een hint "👁️ Bekijk opstelling". Aankomende kaarten houden hun knoppen. Geen schemawijziging — gebruikt bestaande tabel `opstelling`.
@@ -139,7 +150,7 @@ Na ronde 1 krijgen atleten die al aan een ploeg zijn gekoppeld maar nog maar 1 o
 ### PDF-import tijdschema: discipline-vertaling (patch 27, mei 2026)
 De vertaaltabel `PDF_DISCIPLINE_VERTALING` bevat alle discipline-sleutels die in een wedstrijdprogramma-PDF kunnen voorkomen. Volgorde is belangrijk: de zoekfunctie `zoekDisciplineVertaling()` werkt ook met `startsWith`, dus specifiekere sleutels (bijv. `"300m horden"`) moeten altijd vóór kortere overlappende sleutels (bijv. `"300m"`) staan.
 
-Toegevoegd in patch 27: `"300m horden"`, `"300mh"`, `"300mhorden"`.
+Toegevoegd in patch 27: `"300m horden"`, `"300mh"`, `"300mhorden"`. Toegevoegd/geactiveerd in patch 45: `"60m"`, `"60mh"`/`"60m horden"`, `"4x60m"` en `"1000m"` (waren `null` of ontbraken) voor U14.
 
 ### Geboortedatum tijdzonefout bij import (opgelost mei 2026, patches 25 + 26)
 Bij de eerste atletenimport in het begin van het project stonden alle geboortedata 1 dag te vroeg opgeslagen. Oorzaak: `formatDatum()` gebruikte `.toISOString()` op een JavaScript `Date` object, wat in Nederland (UTC+1/+2) de datum 1 dag terug converteert naar UTC.
@@ -200,7 +211,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
   `koppel_trainer_aan_uitnodiging_categorie(trainer_id, token)`
 - Admin ziet alle categorieën; trainer ziet alleen eigen categorieën
 - Categorie-switcher verschijnt in navbar bij meerdere categorieën
-- Logo toont actieve categorie: "⚡ Sprint U16" → "⚡ Sprint U14" etc.
+- **Onderdelen, punten en branding zijn categorie-afhankelijk (patch 45):** de onderdelenlijst komt uit `CATEGORIE_CONFIG` via `getDisciplines()`; logo, ondertitel, tabbladtitel, PDF-labels, teamnamen en share-teksten tonen de actieve categorie via `catNaam()`. Een categorie zonder eigen config valt terug op de U16-onderdelenlijst. De categorienaam in de Admin-tab moet exact kloppen (bijv. `U14`) om de juiste config te activeren.
 
 ---
 
@@ -221,18 +232,19 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | Atletiek.nu API | ~~Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev`~~ — **Verwijderd (patch 32)**, werkt niet door Cloudflare-beperkingen |
 | E-mail (uitnodiging + welkom) | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo. POST-body: `{ email, link, type }` waarbij `type` = `"uitnodiging"` of `"welkom"`. API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker |
 | World Athletics PR | `worldathletics.nimarion.de` |
-| NAU scoretabellen | Ingebouwd (U14/U16, feb. 2022) |
+| NAU scoretabellen | Ingebouwd (gezamenlijke U14/U16-telling, NAU-document dec. 2025) |
 
 **Let op:** atletiek.nu Worker kan soms worden geblokkeerd door bot-detectie.
 
 ---
 
-## 📋 Puntentelling (NAU, feb. 2022)
+## 📋 Puntentelling (NAU, dec. 2025)
 
 - **Loop:** `PUNTEN = INT(A / tijd - B)`
 - **Veld:** `PUNTEN = INT(A × SQRT(afstand) - B)`
 - INT kapt naar beneden af (geen afronding)
-- Jongens en meisjes gebruiken dezelfde constanten bij U16
+- Jongens en meisjes gebruiken dezelfde constanten; **U14 en U16 delen één gezamenlijke NAU-tabel** (zelfde constanten)
+- Drempelformules onder de grens: verspringen ≤ 4,41 m → `INT((afstand - 1,91) × 200 + 0,5)`; hoogspringen ≤ 1,35 m → `INT((afstand - 0,67) × 733,33333 + 0,7)` (de `+0,7` is gecorrigeerd in patch 45; was `+0,5`). In `veldConst` geregeld via `drempelPlus` per onderdeel.
 
 ### Telregel per onderdeel (spelregel)
 
@@ -251,15 +263,17 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 | Knop | Locatie | Formaat | Wat het doet |
 |------|---------|---------|--------------|
 | 📥 Excel importeren | Atleten-tab | `.xlsx` atletenlijst (atletiek.nu formaat) | Importeert atletengegevens |
-| 📥 PRs importeren | Prestaties-tab (Atletiek.nu sectie) | Atletiek.nu webresultaten | Haalt PR's op via externe koppeling |
 | 📊 PR-overzicht importeren | Prestaties-tab | `.xlsx` breed formaat (naam + disciplines) | Importeert PR-overzicht met tijdomrekening |
 | 📄 Tijdschema importeren | Wedstrijden-tab | `.pdf` wedstrijdprogramma | Importeert starttijden per onderdeel/geslacht |
+| 📊 Importeer finale (Excel) | Wedstrijden-tab (aankomende kaart) | `.xls`/`.xlsx` finale-tijdschema | Importeert finaleprogramma per geslacht (patch 42) |
+
+> Alle drie de import-paden zijn sinds patch 45 categorie-bewust: ze herkennen de regels en onderdelen van de actieve categorie (incl. U14: 60m, 60m horden, 4x60m, 1000m).
 
 ### PR-overzicht Excel formaat (patch 14)
 - Kolom A: atletennamen
 - Rij 1: discipline-namen als kolomtitels (bijv. `80m`, `hoogspringen`, `1500m`)
 - Cellen: waarden — tijden als getal (seconden) of als Excel-tijddecimaal, veld als meters
-- Ondersteunde disciplines: 80m, 80m horden, 100m, 100m horden, 150m, 200m, 300m, 300m horden, 600m, 800m, 1500m, Hoogspringen, Verspringen, Speerwerpen, Discuswerpen, Kogelstoten, 4x100m, 4x80m
+- Ondersteunde disciplines: 60m, 80m, 60m horden, 80m horden, 100m, 100m horden, 150m, 200m, 300m, 300m horden, 600m, 800m, 1000m, 1500m, Hoogspringen, Verspringen, Speerwerpen, Discuswerpen, Kogelstoten, 4x60m, 4x80m, 4x100m
 
 ---
 
@@ -269,6 +283,7 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 |---------|------|
 | `app.html` | Hoofd-app (atleten, prestaties, wedstrijden, opstelling, admin) |
 | `index.html` | Login + registratie + 2FA setup |
+| `pwa_sw.js` | Service worker (netwerk-eerst voor HTML, patch 44) |
 | `Sprint_U16_Spelregels.pdf` | Spelregels & werking voor trainers |
 | `sprint-u16-dashboard.html` | Standalone statusdashboard (Supabase live checks) |
 
@@ -277,7 +292,8 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 ## 🗺️ Roadmap (volgend seizoen)
 
 - [ ] Meerdere trainers per categorie uitnodigen en testen
-- [ ] Categorieën U14 en U18/U20 activeren
+- [x] Categorie U14 activeren (patch 45) — onderdelen, punten, branding en import categorie-bewust
+- [ ] Categorie U18/U20 activeren — let op: eigen NAU-puntentabel (constanten moeten dan categorie-afhankelijk worden) + gecombineerde categorie per geslacht
 - [ ] Excel-import testen met meerdere trainers
 - [ ] Mobiele weergave verbeteren (optioneel)
 
