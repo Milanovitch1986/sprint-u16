@@ -6,6 +6,22 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 44] — 2026-06-15
+
+### 🐛 Bugfix: app bleef hangen op oude versie (service worker cachte te agressief)
+
+Na een nieuwe patch zag je soms nog de **oude versie** van de app, ook na verversen. Voorbeeld: de finale-import-fix van patch 43 werkte wel volgens de broncode, maar in de browser deed "Volgende" bij de meisjes niets — omdat de browser een oude, gecachte `app.html` bleef tonen.
+
+**Oorzaak:** `pwa_sw.js` gebruikte een **cache-first** strategie en bewaarde `app.html` permanent in de cache (`sprint-u16-v1`, naam veranderde nooit). Eenmaal gecachet werd `app.html` nooit meer ververst tegen het netwerk, dus nieuwe patches kwamen niet door.
+
+**Oplossing:** de service worker is nu **netwerk-eerst** voor HTML/navigatie (`app.html`, `index.html`, `/`): online wordt altijd de nieuwste versie opgehaald, met de cache alleen als terugval wanneer je offline bent. Statische bestanden (iconen, manifest) blijven cache-eerst voor snelheid. De cachenaam is verhoogd naar `sprint-u16-v2`, zodat de oude (stale) cache bij activatie automatisch wordt opgeruimd.
+
+**Gevolg:** vanaf nu zie je na elke patch automatisch de nieuwste versie zodra je online bent (mogelijk na één keer extra verversen terwijl de nieuwe service worker zich installeert). De eerste keer moet de oude service worker nog vervangen worden — zie de eenmalige instructie in de chat/PROJECTNOTITIES.
+
+**Bestanden gewijzigd:** `pwa_sw.js`, `CHANGELOG.md`, `PROJECTNOTITIES.md` (geen wijziging in `app.html` — de app-logica van patch 43 was al correct).
+
+---
+
 ## [juni 2026 — patch 43] — 2026-06-15
 
 ### 🐛 Bugfix: keuze jongens/meisjes bij finale-import bleef niet staan
