@@ -1948,6 +1948,15 @@ async function wisselCategorie(id, naam) {
   if (actieveCategorie?.id === id) return;
   actieveCategorie = { id, naam };
   renderCategorieSwitcher();
+  // Patch 46: verlaat een eventueel geopende opstelling van de vorige categorie.
+  // Anders blijf je in stap 2 (het opstellingsscherm) van een wedstrijd hangen
+  // die niet bij de nieuwe categorie hoort.
+  actiefWedstrijdId = null;
+  opstellingAlleenLezen = false;
+  const stap1 = document.getElementById("opstelling-stap1");
+  const stap2 = document.getElementById("opstelling-stap2");
+  if (stap1) stap1.style.display = "";
+  if (stap2) stap2.style.display = "none";
   await syncAll(); // herlaad data voor nieuwe categorie
 }
 
@@ -6297,16 +6306,67 @@ async function maakCategorie() {
 }
 
 async function verwijderCategorie(id, naam) {
+  // Patch 46: een categorie kan pas weg als alle gekoppelde rijen weg zijn.
+  // Eerst tellen hoeveel er aan deze categorie hangen, zodat we het in de
+  // bevestiging kunnen tonen. Volgorde van labels = leesvolgorde voor de gebruiker.
+  const telTabellen = [
+    ["atleten",       "atleten"],
+    ["wedstrijden",   "wedstrijden"],
+    ["prestaties",    "prestaties"],
+    ["opstelling",    "opstellingen"],
+    ["programma",     "programmaregels"],
+    ["beschikbaarheid","beschikbaarheidsregels"],
+    ["onderdelen",    "eigen onderdelen"],
+    ["uitnodigingen", "uitnodigingen"],
+    ["trainer_categorieen", "trainerkoppelingen"]
+  ];
+  let aantallen = [];
+  try {
+    const tellingen = await Promise.all(
+      telTabellen.map(([tabel]) =>
+        sb.from(tabel).select("*", { count: "exact", head: true }).eq("categorie_id", id)
+      )
+    );
+    aantallen = tellingen.map((r, i) => ({ label: telTabellen[i][1], n: r.count || 0 }));
+  } catch(e) {
+    toast("Fout bij tellen: " + e.message, "err");
+    return;
+  }
+
+  const teVerwijderen = aantallen.filter(a => a.n > 0);
+  const opsomming = teVerwijderen.length
+    ? "Dit verwijdert ook:\n" + teVerwijderen.map(a => `• ${a.n} ${a.label}`).join("\n")
+    : "Er hangt geen verdere data aan deze categorie.";
+
   const ok = await bevestig(
     "Categorie verwijderen",
-    `Weet je zeker dat je "${naam}" wilt verwijderen?\n\nAlle atleten, wedstrijden en prestaties van deze categorie worden ook verwijderd.`
+    `Weet je zeker dat je "${naam}" wilt verwijderen?\n\n${opsomming}\n\nDit kan niet ongedaan worden gemaakt.`
   );
   if (!ok) return;
+
+  // Verwijdervolgorde: eerst de tabellen die naar wedstrijden/atleten verwijzen,
+  // dan wedstrijden/atleten zelf, en als laatste de categorie. Zo lopen we niet
+  // tegen een foreign-key-fout aan.
+  const volgorde = [
+    "opstelling", "programma", "beschikbaarheid", "prestaties",
+    "wedstrijden", "atleten", "onderdelen", "uitnodigingen", "trainer_categorieen"
+  ];
   try {
+    for (const tabel of volgorde) {
+      const { error } = await sb.from(tabel).delete().eq("categorie_id", id);
+      if (error) throw new Error(`${tabel}: ${error.message}`);
+    }
     const { error } = await sb.from("categorieen").delete().eq("id", id);
     if (error) throw error;
+
+    // Verwijder je de categorie waar je nu in zit? Reset hem, zodat de app
+    // niet naar een verdwenen categorie blijft wijzen.
+    const wasActief = actieveCategorie?.id === id;
+    if (wasActief) actieveCategorie = null;
+
     toast(`Categorie ${naam} verwijderd`);
-    await laadMijnCategorieen();
+    await laadMijnCategorieen(); // kiest zo nodig een nieuwe actieve categorie
+    if (wasActief) await syncAll(); // ververs de getoonde data naar die nieuwe categorie
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }

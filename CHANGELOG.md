@@ -6,6 +6,28 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juni 2026 — patch 46] — 2026-06-16
+
+### 🐛 Categorie verwijderen werkt nu + opstelling reset bij categoriewissel
+
+Twee dingen die opvielen bij het testen van een tweede categorie (U14) zijn opgelost.
+
+- **Categorie verwijderen lukt nu écht.** Voorheen weigerde de databank een categorie te verwijderen zodra er nog een wedstrijd (of atleet, prestatie, opstelling, …) aan hing — je kreeg dan de fout *"violates foreign key constraint wedstrijden_categorie_id_fkey"*. De bevestigingstekst beloofde al dat alles meeging, maar de code ruimde die gekoppelde gegevens niet op. Vanaf nu verwijdert de app eerst alle gekoppelde rijen en daarna pas de categorie zelf.
+- **Veiliger bevestigingsvenster.** Vóór het verwijderen toont de app nu hoeveel gegevens eraan hangen, bijvoorbeeld *"Dit verwijdert ook: 3 atleten, 1 wedstrijd, 5 prestaties"*. Zo trek je nooit per ongeluk een volle categorie leeg. Verwijder je de categorie waarin je op dat moment werkt, dan schakelt de app netjes over naar een andere beschikbare categorie.
+- **Opstelling blijft niet hangen bij categoriewissel.** Als je in de Opstelling-tab een wedstrijd open had en bovenin naar een andere categorie wisselde, bleef je in die (oude) wedstrijd hangen. Nu keer je bij het wisselen automatisch terug naar de wedstrijdkeuze van de nieuwe categorie.
+
+#### Technisch
+- `verwijderCategorie()` telt nu eerst per gekoppelde tabel (`atleten`, `wedstrijden`, `prestaties`, `opstelling`, `programma`, `beschikbaarheid`, `onderdelen`, `uitnodigingen`, `trainer_categorieen`) via `select("*", { count: "exact", head: true })`, toont de aantallen in de bevestiging, en verwijdert vervolgens in een FK-veilige volgorde (eerst de tabellen die naar wedstrijden/atleten verwijzen, dan wedstrijden/atleten, als laatste de categorie). Was de verwijderde categorie de actieve, dan wordt `actieveCategorie` gereset en de data herladen.
+- `wisselCategorie()` zet `actiefWedstrijdId` en `opstellingAlleenLezen` terug en toont weer stap 1 (`#opstelling-stap1`) i.p.v. stap 2 voordat `syncAll()` de data van de nieuwe categorie laadt.
+- Geen nieuwe Supabase-tabel; geen SQL-migratie nodig.
+
+#### Wat niet getest kon worden
+- De werkelijke Supabase-verwijdering en RLS-rechten, en de echte browserweergave van het bevestigingsvenster. De logica (telvolgorde, verwijdervolgorde, reset bij categoriewissel) is wel doorgelopen; JavaScript-syntax is gevalideerd met `node --check`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [juni 2026 — patch 45] — 2026-06-15
 
 ### 🏃 U14 als tweede categorie + puntencorrectie hoogspringen
