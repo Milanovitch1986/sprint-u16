@@ -6,6 +6,38 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 50] — 2026-07-03
+
+### 🔀 Doorstroming voor alle trainers + ✏️ release notes bewerken
+
+**Doorstroming verhuisd naar de Atleten-tab en beschikbaar voor iedereen**
+
+De doorstroming zat in de Admin-tab en was daardoor alleen voor beheerders. Vanaf nu staat het scherm in de **Atleten-tab** en kan elke trainer het gebruiken. De meldingsbanner bovenaan ("X atleten staan klaar voor doorstroming") verschijnt nu ook voor gewone trainers en verwijst naar de Atleten-tab.
+
+Nieuw: een trainer kan alleen atleten doorstromen naar categorieën waar hij zélf toegang toe heeft (de database bewaakt dit ook). Er zijn nu drie situaties zichtbaar per atleet:
+- **Doelcategorie bestaat + je hebt toegang** → gewoon selecteerbaar en doorstroombaar.
+- **Doelcategorie bestaat, maar je hebt er geen toegang toe** → de atleet is zichtbaar met "geen toegang 🔒" en niet-selecteerbaar. Klik je op Doorstromen terwijl zulke atleten klaarstaan, dan verschijnt één nette melding met het advies contact op te nemen met de beheerder.
+- **Doelcategorie bestaat helemaal niet** → "bestaat niet ✗" met de tip om de categorie eerst aan te maken.
+
+Om "geen toegang" van "bestaat niet" te kunnen onderscheiden, haalt de app nu de namen van álle categorieën op (alleen namen, geen data — die lijst was al leesbaar voor ingelogde gebruikers).
+
+**Release notes bewerken en verwijderen (admin)**
+
+Bij elke release note staan nu (voor admins) knoppen **✏️ Bewerken** en **🗑️ Verwijderen**. Bewerken opent dezelfde popup als toevoegen, maar met de bestaande tekst ingevuld — handig om een typo of kopieerfout te herstellen. Verwijderen vraagt eerst om bevestiging.
+
+#### Technisch
+- Doorstroom-HTML verplaatst van `view-admin` naar `view-atleten` (paneel `#doorstroom-paneel`, alleen zichtbaar als er kandidaten zijn). `laadDoorstroming()` wordt nu aangeroepen bij het openen van de Atleten-tab en bij het opstarten (voor iedereen). `renderDoorstroomMelding()` is niet langer admin-only.
+- `bepaalDoorstroomKandidaten()` laadt naast de toegankelijke categorieën nu ook `alleCategorieNamen` (id + naam van alle categorieën) en zet per kandidaat een vlag `doelBestaatGeenToegang`. `startDoorstroming()` toont bij aanwezigheid daarvan een eenmalige melding via de nieuwe `bevestig(..., { alleenOk: true })`-modus (verbergt de annuleerknop).
+- Release notes: `noteModal` kreeg een verborgen `note-id` en dynamische titel; `slaaNoteOp()` doet nu een `update` bij een id en anders een `insert`; nieuwe `openNoteBewerken()`, `verwijderNote()` en de veilige `bewerkNoteVanuitKnop()` / `verwijderNoteVanuitKnop()` (lezen de note uit een `data-note`-attribuut, zodat titels met aanhalingstekens geen probleem geven).
+
+#### Wat niet getest kon worden
+- De echte Supabase-updates/deletes en RLS (of een trainer inderdaad geblokkeerd wordt op een ontoegankelijke doelcategorie, en of een admin release notes mag wijzigen/verwijderen), plus de browserweergave. De classificatielogica (verplaatsbaar / geen toegang / bestaat niet) is met 7 losse unit-asserties gecontroleerd, bovenop de bestaande leeftijdstests; JavaScript-syntax gevalideerd met `node --check`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Geen Supabase-wijziging.
+
+---
+
 ## [juli 2026 — patch 49] — 2026-07-03
 
 ### 🔀 Doorstroming: atleten naar een volgende categorie verplaatsen

@@ -1318,6 +1318,13 @@
       <button class="btn btn-ghost btn-sm" onclick="deselecteerAlle()">Niets selecteren</button>
       <button class="btn btn-danger btn-sm" id="verwijderGeselecteerdeBtn" onclick="verwijderGeselecteerde()" style="display:none;">🗑️ Verwijder geselecteerde</button>
     </div>
+    <!-- Doorstroming (patch 49 → verplaatst naar Atleten-tab in patch 50).
+         Alleen zichtbaar als er atleten klaarstaan. -->
+    <div id="doorstroom-paneel" class="detail-panel" style="display:none;margin-bottom:16px;">
+      <div class="section-label">🔀 Doorstroming</div>
+      <div id="doorstroom-lijst" style="padding:16px;"></div>
+    </div>
+
     <div class="search-bar">
       <input type="text" id="atleten-search" placeholder="Zoek op naam of club…" oninput="renderAtleten()">
       <select id="atleten-filter-geslacht" onchange="renderAtleten()">
@@ -1703,12 +1710,6 @@
       <div id="categorieen-lijst" style="padding:16px;"></div>
     </div>
 
-    <!-- Doorstroming (patch 49) -->
-    <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label">🔀 Doorstroming</div>
-      <div id="doorstroom-lijst" style="padding:16px;"></div>
-    </div>
-
     <!-- Trainer–categorie koppelingen -->
     <div class="detail-panel">
       <div class="section-label">🔗 Toegang per trainer</div>
@@ -1970,7 +1971,8 @@
 <!-- RELEASENOTE MODAL -->
 <div class="modal-overlay" id="noteModal">
   <div class="modal" style="max-width:500px;">
-    <div class="modal-title">Releasenote toevoegen</div>
+    <div class="modal-title" id="noteModalTitle">Releasenote toevoegen</div>
+    <input type="hidden" id="note-id">
     <div class="field"><label>Versie</label><input type="text" id="note-versie" placeholder="bijv. april 2026 — patch 9"></div>
     <div class="field"><label>Titel</label><input type="text" id="note-titel" placeholder="bijv. Startgroepen hersteld"></div>
     <div class="field">
@@ -2035,11 +2037,9 @@ async function checkAuth() {
   // Laad categorieën waar deze trainer toegang toe heeft
   await laadMijnCategorieen();
 
-  // Patch 49: check bij opstarten of er atleten klaarstaan voor doorstroming
-  // (banner bovenaan de app; alleen voor admins).
-  if (profiel?.rol === "admin") {
-    laadDoorstroming().catch(e => console.warn("Doorstroming-check mislukt:", e.message));
-  }
+  // Patch 49/50: check bij opstarten of er atleten klaarstaan voor doorstroming
+  // (banner bovenaan de app; sinds patch 50 voor alle trainers).
+  laadDoorstroming().catch(e => console.warn("Doorstroming-check mislukt:", e.message));
   return true;
 }
 
@@ -2186,6 +2186,7 @@ function showTab(tab) {
     if (mb) mb.classList.toggle("active", t === tab);
   });
   if (tab === "home")        laadReleasenotes();
+  if (tab === "atleten")     laadDoorstroming();
   if (tab === "prestaties")  populateAtleetSelects();
   if (tab === "wedstrijden") renderWedstrijden();
   if (tab === "opstelling")  renderOpstellingWedstrijden();
@@ -3326,17 +3327,24 @@ function formatDate(d) {
 }
 
 // ── Bevestigingsdialoog (vervangt confirm()) ──────────────────
-function bevestig(titel, bericht) {
+function bevestig(titel, bericht, opties = {}) {
   return new Promise(res => {
     document.getElementById("confirmTitle").textContent = titel;
     document.getElementById("confirmMsg").textContent   = bericht;
     document.getElementById("confirmOverlay").classList.add("open");
     const ja  = document.getElementById("confirmJa");
     const nee = document.getElementById("confirmNee");
+    // patch 50: 'alleenOk'-modus voor een pure meldingsdialoog (geen keuze).
+    const alleenOk = !!opties.alleenOk;
+    nee.style.display = alleenOk ? "none" : "";
+    if (alleenOk) { ja.textContent = "OK"; }
     function sluit(ok) {
       document.getElementById("confirmOverlay").classList.remove("open");
       ja.removeEventListener("click", opJa);
       nee.removeEventListener("click", opNee);
+      // labels/knop herstellen voor het volgende gebruik
+      nee.style.display = "";
+      ja.textContent = "Bevestigen";
       res(ok);
     }
     function opJa()  { sluit(true);  }
@@ -6785,8 +6793,7 @@ async function laadAdmin() {
     laadAdminUitnodigingen(),
     laadAdminGebruikers(),
     laadCategorieBeheer(),
-    laadTrainerCategorieBeheer(),
-    laadDoorstroming()
+    laadTrainerCategorieBeheer()
   ]);
 }
 
@@ -7019,13 +7026,26 @@ async function maakCategorie() {
 // kunnen naar een volgende categorie worden verplaatst. Bij doorstroming
 // verhuizen de atleet én zijn PR's mee; wedstrijdresultaten (patch 47) en
 // opstellingen/beschikbaarheid blijven bewust bij de oude wedstrijden staan.
-let doorstroomKandidaten = []; // { atleet, huidigeCat, catBerekend, doelCat|null }
+let doorstroomKandidaten = []; // { atleet, huidigeCat, catBerekend, doelCat|null, doelBestaatGeenToegang }
+let alleCategorieNamen   = []; // {id, naam} van ALLE categorieën (ook zonder toegang), om
+                               // 'bestaat niet' vs 'geen toegang' te kunnen onderscheiden
 
 // Bepaal alle kandidaten over alle categorieën waartoe de gebruiker toegang heeft.
 async function bepaalDoorstroomKandidaten() {
   doorstroomKandidaten = [];
   const cats = beschikbareCategorieen || [];
   if (!cats.length) return;
+
+  // Namen van ALLE categorieën ophalen (ook die zonder toegang). Zo kunnen we
+  // onderscheiden of een doelcategorie 'bestaat niet' of 'bestaat maar geen
+  // toegang' is. De categorieen-tabel is voor iedere ingelogde gebruiker leesbaar.
+  try {
+    const { data, error } = await sb.from("categorieen").select("id, naam").order("volgorde");
+    if (!error) alleCategorieNamen = data || [];
+  } catch(e) {
+    console.warn("Doorstroming: categorieënlijst laden mislukt:", e.message);
+    alleCategorieNamen = cats.map(c => ({ id: c.id, naam: c.naam })); // fallback
+  }
 
   // Alle atleten van alle toegankelijke categorieën ophalen.
   const catIds = cats.map(c => c.id);
@@ -7050,14 +7070,19 @@ async function bepaalDoorstroomKandidaten() {
     if (!huidigeCat) return;
     // Past de huidige categorie nog? Dan geen doorstroming nodig.
     if (categorieNaamDekt(huidigeCat.naam, catBerekend)) return;
-    // Zoek een bestaande categorie die de berekende leeftijdscategorie dekt.
+    // Zoek een TOEGANKELIJKE categorie die de berekende leeftijdscategorie dekt.
     const doelCat = cats.find(c => categorieNaamDekt(c.naam, catBerekend)) || null;
-    doorstroomKandidaten.push({ atleet: a, huidigeCat, catBerekend, doelCat });
+    // Bestaat er wél een (ontoegankelijke) categorie die het zou dekken?
+    const doelBestaatGeenToegang = !doelCat &&
+      alleCategorieNamen.some(c => categorieNaamDekt(c.naam, catBerekend));
+    doorstroomKandidaten.push({ atleet: a, huidigeCat, catBerekend, doelCat, doelBestaatGeenToegang });
   });
 }
 
 async function laadDoorstroming() {
   await bepaalDoorstroomKandidaten();
+  const paneel = document.getElementById("doorstroom-paneel");
+  if (paneel) paneel.style.display = doorstroomKandidaten.length ? "" : "none";
   renderDoorstroomLijst();
   renderDoorstroomMelding();
 }
@@ -7074,9 +7099,14 @@ function renderDoorstroomLijst() {
   const rijen = doorstroomKandidaten.map((k, i) => {
     const geboortejaar = k.atleet.geboortedatum ? new Date(k.atleet.geboortedatum).getFullYear() : "—";
     const kanVerhuizen = !!k.doelCat;
-    const doelHtml = kanVerhuizen
-      ? `<span class="doorstroom-doel">${esc(k.doelCat.naam)} ✓</span>`
-      : `<span class="doorstroom-blok">categorie "${esc(k.catBerekend)}" bestaat niet ✗</span>`;
+    let doelHtml;
+    if (kanVerhuizen) {
+      doelHtml = `<span class="doorstroom-doel">${esc(k.doelCat.naam)} ✓</span>`;
+    } else if (k.doelBestaatGeenToegang) {
+      doelHtml = `<span class="doorstroom-blok">${esc(k.catBerekend)} · geen toegang 🔒</span>`;
+    } else {
+      doelHtml = `<span class="doorstroom-blok">categorie "${esc(k.catBerekend)}" bestaat niet ✗</span>`;
+    }
     return `
       <div class="doorstroom-rij${kanVerhuizen ? "" : " geblokkeerd"}">
         <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:${kanVerhuizen ? "pointer" : "default"};">
@@ -7091,10 +7121,16 @@ function renderDoorstroomLijst() {
       </div>`;
   }).join("");
 
-  const ontbrekend = doorstroomKandidaten.filter(k => !k.doelCat);
-  const tip = ontbrekend.length
-    ? `<div style="font-size:12px;color:var(--muted);margin-top:10px;">💡 Maak de ontbrekende categorie(ën) aan via "+ Nieuwe categorie" om ook de overige atleten te kunnen doorstromen.</div>`
-    : "";
+  // Tips onder de lijst: onderscheid 'bestaat niet' en 'geen toegang'.
+  const geenToegang = doorstroomKandidaten.some(k => !k.doelCat && k.doelBestaatGeenToegang);
+  const ontbrekend  = doorstroomKandidaten.some(k => !k.doelCat && !k.doelBestaatGeenToegang);
+  let tips = "";
+  if (geenToegang) {
+    tips += `<div style="font-size:12px;color:var(--muted);margin-top:10px;">🔒 Voor de atleten met "geen toegang" heb je zelf geen rechten op de doelcategorie. Neem contact op met de beheerder om hen door te laten stromen.</div>`;
+  }
+  if (ontbrekend) {
+    tips += `<div style="font-size:12px;color:var(--muted);margin-top:8px;">💡 Voor de atleten met "bestaat niet" moet de doelcategorie nog worden aangemaakt (Admin-tab → Categorieën).</div>`;
+  }
 
   el.innerHTML = `
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
@@ -7106,7 +7142,7 @@ function renderDoorstroomLijst() {
         Doorstromen (<span id="doorstroom-aantal">${verplaatsbaar.length}</span> geselecteerd)
       </button>
     </div>
-    ${tip}`;
+    ${tips}`;
 
   // Live meetellen van de selectie
   doorstroomKandidaten.forEach((k, i) => {
@@ -7125,12 +7161,12 @@ function updateDoorstroomAantal() {
   if (el) el.textContent = n;
 }
 
-// Banner bovenaan de app (alleen admin, alleen als er iemand klaarstaat).
+// Banner bovenaan de app (patch 50: voor alle trainers, niet meer admin-only).
 function renderDoorstroomMelding() {
   const el = document.getElementById("doorstroom-melding");
   if (!el) return;
   const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat).length;
-  if (huidigeProfiel?.rol !== "admin" || verplaatsbaar < 1) {
+  if (verplaatsbaar < 1) {
     el.style.display = "none";
     el.innerHTML = "";
     return;
@@ -7140,7 +7176,7 @@ function renderDoorstroomMelding() {
     <div class="doorstroom-banner">
       <span style="font-size:18px;">🔀</span>
       <span><b>${verplaatsbaar} atlet${verplaatsbaar === 1 ? "e staat" : "en staan"} klaar voor doorstroming</b> naar een volgende categorie.</span>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto;white-space:nowrap;" onclick="showTab('admin');document.getElementById('doorstroom-lijst')?.scrollIntoView({behavior:'smooth'});">Bekijk doorstroming</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto;white-space:nowrap;" onclick="showTab('atleten');setTimeout(()=>document.getElementById('doorstroom-paneel')?.scrollIntoView({behavior:'smooth'}),50);">Bekijk doorstroming</button>
     </div>`;
 }
 
@@ -7149,7 +7185,23 @@ async function startDoorstroming() {
     const chk = document.getElementById(`doorstroom-chk-${i}`);
     return k.doelCat && chk && chk.checked;
   });
-  if (!teVerhuizen.length) { toast("Niets geselecteerd", "err"); return; }
+
+  // Waarschuwing (één keer, bij het klikken): staan er atleten klaar die naar
+  // een bestaande categorie zouden moeten waar deze gebruiker geen toegang toe
+  // heeft? Dan die kandidaten niet doorschuiven, maar de gebruiker doorverwijzen
+  // naar de beheerder.
+  const geenToegang = doorstroomKandidaten.filter(k => !k.doelCat && k.doelBestaatGeenToegang);
+  if (geenToegang.length) {
+    const namen = geenToegang.map(k => `• ${k.atleet.naam} (${k.huidigeCat.naam} → ${k.catBerekend})`).join("\n");
+    await bevestig(
+      "Doorstromen niet mogelijk",
+      `De volgende atlet${geenToegang.length === 1 ? "e hoort" : "en horen"} in een categorie waartoe jij geen toegang hebt, waardoor je ${geenToegang.length === 1 ? "die" : "hen"} niet zelf kunt doorstromen:\n\n${namen}\n\nNeem contact op met de beheerder om ${geenToegang.length === 1 ? "deze atleet" : "deze atleten"} door te laten stromen.`,
+      { alleenOk: true }
+    );
+    // Geen return: eventuele wél-toegankelijke selectie mag gewoon doorgaan.
+  }
+
+  if (!teVerhuizen.length) { return; }
 
   // Tel per atleet de PR's, zodat we het in de bevestiging kunnen tonen.
   const regels = [];
@@ -7714,7 +7766,11 @@ async function laadReleasenotes() {
 
     const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
 
-    lijst.innerHTML = data.map(n => `
+    lijst.innerHTML = data.map(n => {
+      const isAdmin = huidigeProfiel?.rol === "admin";
+      // Veilig doorgeven aan onclick: via JSON in een data-attribuut i.p.v. inline args.
+      const payload = esc(JSON.stringify({ id: n.id, versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving || "" }));
+      return `
       <div class="note-kaart">
         <div class="note-kaart-header">
           <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
@@ -7722,8 +7778,13 @@ async function laadReleasenotes() {
           <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
         </div>
         ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
-        ${huidigeProfiel?.rol === "admin" && !toonArchief ? `<div style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button></div>` : ""}
-      </div>`).join("");
+        ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" data-note='${payload}' onclick="bewerkNoteVanuitKnop(this)">✏️ Bewerken</button>
+          ${!toonArchief ? `<button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button>` : ""}
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent2);" data-note='${payload}' onclick="verwijderNoteVanuitKnop(this)">🗑️ Verwijderen</button>
+        </div>` : ""}
+      </div>`;
+    }).join("");
   } catch(e) {
     lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout bij laden: ${e.message}</div>`;
   }
@@ -7736,6 +7797,8 @@ function toggleArchief() {
 }
 
 function openNoteModal() {
+  document.getElementById("note-id").value = "";
+  document.getElementById("noteModalTitle").textContent = "Releasenote toevoegen";
   document.getElementById("note-versie").value = "";
   document.getElementById("note-titel").value = "";
   document.getElementById("note-type").value = "feature";
@@ -7743,17 +7806,65 @@ function openNoteModal() {
   openModal("noteModal");
 }
 
+// patch 50: een bestaande releasenote bewerken.
+function bewerkNoteVanuitKnop(btn) {
+  try {
+    const n = JSON.parse(btn.getAttribute("data-note"));
+    openNoteBewerken(n.id, n.versie, n.titel, n.type, n.beschrijving);
+  } catch(e) { toast("Kon note niet openen", "err"); }
+}
+
+function verwijderNoteVanuitKnop(btn) {
+  try {
+    const n = JSON.parse(btn.getAttribute("data-note"));
+    verwijderNote(n.id, n.titel);
+  } catch(e) { toast("Kon note niet verwijderen", "err"); }
+}
+
+function openNoteBewerken(id, versie, titel, type, beschrijving) {
+  document.getElementById("note-id").value = id;
+  document.getElementById("noteModalTitle").textContent = "Releasenote bewerken";
+  document.getElementById("note-versie").value = versie || "";
+  document.getElementById("note-titel").value = titel || "";
+  document.getElementById("note-type").value = type || "feature";
+  document.getElementById("note-beschrijving").value = beschrijving || "";
+  openModal("noteModal");
+}
+
 async function slaaNoteOp() {
+  const id          = document.getElementById("note-id").value;
   const versie      = document.getElementById("note-versie").value.trim();
   const titel       = document.getElementById("note-titel").value.trim();
   const type        = document.getElementById("note-type").value;
   const beschrijving = document.getElementById("note-beschrijving").value.trim();
   if (!versie || !titel) { toast("Vul versie en titel in", "err"); return; }
   try {
-    const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving });
-    if (error) throw error;
-    toast("Releasenote opgeslagen ✓");
+    if (id) {
+      // Bestaande note bijwerken
+      const { error } = await sb.from("releasenotes")
+        .update({ versie, titel, type, beschrijving }).eq("id", id);
+      if (error) throw error;
+      toast("Releasenote bijgewerkt ✓");
+    } else {
+      const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving });
+      if (error) throw error;
+      toast("Releasenote opgeslagen ✓");
+    }
     closeModal("noteModal");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function verwijderNote(id, titel) {
+  const ok = await bevestig(
+    "Releasenote verwijderen",
+    `Weet je zeker dat je "${titel}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
+  );
+  if (!ok) return;
+  try {
+    const { error } = await sb.from("releasenotes").delete().eq("id", id);
+    if (error) throw error;
+    toast("Releasenote verwijderd ✓");
     laadReleasenotes();
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }

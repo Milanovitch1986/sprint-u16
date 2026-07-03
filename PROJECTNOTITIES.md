@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 49)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 50)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Doorstroming voor alle trainers + release notes bewerken (patch 50, juli 2026)
+Het doorstroom-scherm is verplaatst van `view-admin` naar `view-atleten` (`#doorstroom-paneel`, alleen zichtbaar bij kandidaten) en is nu voor álle trainers beschikbaar; de banner is niet langer admin-only. `laadDoorstroming()` draait bij opstarten (iedereen) en bij openen van de Atleten-tab. Om "doel bestaat niet" van "doel bestaat maar geen toegang" te onderscheiden laadt `bepaalDoorstroomKandidaten()` nu ook `alleCategorieNamen` (id+naam van álle categorieën; de categorieen-tabel is leesbaar voor iedere ingelogde gebruiker) en zet per kandidaat `doelBestaatGeenToegang`. Een trainer kan door de RLS alleen verplaatsen naar categorieën waartoe hij toegang heeft; kandidaten met een ontoegankelijke doelcategorie zijn niet-selecteerbaar en `startDoorstroming()` toont daarvoor een eenmalige melding ("neem contact op met de beheerder") via de nieuwe `bevestig(titel, bericht, { alleenOk:true })`-modus (verbergt de annuleerknop, label wordt "OK", herstelt zichzelf na sluiten). Release notes: `noteModal` heeft nu een verborgen `note-id`; `slaaNoteOp()` doet update-bij-id anders insert; verwijderen/bewerken via `data-note`-attribuut op de knop (veilig voor titels met aanhalingstekens). Geen schemawijziging.
 
 ### Doorstroming naar volgende categorie (patch 49, juli 2026)
 Admin-scherm + banner die atleten signaleert wier geboortejaar niet meer bij hun categorie past. Leeftijdslogica staat nu in twee herbruikbare helpers: `berekenLeeftijdsCategorie(geboortedatum)` (kalenderjaar-systeem: de leeftijd die je dit jaar WORDT; U14=12/13, U16=14/15, U18=16/17, U20=18/19, Sen=20+) en `categorieNaamDekt(catNaam, catBerekend)` die samengestelde namen herkent ("U18/U20" dekt U18 én U20; "Senioren" dekt "Sen") via tokenisatie. `bepaalCategorieBadge()` hergebruikt deze helpers. **Doorstromen verhuist alleen de atleet + zijn PR's** (`prestaties.categorie_id` en `atleten.categorie_id` → doelcategorie); wedstrijdresultaten (patch 47, `resultaten`), opstellingen en beschikbaarheid blijven bewust bij de oude wedstrijden staan omdat die wedstrijd-gebonden zijn en in de oude categorie blijven. `bepaalDoorstroomKandidaten()` laadt atleten van álle toegankelijke categorieën (`in("categorie_id", beschikbareCategorieen)`). Bestaat de doelcategorie niet (bv. nog geen "U18/U20" aangemaakt), dan is de rij zichtbaar maar niet-selecteerbaar met een hint. Volledig automatisch op 1 januari kan niet (geen server; app draait in de browser) — daarom melding + handmatige bevestiging. Geen schemawijziging.
