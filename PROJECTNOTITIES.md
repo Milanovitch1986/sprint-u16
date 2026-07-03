@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 48)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 49)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Doorstroming naar volgende categorie (patch 49, juli 2026)
+Admin-scherm + banner die atleten signaleert wier geboortejaar niet meer bij hun categorie past. Leeftijdslogica staat nu in twee herbruikbare helpers: `berekenLeeftijdsCategorie(geboortedatum)` (kalenderjaar-systeem: de leeftijd die je dit jaar WORDT; U14=12/13, U16=14/15, U18=16/17, U20=18/19, Sen=20+) en `categorieNaamDekt(catNaam, catBerekend)` die samengestelde namen herkent ("U18/U20" dekt U18 én U20; "Senioren" dekt "Sen") via tokenisatie. `bepaalCategorieBadge()` hergebruikt deze helpers. **Doorstromen verhuist alleen de atleet + zijn PR's** (`prestaties.categorie_id` en `atleten.categorie_id` → doelcategorie); wedstrijdresultaten (patch 47, `resultaten`), opstellingen en beschikbaarheid blijven bewust bij de oude wedstrijden staan omdat die wedstrijd-gebonden zijn en in de oude categorie blijven. `bepaalDoorstroomKandidaten()` laadt atleten van álle toegankelijke categorieën (`in("categorie_id", beschikbareCategorieen)`). Bestaat de doelcategorie niet (bv. nog geen "U18/U20" aangemaakt), dan is de rij zichtbaar maar niet-selecteerbaar met een hint. Volledig automatisch op 1 januari kan niet (geen server; app draait in de browser) — daarom melding + handmatige bevestiging. Geen schemawijziging.
 
 ### Mobiele floating nav: ondoorzichtig + onderruimte (patch 48, juli 2026)
 De floating bottom nav (`#mob-nav`, alleen op mobiel, `position: fixed; bottom: 0`) had twee problemen: (1) een `background: transparent` waardoor content er tijdens scrollen doorheen scheen én de balk "leek te zweven", en (2) te weinig onderruimte in de content, waardoor de knop `✅ Wedstrijd afronden` uit patch 47 achter de balk viel en niet aantikbaar was. Opgelost met puur CSS: ondoorzichtige `var(--surface)`-achtergrond met een `@supports (backdrop-filter)`-regel voor het glas-effect (semi-transparant via `color-mix`); `main` `padding-bottom` verhoogd naar balkhoogte + safe-area + 28px; en een aparte container `.wd-afrond-actie` met eigen mobiele `padding-bottom` als vangnet. `position: fixed; bottom: 0` bewust behouden (correcte moderne aanpak; geen dvh-/JS-truc). Horizontaal scrollen door de 8 knoppen blijft bewust behouden. **Let op (bestaande HTML-eigenaardigheid):** het document heeft 1× `<main>` maar 2× `</main>`; de views wedstrijden/wedstrijddag/opstelling/punten/admin staan daardoor feitelijk buiten `<main>`. Browsers herstellen dit, maar reken er niet op dat `main`-padding die schermen raakt — vandaar het vangnet op `.wd-afrond-actie` zelf. Niet aangeraakt in patch 48 (buiten scope, risicovol om te herstructureren).

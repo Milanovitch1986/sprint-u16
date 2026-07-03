@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 49] — 2026-07-03
+
+### 🔀 Doorstroming: atleten naar een volgende categorie verplaatsen
+
+Aan het begin van een nieuw kalenderjaar groeit een deel van de atleten uit hun categorie. Er is nu een admin-scherm dat dit signaleert en het verplaatsen met één klik regelt.
+
+**Wat je krijgt:**
+- **Melding bovenaan de app** (alleen voor admins) zodra er atleten klaarstaan: bijvoorbeeld *"3 atleten staan klaar voor doorstroming"*, met een knop die je naar het scherm brengt.
+- **Nieuwe sectie "🔀 Doorstroming"** in de Admin-tab. Per atleet zie je het geboortejaar, de huidige categorie (met ⚠️) en de doelcategorie. Je vinkt aan wie je wilt doorstromen en klikt op **Doorstromen**.
+- **PR's verhuizen mee.** Bij doorstroming verplaatsen de atleet én al zijn persoonlijke records naar de nieuwe categorie. Wedstrijdresultaten (patch 47), opstellingen en beschikbaarheid blijven bewust bij de oude wedstrijden staan — die horen bij die specifieke wedstrijd in de oude categorie.
+- **Bestaat de doelcategorie nog niet** (bijvoorbeeld U18/U20), dan is die atleet zichtbaar maar niet-selecteerbaar, met de melding *"categorie … bestaat niet ✗"* en een tip om die categorie eerst aan te maken.
+- **Bevestiging vooraf:** vóór het verplaatsen zie je precies welke atleten naar welke categorie gaan, inclusief het aantal PR's dat meeverhuist.
+
+De categorie-indeling volgt het kalenderjaar-systeem (de leeftijd die je dit jaar wórdt): U14 = 12/13, U16 = 14/15, U18/U20 = 16 t/m 19. Een gecombineerde categorienaam als "U18/U20" wordt correct herkend als doel voor zowel 16/17- als 18/19-jarigen.
+
+#### Technisch
+- Leeftijdslogica uit `bepaalCategorieBadge()` geëxtraheerd naar twee herbruikbare helpers: `berekenLeeftijdsCategorie(geboortedatum)` (geeft U12…U20/Sen op basis van geboortejaar) en `categorieNaamDekt(catNaam, catBerekend)` (herkent samengestelde namen: "U18/U20" dekt zowel U18 als U20, "Senioren" dekt "Sen"). `bepaalCategorieBadge()` gebruikt nu deze helpers — de ⚠️-badge blijft functioneel identiek.
+- `bepaalDoorstroomKandidaten()` laadt atleten van álle categorieën waartoe de gebruiker toegang heeft (`in("categorie_id", …)`) en markeert wie niet meer in zijn categorie past; `laadDoorstroming()`, `renderDoorstroomLijst()`, `renderDoorstroomMelding()`, `startDoorstroming()`.
+- Doorstromen = `UPDATE prestaties SET categorie_id = doel WHERE categorie_id = oud AND atleet_id = …`, gevolgd door `UPDATE atleten SET categorie_id = doel`. Na afloop `laadDoorstroming()` + `syncAll()`.
+- Banner wordt bij het opstarten (voor admins) en bij het openen van de Admin-tab ververst. Geen schemawijziging.
+
+#### Wat niet getest kon worden
+- De echte Supabase-updates en RLS (of een admin de categorie-overstijgende `UPDATE` mag doen), en de browserweergave. De kernlogica (leeftijdsberekening kalenderjaar-systeem, dekking van samengestelde categorienamen, doorstroom-detectie U14→U16 en U16→U18/U20, en dat 15-jarigen in U16 blijven) is gecontroleerd met 25 losse unit-asserties; JavaScript-syntax gevalideerd met `node --check`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Geen Supabase-wijziging.
+
+---
+
 ## [juli 2026 — patch 48] — 2026-07-03
 
 ### 🐛 Mobiele navigatiebalk: twee fixes

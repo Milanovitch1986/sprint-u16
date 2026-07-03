@@ -1107,6 +1107,31 @@
 
   /* ── Wedstrijddag-modus (patch 47) ── */
   .wd-afrond-actie { margin-top: 18px; }
+
+  /* ── Doorstroming (patch 49) ── */
+  .doorstroom-banner {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(245,166,35,.08); border: 1px solid var(--accent);
+    border-radius: var(--radius); padding: 12px 16px; font-size: 13px;
+    margin: 12px 24px 0;
+  }
+  .doorstroom-rij {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .doorstroom-rij:last-of-type { border-bottom: none; }
+  .doorstroom-rij.geblokkeerd { opacity: .6; }
+  .doorstroom-doel {
+    display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px;
+    border-radius: 6px; background: rgba(34,197,94,.15); color: var(--success);
+  }
+  .doorstroom-blok {
+    display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px;
+    border-radius: 6px; background: rgba(232,56,61,.12); color: var(--accent2);
+  }
+  @media (max-width: 768px) {
+    .doorstroom-banner { margin: 12px 14px 0; }
+  }
   .wd-live-badge {
     display:inline-block; font-size:11px; font-weight:700; padding:3px 9px;
     border-radius:6px; background:rgba(232,56,61,.15); color:var(--accent2);
@@ -1200,6 +1225,10 @@
   </div>
   <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
 </header>
+
+<!-- Doorstroming-melding (patch 49): alleen zichtbaar voor admins zodra er
+     atleten klaarstaan voor een volgende categorie. -->
+<div id="doorstroom-melding" style="display:none;"></div>
 
 <main>
   <!-- HOME TAB -->
@@ -1674,6 +1703,12 @@
       <div id="categorieen-lijst" style="padding:16px;"></div>
     </div>
 
+    <!-- Doorstroming (patch 49) -->
+    <div class="detail-panel" style="margin-bottom:24px;">
+      <div class="section-label">🔀 Doorstroming</div>
+      <div id="doorstroom-lijst" style="padding:16px;"></div>
+    </div>
+
     <!-- Trainer–categorie koppelingen -->
     <div class="detail-panel">
       <div class="section-label">🔗 Toegang per trainer</div>
@@ -1999,6 +2034,12 @@ async function checkAuth() {
 
   // Laad categorieën waar deze trainer toegang toe heeft
   await laadMijnCategorieen();
+
+  // Patch 49: check bij opstarten of er atleten klaarstaan voor doorstroming
+  // (banner bovenaan de app; alleen voor admins).
+  if (profiel?.rol === "admin") {
+    laadDoorstroming().catch(e => console.warn("Doorstroming-check mislukt:", e.message));
+  }
   return true;
 }
 
@@ -2325,29 +2366,44 @@ async function verwijderGeselecteerde() {
 }
 
 // ── Categorie bepalen op basis van geboortejaar ───────────────
+// ── Leeftijdscategorie op basis van geboortejaar (kalenderjaar-systeem) ──
+// Atletiek gebruikt het verschil tussen huidig jaar en geboortejaar (de leeftijd
+// die je dit jaar WORDT), niet je werkelijke leeftijd op dit moment.
+//   U14 = wordt 12/13   U16 = wordt 14/15   U18/U20 = wordt 16 t/m 19
+function berekenLeeftijdsCategorie(geboortedatum) {
+  if (!geboortedatum) return null;
+  const geboortejaar = new Date(geboortedatum).getFullYear();
+  if (isNaN(geboortejaar)) return null;
+  const jaarVerschil = new Date().getFullYear() - geboortejaar;
+  if      (jaarVerschil <= 11) return "U12";
+  else if (jaarVerschil <= 13) return "U14";
+  else if (jaarVerschil <= 15) return "U16";
+  else if (jaarVerschil <= 17) return "U18";
+  else if (jaarVerschil <= 19) return "U20";
+  return "Sen";
+}
+
+// Dekt een categorienaam de berekende leeftijdscategorie? Naast een exacte
+// match herkennen we samengestelde namen: "U18/U20" dekt zowel U18 als U20,
+// "Senioren" dekt "Sen". Zo krijgt een gecombineerde categorie geen onterechte
+// ⚠️ en vindt de doorstroming (patch 49) de juiste doelcategorie.
+function categorieNaamDekt(catNaam, catBerekend) {
+  if (!catNaam || !catBerekend) return true; // zonder gegevens geen oordeel
+  if (catNaam === catBerekend) return true;
+  const b = catBerekend.toLowerCase();
+  const tokens = catNaam.split(/[^A-Za-z0-9]+/).filter(Boolean).map(t => t.toLowerCase());
+  return tokens.some(t => t === b || (b.length >= 3 && t.startsWith(b)));
+}
+
 function bepaalCategorieBadge(geboortedatum, geslacht) {
   const geslachtLabel = geslacht === "V" ? "Meisje" : "Jongen";
   const catNaam = actieveCategorie?.naam || "?";
 
-  if (!geboortedatum) return `${catNaam} ${geslachtLabel}`;
-  const geboortejaar = new Date(geboortedatum).getFullYear();
-  if (isNaN(geboortejaar)) return `${catNaam} ${geslachtLabel}`;
+  const catBerekend = berekenLeeftijdsCategorie(geboortedatum);
+  if (!catBerekend) return `${catNaam} ${geslachtLabel}`;
 
-  // Bereken de 'echte' leeftijdscategorie op basis van geboortejaar (kalenderjaar-systeem)
-  // Atletiek gebruikt het verschil tussen huidig jaar en geboortejaar (niet de werkelijke leeftijd)
-  // U16 = jaarVerschil 15 of 14 (bijv. in 2026: geboren 2011 of 2012)
-  const huidigJaar = new Date().getFullYear();
-  const jaarVerschil = huidigJaar - geboortejaar;
-  let catBerekend = "";
-  if      (jaarVerschil <= 11) catBerekend = "U12";
-  else if (jaarVerschil <= 13) catBerekend = "U14";
-  else if (jaarVerschil <= 15) catBerekend = "U16";
-  else if (jaarVerschil <= 17) catBerekend = "U18";
-  else if (jaarVerschil <= 19) catBerekend = "U20";
-  else                         catBerekend = "Sen";
-
-  // Toon ⚠️ als geboortejaar niet overeenkomt met de actieve categorie
-  const afwijkend = (catNaam !== catBerekend) ? " ⚠️" : "";
+  // Toon ⚠️ als het geboortejaar niet meer past bij de actieve categorie
+  const afwijkend = categorieNaamDekt(catNaam, catBerekend) ? "" : " ⚠️";
   return `${catNaam} ${geslachtLabel}${afwijkend}`;
 }
 
@@ -6729,7 +6785,8 @@ async function laadAdmin() {
     laadAdminUitnodigingen(),
     laadAdminGebruikers(),
     laadCategorieBeheer(),
-    laadTrainerCategorieBeheer()
+    laadTrainerCategorieBeheer(),
+    laadDoorstroming()
   ]);
 }
 
@@ -6955,6 +7012,195 @@ async function maakCategorie() {
     await laadMijnCategorieen();
     laadAdmin();
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+// ── Doorstroming (patch 49) ───────────────────────────────────
+// Atleten van wie het geboortejaar niet meer past bij hun huidige categorie
+// kunnen naar een volgende categorie worden verplaatst. Bij doorstroming
+// verhuizen de atleet én zijn PR's mee; wedstrijdresultaten (patch 47) en
+// opstellingen/beschikbaarheid blijven bewust bij de oude wedstrijden staan.
+let doorstroomKandidaten = []; // { atleet, huidigeCat, catBerekend, doelCat|null }
+
+// Bepaal alle kandidaten over alle categorieën waartoe de gebruiker toegang heeft.
+async function bepaalDoorstroomKandidaten() {
+  doorstroomKandidaten = [];
+  const cats = beschikbareCategorieen || [];
+  if (!cats.length) return;
+
+  // Alle atleten van alle toegankelijke categorieën ophalen.
+  const catIds = cats.map(c => c.id);
+  let alleAtleten = [];
+  try {
+    const { data, error } = await sb.from("atleten")
+      .select("*").in("categorie_id", catIds).order("naam");
+    if (error) throw error;
+    alleAtleten = data || [];
+  } catch(e) {
+    console.warn("Doorstroming: atleten laden mislukt:", e.message);
+    return;
+  }
+
+  const catById = {};
+  cats.forEach(c => { catById[c.id] = c; });
+
+  alleAtleten.forEach(a => {
+    const catBerekend = berekenLeeftijdsCategorie(a.geboortedatum);
+    if (!catBerekend) return; // geen geboortedatum → geen oordeel
+    const huidigeCat = catById[a.categorie_id];
+    if (!huidigeCat) return;
+    // Past de huidige categorie nog? Dan geen doorstroming nodig.
+    if (categorieNaamDekt(huidigeCat.naam, catBerekend)) return;
+    // Zoek een bestaande categorie die de berekende leeftijdscategorie dekt.
+    const doelCat = cats.find(c => categorieNaamDekt(c.naam, catBerekend)) || null;
+    doorstroomKandidaten.push({ atleet: a, huidigeCat, catBerekend, doelCat });
+  });
+}
+
+async function laadDoorstroming() {
+  await bepaalDoorstroomKandidaten();
+  renderDoorstroomLijst();
+  renderDoorstroomMelding();
+}
+
+function renderDoorstroomLijst() {
+  const el = document.getElementById("doorstroom-lijst");
+  if (!el) return;
+  if (!doorstroomKandidaten.length) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--muted);">Er staan geen atleten klaar voor doorstroming. Zodra het geboortejaar van een atleet niet meer bij de categorie past, verschijnt die hier.</div>`;
+    return;
+  }
+
+  const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat);
+  const rijen = doorstroomKandidaten.map((k, i) => {
+    const geboortejaar = k.atleet.geboortedatum ? new Date(k.atleet.geboortedatum).getFullYear() : "—";
+    const kanVerhuizen = !!k.doelCat;
+    const doelHtml = kanVerhuizen
+      ? `<span class="doorstroom-doel">${esc(k.doelCat.naam)} ✓</span>`
+      : `<span class="doorstroom-blok">categorie "${esc(k.catBerekend)}" bestaat niet ✗</span>`;
+    return `
+      <div class="doorstroom-rij${kanVerhuizen ? "" : " geblokkeerd"}">
+        <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:${kanVerhuizen ? "pointer" : "default"};">
+          <input type="checkbox" id="doorstroom-chk-${i}" ${kanVerhuizen ? "checked" : "disabled"}>
+          <span style="flex:1;">
+            <b>${esc(k.atleet.naam)}</b>
+            <span style="color:var(--muted);font-size:12px;"> · ${geboortejaar}</span>
+          </span>
+        </label>
+        <span style="font-size:12px;color:var(--muted);">${esc(k.huidigeCat.naam)} ⚠️ →</span>
+        ${doelHtml}
+      </div>`;
+  }).join("");
+
+  const ontbrekend = doorstroomKandidaten.filter(k => !k.doelCat);
+  const tip = ontbrekend.length
+    ? `<div style="font-size:12px;color:var(--muted);margin-top:10px;">💡 Maak de ontbrekende categorie(ën) aan via "+ Nieuwe categorie" om ook de overige atleten te kunnen doorstromen.</div>`
+    : "";
+
+  el.innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+      Bij doorstroming verhuizen de atleet en al zijn persoonlijke records (PR's) mee naar de nieuwe categorie. Wedstrijdresultaten en opstellingen blijven bij de oude wedstrijden staan.
+    </div>
+    ${rijen}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;">
+      <button class="btn btn-primary btn-sm" onclick="startDoorstroming()" ${verplaatsbaar.length ? "" : "disabled"}>
+        Doorstromen (<span id="doorstroom-aantal">${verplaatsbaar.length}</span> geselecteerd)
+      </button>
+    </div>
+    ${tip}`;
+
+  // Live meetellen van de selectie
+  doorstroomKandidaten.forEach((k, i) => {
+    const chk = document.getElementById(`doorstroom-chk-${i}`);
+    if (chk && k.doelCat) chk.addEventListener("change", updateDoorstroomAantal);
+  });
+}
+
+function updateDoorstroomAantal() {
+  let n = 0;
+  doorstroomKandidaten.forEach((k, i) => {
+    const chk = document.getElementById(`doorstroom-chk-${i}`);
+    if (chk && chk.checked) n++;
+  });
+  const el = document.getElementById("doorstroom-aantal");
+  if (el) el.textContent = n;
+}
+
+// Banner bovenaan de app (alleen admin, alleen als er iemand klaarstaat).
+function renderDoorstroomMelding() {
+  const el = document.getElementById("doorstroom-melding");
+  if (!el) return;
+  const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat).length;
+  if (huidigeProfiel?.rol !== "admin" || verplaatsbaar < 1) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  el.style.display = "";
+  el.innerHTML = `
+    <div class="doorstroom-banner">
+      <span style="font-size:18px;">🔀</span>
+      <span><b>${verplaatsbaar} atlet${verplaatsbaar === 1 ? "e staat" : "en staan"} klaar voor doorstroming</b> naar een volgende categorie.</span>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto;white-space:nowrap;" onclick="showTab('admin');document.getElementById('doorstroom-lijst')?.scrollIntoView({behavior:'smooth'});">Bekijk doorstroming</button>
+    </div>`;
+}
+
+async function startDoorstroming() {
+  const teVerhuizen = doorstroomKandidaten.filter((k, i) => {
+    const chk = document.getElementById(`doorstroom-chk-${i}`);
+    return k.doelCat && chk && chk.checked;
+  });
+  if (!teVerhuizen.length) { toast("Niets geselecteerd", "err"); return; }
+
+  // Tel per atleet de PR's, zodat we het in de bevestiging kunnen tonen.
+  const regels = [];
+  for (const k of teVerhuizen) {
+    let aantalPR = 0;
+    try {
+      const { count } = await sb.from("prestaties")
+        .select("*", { count: "exact", head: true })
+        .eq("categorie_id", k.huidigeCat.id)
+        .eq("atleet_id", k.atleet.id);
+      aantalPR = count || 0;
+    } catch(e) { /* telfout negeren, toon 0 */ }
+    regels.push(`• ${k.atleet.naam}: ${k.huidigeCat.naam} → ${k.doelCat.naam} (${aantalPR} PR's)`);
+  }
+
+  const ok = await bevestig(
+    "Doorstroming bevestigen",
+    `Je staat op het punt ${teVerhuizen.length} atlet${teVerhuizen.length === 1 ? "e" : "en"} door te stromen:\n\n${regels.join("\n")}\n\nDe atleten en hun PR's verhuizen mee. Dit kan niet automatisch ongedaan worden gemaakt.`
+  );
+  if (!ok) return;
+
+  let gelukt = 0, fouten = 0;
+  for (const k of teVerhuizen) {
+    try {
+      // 1. PR's verhuizen naar de nieuwe categorie
+      const { error: pErr } = await sb.from("prestaties")
+        .update({ categorie_id: k.doelCat.id })
+        .eq("categorie_id", k.huidigeCat.id)
+        .eq("atleet_id", k.atleet.id);
+      if (pErr) throw pErr;
+      // 2. De atleet zelf verhuizen
+      const { error: aErr } = await sb.from("atleten")
+        .update({ categorie_id: k.doelCat.id })
+        .eq("id", k.atleet.id)
+        .eq("categorie_id", k.huidigeCat.id);
+      if (aErr) throw aErr;
+      gelukt++;
+    } catch(e) {
+      console.warn("Doorstroming mislukt voor", k.atleet.naam, e.message);
+      fouten++;
+    }
+  }
+
+  toast(fouten
+    ? `${gelukt} doorgestroomd · ${fouten} mislukt`
+    : `${gelukt} atlet${gelukt === 1 ? "e" : "en"} doorgestroomd ✓`, fouten ? "err" : "ok");
+
+  // Herlaad de doorstroomlijst + banner, en als de actieve categorie is geraakt
+  // ook de getoonde atleten/PR's.
+  await laadDoorstroming();
+  await syncAll();
 }
 
 async function verwijderCategorie(id, naam) {
