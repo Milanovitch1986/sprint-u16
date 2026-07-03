@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 50)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 51)*
 
 ---
 
@@ -42,6 +42,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Wedstrijddag als aparte tab + individuele modus (patch 51, juli 2026)
+De wedstrijddag-modus is nu een eigen tab (`showTab("wedstrijddag")`, desktop-knop `#tab-wedstrijddag` + mobiel `#mob-tab-wedstrijddag` met ⏱️-icoon). De view `#view-wedstrijddag` is opgesplitst in `#wd-overzicht` (lijst van wedstrijden, `renderWedstrijddagLijst()`, aankomende bovenaan) en `#wd-detail` (het invoerscherm). `showTab("wedstrijddag")` toont de lijst; `openWedstrijddag(id)` (ook nog via het 🏟️-knopje op de wedstrijdkaart) schakelt door naar het detail via `toonWdDetail()`. `sluitWedstrijddag()` gaat terug naar de lijst (niet meer naar de Wedstrijden-tab).
+
+**Twee modi via `wdModus`** (`"competitie"` / `"individueel"`), bepaald in `laadWedstrijddag()`: er wordt eerst gekeken of er een gevulde `opstelling` bestaat voor de wedstrijd (query over álle geslachten, `some(o => o.data && Object.keys(o.data).length)`). Wél opstelling → competitiemodus (ongewijzigd: programma + opstelling + teamscore). Géén opstelling → individuele modus. `toonWdModusUI()` verbergt in individuele modus de geslacht-/ploeg-tabs en `#wd-scorebalk` en toont `#wd-quickadd`; het `#wd-modus-badge` toont "👤 Individuele modus".
+
+**Individuele modus** hergebruikt de tabel `resultaten` (sleutel = atleet-id, `atleet_id` gevuld) en dezelfde afrond-modal (`openWdAfronden`/`verwerkWdAfronden` verwerkt álle individuele resultaten en slaat PR's op). `wdIndivDisciplines()` = alle categorie-onderdelen behalve estafettes + categorie-brede eigen onderdelen (`customOnderdelen` met `atleet_id` leeg). `renderWdIndividueel()` toont alleen onderdelen waar iemand aan meedoet; toevoegen gaat via de snelinvoer-balk (`wdQuickAdd` → `wdIndivVoegToe`) of per sectie (`wdIndivAddPrompt` zet het onderdeel klaar in de balk). Punten worden berekend met het **geslacht van de atleet zelf** (niet dat van het onderdeel), zodat gemengd invoeren klopt. Leegmaken van een invoerveld (`wdIndivInvoer`) wist alleen het resultaat (rij blijft, `resultaat=null`), verwijderen doet `wdIndivVerwijder` (bevestiging als er al een resultaat staat). **Estafettes zitten niet in de individuele modus** (een estafette is een teamtijd, geen individueel PR) — later eventueel toe te voegen. Geen schemawijziging.
 
 ### Doorstroming voor alle trainers + release notes bewerken (patch 50, juli 2026)
 Het doorstroom-scherm is verplaatst van `view-admin` naar `view-atleten` (`#doorstroom-paneel`, alleen zichtbaar bij kandidaten) en is nu voor álle trainers beschikbaar; de banner is niet langer admin-only. `laadDoorstroming()` draait bij opstarten (iedereen) en bij openen van de Atleten-tab. Om "doel bestaat niet" van "doel bestaat maar geen toegang" te onderscheiden laadt `bepaalDoorstroomKandidaten()` nu ook `alleCategorieNamen` (id+naam van álle categorieën; de categorieen-tabel is leesbaar voor iedere ingelogde gebruiker) en zet per kandidaat `doelBestaatGeenToegang`. Een trainer kan door de RLS alleen verplaatsen naar categorieën waartoe hij toegang heeft; kandidaten met een ontoegankelijke doelcategorie zijn niet-selecteerbaar en `startDoorstroming()` toont daarvoor een eenmalige melding ("neem contact op met de beheerder") via de nieuwe `bevestig(titel, bericht, { alleenOk:true })`-modus (verbergt de annuleerknop, label wordt "OK", herstelt zichzelf na sluiten). Release notes: `noteModal` heeft nu een verborgen `note-id`; `slaaNoteOp()` doet update-bij-id anders insert; verwijderen/bewerken via `data-note`-attribuut op de knop (veilig voor titels met aanhalingstekens). Geen schemawijziging.

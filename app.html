@@ -1184,6 +1184,32 @@
     background:var(--surface2); border:1px solid var(--border); color:var(--muted);
   }
   .wd-dns-btn.actief { background:rgba(232,56,61,.12); border-color:var(--accent2); color:var(--accent2); }
+  /* Individuele modus (gewone wedstrijd) */
+  .wd-modus-badge {
+    display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px;
+    background:rgba(245,166,35,.15); color:var(--accent); border:1px solid var(--accent); letter-spacing:.3px;
+  }
+  .wd-quickadd {
+    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px 14px; margin-bottom:16px;
+  }
+  .wd-quickadd .qa-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+  .wd-quickadd .qa-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .wd-quickadd select, .wd-quickadd input {
+    background:var(--bg); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 10px; font-size:13px; font-family:'Barlow',sans-serif;
+  }
+  .wd-quickadd select { flex:1; min-width:120px; }
+  .wd-quickadd input { flex:1; min-width:90px; max-width:150px; }
+  .wd-sectie-add {
+    width:100%; margin-top:6px; background:transparent; border:1px dashed var(--border);
+    color:var(--muted); border-radius:var(--radius); padding:9px; font-size:13px; cursor:pointer;
+  }
+  .wd-sectie-add:hover { border-color:var(--accent); color:var(--accent); }
+  @media (max-width: 640px) {
+    .wd-quickadd .qa-row { flex-direction:column; align-items:stretch; }
+    .wd-quickadd select, .wd-quickadd input { max-width:none; width:100%; }
+  }
   @media (max-width: 640px) {
     .wd-rij { grid-template-columns: minmax(100px,1.2fr) 90px 60px 46px; }
     .wd-rij .wd-pr { display:none; }
@@ -1204,6 +1230,7 @@
     <button id="tab-atleten" onclick="showTab('atleten')">Atleten</button>
     <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
     <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
+    <button id="tab-wedstrijddag" onclick="showTab('wedstrijddag')">🏟️ Wedstrijddag</button>
     <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
     <button id="tab-punten" onclick="showTab('punten')">🧮 Punten</button>
     <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">👤 Profiel</button>
@@ -1473,22 +1500,46 @@
 
   <!-- WEDSTRIJDDAG-MODUS (patch 47): live resultaten invoeren -->
   <div id="view-wedstrijddag" style="display:none;">
-    <div class="page-header" style="flex-wrap:wrap;gap:10px;">
-      <button class="btn btn-ghost btn-sm" onclick="sluitWedstrijddag()">← Terug</button>
-      <div class="page-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        🏟️ <span id="wd-titel">Wedstrijddag</span>
-        <span class="wd-live-badge">● LIVE</span>
+
+    <!-- Overzicht: kies een wedstrijd -->
+    <div id="wd-overzicht">
+      <div class="page-header">
+        <div class="page-title">🏟️ Wedstrijddag</div>
       </div>
-      <div class="ml-auto">
-        <button class="btn btn-ghost btn-sm" onclick="vernieuwWedstrijddag()" title="Haal de invoer van collega-trainers op">🔄 Vernieuwen</button>
-      </div>
+      <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om live resultaten in te voeren:</div>
+      <div id="wd-wedstrijd-lijst" class="grid"></div>
     </div>
-    <div class="wd-tabs" id="wd-geslacht-tabs"></div>
-    <div class="wd-tabs" id="wd-ploeg-tabs"></div>
-    <div class="wd-scorebalk" id="wd-scorebalk"></div>
-    <div id="wd-lijst"></div>
-    <div class="wd-afrond-actie">
-      <button class="btn btn-primary" onclick="openWdAfronden()">✅ Wedstrijd afronden — PR's bijwerken</button>
+
+    <!-- Detail: invoerscherm voor de gekozen wedstrijd -->
+    <div id="wd-detail" style="display:none;">
+      <div class="page-header" style="flex-wrap:wrap;gap:10px;">
+        <button class="btn btn-ghost btn-sm" onclick="sluitWedstrijddag()">← Wedstrijddag</button>
+        <div class="page-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          🏟️ <span id="wd-titel">Wedstrijddag</span>
+          <span class="wd-live-badge">● LIVE</span>
+          <span class="wd-modus-badge" id="wd-modus-badge" style="display:none;"></span>
+        </div>
+        <div class="ml-auto">
+          <button class="btn btn-ghost btn-sm" onclick="vernieuwWedstrijddag()" title="Haal de invoer van collega-trainers op">🔄 Vernieuwen</button>
+        </div>
+      </div>
+      <div class="wd-tabs" id="wd-geslacht-tabs"></div>
+      <div class="wd-tabs" id="wd-ploeg-tabs"></div>
+      <div class="wd-scorebalk" id="wd-scorebalk"></div>
+      <!-- Snelinvoer (alleen individuele modus) -->
+      <div class="wd-quickadd" id="wd-quickadd" style="display:none;">
+        <div class="qa-label">Snel toevoegen</div>
+        <div class="qa-row">
+          <select id="wd-qa-atleet"><option value="">Atleet…</option></select>
+          <select id="wd-qa-disc"><option value="">Onderdeel…</option></select>
+          <input id="wd-qa-res" placeholder="resultaat (optioneel)" onkeydown="if(event.key==='Enter')wdQuickAdd()">
+          <button class="btn btn-primary btn-sm" onclick="wdQuickAdd()">＋ Toevoegen</button>
+        </div>
+      </div>
+      <div id="wd-lijst"></div>
+      <div class="wd-afrond-actie">
+        <button class="btn btn-primary" onclick="openWdAfronden()">✅ Afronden &amp; nieuwe PR's opslaan</button>
+      </div>
     </div>
   </div>
 
@@ -2190,6 +2241,7 @@ function showTab(tab) {
   if (tab === "prestaties")  populateAtleetSelects();
   if (tab === "wedstrijden") renderWedstrijden();
   if (tab === "opstelling")  renderOpstellingWedstrijden();
+  if (tab === "wedstrijddag") { renderWedstrijddagLijst(); toonWdOverzicht(); }
   if (tab === "admin")       laadAdmin();
 }
 
@@ -5735,6 +5787,7 @@ let wdOpstellingPerPloeg = {};  // { A: {slotKey: atleetId}, B: {...}, ... }
 let wdPloegen           = [];   // ploegen met een opgeslagen (gevulde) opstelling
 let wdResultaten        = {};   // resKey -> { discipline, atleetId, sleutel, resultaat, status }
 let wdAfrondKandidaten  = [];   // kandidaten voor PR-bijwerking in de afrond-modal
+let wdModus             = "competitie"; // "competitie" (met opstelling + teamscore) of "individueel" (gewone wedstrijd, patch 51)
 
 // Sleutel in de databank: individueel = atleet-id, estafette = "ploeg-X"
 // (één teamtijd per ploeg per estafette-onderdeel).
@@ -5742,19 +5795,66 @@ function wdResKey(discipline, sleutel) {
   return `${discipline.trim().toLowerCase()}|${sleutel}`;
 }
 
+// Toon de overzichtslijst (kies een wedstrijd) binnen de Wedstrijddag-tab.
+function toonWdOverzicht() {
+  const ov = document.getElementById("wd-overzicht");
+  const det = document.getElementById("wd-detail");
+  if (ov)  ov.style.display = "";
+  if (det) det.style.display = "none";
+}
+
+// Toon het invoerscherm (detail) binnen de Wedstrijddag-tab.
+function toonWdDetail() {
+  const ov = document.getElementById("wd-overzicht");
+  const det = document.getElementById("wd-detail");
+  if (ov)  ov.style.display = "none";
+  if (det) det.style.display = "";
+}
+
+// Overzichtslijst: alle wedstrijden, aankomende bovenaan.
+function renderWedstrijddagLijst() {
+  const cont = document.getElementById("wd-wedstrijd-lijst");
+  if (!cont) return;
+  if (!wedstrijden.length) {
+    cont.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er eerst een toe via het tabblad Wedstrijden.</div>`;
+    return;
+  }
+  const aankomend = wedstrijden.filter(w => !isWedstrijdAfgelopen(w));
+  const afgelopen = wedstrijden.filter(w => isWedstrijdAfgelopen(w));
+  const kaart = (w) => {
+    const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
+    const datum = w.datum ? new Date(w.datum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" }) : "Geen datum";
+    return `
+      <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}" onclick="openWedstrijddag('${w.id}')" style="cursor:pointer;" title="Open de wedstrijddag">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <b style="font-family:'Barlow Condensed',sans-serif;font-size:18px;">${esc(w.naam || "Wedstrijd")}</b>
+          ${finaleBadge}
+        </div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">📅 ${esc(datum)}${w.locatie ? " · 📍 " + esc(w.locatie) : ""}</div>
+        <div style="color:var(--accent);font-size:13px;margin-top:8px;font-weight:600;">🏟️ Live resultaten invoeren →</div>
+      </div>`;
+  };
+  let html = "";
+  if (aankomend.length) html += aankomend.map(kaart).join("");
+  if (afgelopen.length) html += afgelopen.map(kaart).join("");
+  cont.innerHTML = html;
+}
+
 function openWedstrijddag(wedstrijdId) {
+  showTab("wedstrijddag");        // toont de view + overzichtslijst
   wdWedstrijdId = wedstrijdId;
   wdGeslacht = "M";
   wdPloeg = "A";
-  showTab("wedstrijddag");
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
   document.getElementById("wd-titel").textContent = w ? (w.naam || "Wedstrijddag") : "Wedstrijddag";
+  toonWdDetail();                 // schakel over naar het invoerscherm
   laadWedstrijddag();
 }
 
 function sluitWedstrijddag() {
   wdWedstrijdId = null;
-  showTab("wedstrijden");
+  renderWedstrijddagLijst();
+  toonWdOverzicht();
 }
 
 async function laadWedstrijddag() {
@@ -5762,7 +5862,32 @@ async function laadWedstrijddag() {
   if (!cid || !wdWedstrijdId) return;
   document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">Laden…</div>`;
   try {
-    const [pRes, oRes, rRes] = await Promise.all([
+    // Bepaal de modus: heeft deze wedstrijd een opgeslagen opstelling (welk geslacht dan ook)?
+    //  - Wél opstelling  → competitiemodus (teamscore + telregels, zoals patch 47).
+    //  - Géén opstelling → individuele modus (gewone wedstrijd, patch 51).
+    const [oAlleRes, rRes] = await Promise.all([
+      sb.from("opstelling").select("data")
+        .eq("categorie_id", cid)
+        .eq("wedstrijd_id", wdWedstrijdId),
+      sb.from("resultaten").select("*")
+        .eq("categorie_id", cid)
+        .eq("wedstrijd_id", wdWedstrijdId)
+    ]);
+    if (oAlleRes.error) throw oAlleRes.error;
+    if (rRes.error) throw rRes.error;
+
+    const heeftOpstelling = (oAlleRes.data || []).some(o => o.data && Object.keys(o.data).length > 0);
+    wdModus = heeftOpstelling ? "competitie" : "individueel";
+    wdVerwerkResultaten(rRes.data || []);
+
+    if (wdModus === "individueel") {
+      toonWdModusUI();
+      renderWdIndividueel();
+      return;
+    }
+
+    // ── Competitiemodus: programma + opstelling van het actieve geslacht laden ──
+    const [pRes, oRes] = await Promise.all([
       sb.from("programma").select("*")
         .eq("categorie_id", cid)
         .eq("wedstrijd_id", wdWedstrijdId)
@@ -5771,14 +5896,10 @@ async function laadWedstrijddag() {
       sb.from("opstelling").select("*")
         .eq("categorie_id", cid)
         .eq("wedstrijd_id", wdWedstrijdId)
-        .eq("geslacht", wdGeslacht),
-      sb.from("resultaten").select("*")
-        .eq("categorie_id", cid)
-        .eq("wedstrijd_id", wdWedstrijdId)
+        .eq("geslacht", wdGeslacht)
     ]);
     if (pRes.error) throw pRes.error;
     if (oRes.error) throw oRes.error;
-    if (rRes.error) throw rRes.error;
 
     wdProgramma = pRes.data || [];
 
@@ -5807,11 +5928,26 @@ async function laadWedstrijddag() {
     );
     if (!wdPloegen.includes(wdPloeg)) wdPloeg = wdPloegen[0] || "A";
 
-    wdVerwerkResultaten(rRes.data || []);
+    toonWdModusUI();
     renderWedstrijddag();
   } catch(e) {
     toast("Fout bij laden wedstrijddag: " + e.message, "err");
     document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--accent2);font-size:13px;padding:16px 0;">Kon de wedstrijddag niet laden. Bestaat de tabel 'resultaten' al in Supabase?</div>`;
+  }
+}
+
+// Toon/verberg de UI-onderdelen die per modus verschillen.
+function toonWdModusUI() {
+  const indiv = wdModus === "individueel";
+  const zet = (id, aan) => { const el = document.getElementById(id); if (el) el.style.display = aan ? "" : "none"; };
+  zet("wd-geslacht-tabs", !indiv);
+  zet("wd-ploeg-tabs",    !indiv);
+  zet("wd-scorebalk",     !indiv);
+  zet("wd-quickadd",       indiv);
+  const badge = document.getElementById("wd-modus-badge");
+  if (badge) {
+    badge.style.display = indiv ? "" : "none";
+    badge.textContent = indiv ? "👤 Individuele modus" : "";
   }
 }
 
@@ -5838,8 +5974,12 @@ async function vernieuwWedstrijddag() {
       .eq("wedstrijd_id", wdWedstrijdId);
     if (error) throw error;
     wdVerwerkResultaten(data || []);
-    renderWdLijst();
-    renderWdScore();
+    if (wdModus === "individueel") {
+      renderWdIndividueel();
+    } else {
+      renderWdLijst();
+      renderWdScore();
+    }
     const t = new Date();
     toast(`Vernieuwd ✓ (${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")})`);
   } catch(e) { toast("Fout bij vernieuwen: " + e.message, "err"); }
@@ -5983,6 +6123,202 @@ function wdIsBeterDanPR(res, pr, discipline) {
   const huidig = parseResultaat(pr.resultaat);
   if (huidig === null) return true;
   return isLagerBeter(discipline) ? nieuw < huidig : nieuw > huidig;
+}
+
+// ══ Individuele modus (gewone wedstrijd, patch 51) ════════════
+// Geen opstelling en geen teamscore: je voegt zelf atleten toe per
+// onderdeel en voert resultaten in. Betere resultaten worden bij het
+// afronden als nieuw PR opgeslagen (hergebruikt de bestaande afrond-modal).
+
+// Onderdelen die je individueel kunt invoeren: alle onderdelen van de
+// categorie behalve estafettes (die zijn een teamtijd), plus de
+// categorie-brede eigen onderdelen.
+function wdIndivDisciplines() {
+  const uit = [];
+  const gezien = new Set();
+  getDisciplines().forEach(d => {
+    if (d.type === "estafette") return;
+    const k = d.naam.trim().toLowerCase();
+    if (gezien.has(k)) return;
+    gezien.add(k);
+    uit.push({ naam: d.naam, type: d.type });
+  });
+  // Categorie-brede eigen onderdelen (atleet_id leeg) erbij.
+  (customOnderdelen || []).forEach(o => {
+    if (o.atleet_id != null) return;
+    const k = (o.naam || "").trim().toLowerCase();
+    if (!k || gezien.has(k)) return;
+    gezien.add(k);
+    uit.push({ naam: o.naam, type: "technisch" });
+  });
+  return uit;
+}
+
+// Vul de selects van de snelinvoer-balk (atleten + onderdelen).
+function vulWdQuickAdd() {
+  const atlSel = document.getElementById("wd-qa-atleet");
+  const discSel = document.getElementById("wd-qa-disc");
+  if (atlSel) {
+    atlSel.innerHTML = `<option value="">Atleet…</option>` +
+      atleten.map(a => `<option value="${a.id}">${esc(a.naam || "")} (${a.geslacht || ""})</option>`).join("");
+  }
+  if (discSel) {
+    discSel.innerHTML = `<option value="">Onderdeel…</option>` +
+      wdIndivDisciplines().map(d => `<option value="${esc(d.naam)}">${esc(d.naam)}</option>`).join("");
+  }
+}
+
+function renderWdIndividueel() {
+  vulWdQuickAdd();
+  const cont = document.getElementById("wd-lijst");
+  if (!cont) return;
+
+  // Groepeer de ingevoerde resultaten per onderdeel (alleen individueel: geen ploeg-tijden).
+  const perDiscipline = {};
+  Object.values(wdResultaten).forEach(res => {
+    if (!res.atleetId || String(res.sleutel).startsWith("ploeg-")) return;
+    const k = res.discipline.trim().toLowerCase();
+    (perDiscipline[k] = perDiscipline[k] || []).push(res);
+  });
+
+  const disciplines = wdIndivDisciplines();
+  let kaarten = "";
+  disciplines.forEach(d => {
+    const rijen = perDiscipline[d.naam.trim().toLowerCase()] || [];
+    if (!rijen.length) return; // alleen onderdelen tonen waar iemand aan meedoet
+    // Sorteer op atletennaam voor rust in het scherm.
+    rijen.sort((a, b) => {
+      const na = (atleten.find(x => String(x.id) === String(a.atleetId))?.naam || "");
+      const nb = (atleten.find(x => String(x.id) === String(b.atleetId))?.naam || "");
+      return na.localeCompare(nb);
+    });
+    kaarten += `
+      <div class="wd-kaart">
+        <div class="wd-kaart-kop"><b>${esc(d.naam)}</b></div>
+        ${rijen.map(r => wdIndivRijHtml(d.naam, r)).join("")}
+        <button class="wd-sectie-add" onclick="wdIndivAddPrompt('${esc(d.naam)}')">＋ atleet toevoegen bij ${esc(d.naam)}</button>
+      </div>`;
+  });
+
+  cont.innerHTML = kaarten || `
+    <div class="empty-state"><div class="icon">👤</div>
+      Nog geen resultaten. Voeg hierboven een atleet en onderdeel toe met de snelinvoer-balk.
+    </div>`;
+}
+
+function wdIndivRijHtml(discipline, res) {
+  const a = atleten.find(x => String(x.id) === String(res.atleetId));
+  const naam = a ? a.naam : "Onbekende atleet";
+  const geslacht = a ? a.geslacht : "M";
+  const val = res.status === "ok" && res.resultaat
+    ? formateerResultaatWeergave(res.resultaat, discipline) : "";
+  const pr = bestePrestatie(res.atleetId, discipline);
+  const prTekst = pr ? `PR: ${formateerResultaatWeergave(pr.resultaat, discipline)}` : "PR: —";
+  const pts = res.status === "ok" && res.resultaat
+    ? berekenPunten(discipline, res.resultaat, geslacht) : null;
+  const beter = wdIsBeterDanPR(res, pr, discipline);
+  const aid = String(res.atleetId);
+  return `
+    <div class="wd-rij">
+      <span>${esc(naam)}</span>
+      <input value="${esc(val)}" class="${val ? "gevuld" : ""}"
+             placeholder="${esc(getPRPlaceholder(discipline))}"
+             onchange="wdIndivInvoer('${esc(discipline)}','${aid}',this)">
+      <span class="wd-pr">${prTekst}</span>
+      <span><b>${pts !== null ? pts : "—"}</b>
+            <span>${beter ? `<span class="wd-badge-pr">▲ PR!</span>` : ""}</span></span>
+      <button class="wd-dns-btn" title="Verwijder deze atleet bij dit onderdeel"
+              onclick="wdIndivVerwijder('${esc(discipline)}','${aid}')">✕</button>
+    </div>`;
+}
+
+// Snelinvoer-balk: atleet + onderdeel (+ optioneel resultaat) toevoegen.
+async function wdQuickAdd() {
+  const atleetId = document.getElementById("wd-qa-atleet").value;
+  const disc     = document.getElementById("wd-qa-disc").value;
+  const resInp   = document.getElementById("wd-qa-res");
+  const raw      = resInp.value.trim();
+  if (!atleetId) { toast("Kies eerst een atleet", "err"); return; }
+  if (!disc)     { toast("Kies eerst een onderdeel", "err"); return; }
+  const ok = await wdIndivVoegToe(disc, atleetId, raw || null);
+  if (ok) {
+    resInp.value = "";
+    document.getElementById("wd-qa-atleet").value = "";
+  }
+}
+
+// Voeg een atleet toe bij een onderdeel (met optioneel meteen een resultaat).
+// Retourneert true bij succes.
+async function wdIndivVoegToe(discipline, atleetId, raw) {
+  const cid = actieveCategorie?.id;
+  if (!cid || !wdWedstrijdId) return false;
+  const sleutel = String(atleetId);
+  const bestaat = wdResultaten[wdResKey(discipline, sleutel)];
+  let genorm = null;
+  if (raw) {
+    genorm = normaliserenResultaat(raw, discipline);
+    if (parseResultaat(genorm) === null) {
+      toast("Ongeldig resultaat — controleer het formaat", "err");
+      return false;
+    }
+  } else if (bestaat) {
+    toast("Deze atleet staat al bij dit onderdeel", "ok");
+    return false;
+  }
+  try {
+    await wdBewaarResultaat(discipline, sleutel, atleetId, genorm, "ok");
+    renderWdIndividueel();
+    return true;
+  } catch(e) { toast("Fout bij opslaan: " + e.message, "err"); return false; }
+}
+
+// Resultaat invoeren/wijzigen voor een atleet bij een onderdeel.
+// Leegmaken van het veld wist alleen het resultaat — de atleet blijft in de lijst.
+async function wdIndivInvoer(discipline, atleetId, inputEl) {
+  const cid = actieveCategorie?.id;
+  if (!cid || !wdWedstrijdId) return;
+  const sleutel = String(atleetId);
+  const raw = inputEl.value.trim();
+  try {
+    if (!raw) {
+      await wdBewaarResultaat(discipline, sleutel, atleetId, null, "ok");
+    } else {
+      const genorm = normaliserenResultaat(raw, discipline);
+      if (parseResultaat(genorm) === null) {
+        toast("Ongeldig resultaat — controleer het formaat", "err");
+        return;
+      }
+      await wdBewaarResultaat(discipline, sleutel, atleetId, genorm, "ok");
+    }
+    renderWdIndividueel();
+  } catch(e) { toast("Fout bij opslaan: " + e.message, "err"); }
+}
+
+// Atleet verwijderen bij een onderdeel. Vraagt bevestiging als er al een resultaat staat.
+async function wdIndivVerwijder(discipline, atleetId) {
+  const sleutel = String(atleetId);
+  const res = wdResultaten[wdResKey(discipline, sleutel)];
+  const a = atleten.find(x => String(x.id) === String(atleetId));
+  if (res && res.status === "ok" && res.resultaat) {
+    const ok = await bevestig("Atleet verwijderen",
+      `Verwijder <strong>${esc(a ? a.naam : "deze atleet")}</strong> bij <strong>${esc(discipline)}</strong>?\n\nHet ingevoerde resultaat wordt verwijderd. Dit werkt geen PR bij.`);
+    if (!ok) return;
+  }
+  try {
+    await wdVerwijderResultaat(discipline, sleutel);
+    renderWdIndividueel();
+  } catch(e) { toast("Fout bij verwijderen: " + e.message, "err"); }
+}
+
+// "➕ atleet toevoegen" onder een onderdeel: zet dat onderdeel klaar in de
+// snelinvoer-balk en focus de atleet-keuze.
+function wdIndivAddPrompt(discipline) {
+  const discSel = document.getElementById("wd-qa-disc");
+  const atlSel = document.getElementById("wd-qa-atleet");
+  const balk = document.getElementById("wd-quickadd");
+  if (discSel) discSel.value = discipline;
+  if (balk) balk.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (atlSel) setTimeout(() => atlSel.focus(), 200);
 }
 
 // ── Live invoer: individueel ──────────────────────────────────
@@ -8860,6 +9196,10 @@ init();
   <button id="mob-tab-wedstrijden" onclick="showTab('wedstrijden')">
     <span class="mob-icon">🏟️</span>
     <span class="mob-label">Wedstrijden</span>
+  </button>
+  <button id="mob-tab-wedstrijddag" onclick="showTab('wedstrijddag')">
+    <span class="mob-icon">⏱️</span>
+    <span class="mob-label">Wedstrijddag</span>
   </button>
   <button id="mob-tab-opstelling" onclick="showTab('opstelling')">
     <span class="mob-icon">📋</span>

@@ -6,6 +6,41 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 51] — 2026-07-03
+
+### 🏟️ Wedstrijddag als aparte tab + individuele modus voor gewone wedstrijden
+
+De wedstrijddag-modus was alleen bereikbaar via een knopje op de wedstrijdkaart en ging altijd uit van een opstelling met teamscore (competitie). Vanaf nu is er een **aparte tab "🏟️ Wedstrijddag"** en werkt live invoeren óók voor gewone wedstrijden.
+
+**Nieuwe Wedstrijddag-tab**
+
+- Naast de bestaande tabs staat nu **🏟️ Wedstrijddag** (ook in de mobiele balk, met ⏱️-icoon). De tab toont een lijst van je wedstrijden (aankomende bovenaan); je tikt er één aan om live resultaten in te voeren.
+- Het bestaande 🏟️-knopje op de wedstrijdkaart blijft bestaan als snelkoppeling — het opent hetzelfde scherm.
+
+**Twee modi, automatisch herkend**
+
+De app kijkt of een wedstrijd een opgeslagen opstelling heeft:
+
+- **Competitie (mét opstelling)** → het vertrouwde scherm met opstelling, ploegen en live teamscore (telregels). Ongewijzigd.
+- **Gewone wedstrijd (zónder opstelling)** → de nieuwe **individuele modus**: geen teamscore, iedereen kan op elk onderdeel meedoen.
+
+**Individuele modus**
+
+- Een **snelinvoer-balk** bovenaan: kies een atleet, een onderdeel en (optioneel) meteen een resultaat, en tik **＋ Toevoegen**. De atleet verschijnt onder het juiste onderdeel.
+- Per onderdeel zie je de toegevoegde atleten met naam, huidig PR, invoerveld en direct berekende punten (op basis van het geslacht van de atleet). Een **▲ PR!**-badge verschijnt zodra een resultaat beter is dan het huidige PR.
+- Met **＋ atleet toevoegen bij [onderdeel]** zet je datzelfde onderdeel klaar in de snelinvoer-balk.
+- **✕** verwijdert een atleet bij een onderdeel (met bevestiging als er al een resultaat staat).
+- **✅ Afronden & nieuwe PR's opslaan** toont het bekende vinkjes-overzicht en slaat de verbeterde resultaten op als nieuw PR (met de wedstrijddatum).
+
+**Geen database-wijziging nodig** — de individuele modus hergebruikt de bestaande tabel `resultaten` (individuele invoer met de atleet-id als sleutel) en de bestaande afrond-/PR-logica.
+
+#### Technisch
+- `showTab("wedstrijddag")` toont voortaan de overzichtslijst; `openWedstrijddag()` schakelt door naar het detailscherm. De view is opgesplitst in `#wd-overzicht` (lijst) en `#wd-detail` (invoer).
+- Nieuwe statusvariabele `wdModus` (`"competitie"` / `"individueel"`), bepaald in `laadWedstrijddag()` door te kijken of er een gevulde `opstelling` bestaat voor de wedstrijd (welk geslacht dan ook). `toonWdModusUI()` verbergt in individuele modus de geslacht-/ploeg-tabs en de scorebalk en toont de snelinvoer-balk.
+- Nieuwe functies: `renderWedstrijddagLijst`, `toonWdOverzicht`/`toonWdDetail`, `renderWdIndividueel`, `wdIndivDisciplines` (alle categorie-onderdelen behalve estafettes + categorie-brede eigen onderdelen), `wdIndivRijHtml`, `vulWdQuickAdd`, `wdQuickAdd`, `wdIndivVoegToe`, `wdIndivInvoer`, `wdIndivVerwijder`, `wdIndivAddPrompt`. `vernieuwWedstrijddag()` vertakt nu per modus.
+
+---
+
 ## [juli 2026 — patch 50] — 2026-07-03
 
 ### 🔀 Doorstroming voor alle trainers + ✏️ release notes bewerken
