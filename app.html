@@ -948,8 +948,10 @@
       /* Vaste hoogte — groeit NOOIT mee */
       height: calc(60px + env(safe-area-inset-bottom, 0px));
 
-      /* Transparant glas-effect */
-      background: transparent;
+      /* Ondoorzichtige achtergrond als basis, plus glas-effect waar dat
+         wordt ondersteund. Zo schijnt content er nooit doorheen als
+         backdrop-filter niet werkt (bijv. oudere Android-Chrome). */
+      background: var(--surface);
       backdrop-filter: blur(16px) saturate(1.4);
       -webkit-backdrop-filter: blur(16px) saturate(1.4);
       border-top: 1px solid rgba(255,255,255,.08);
@@ -963,6 +965,11 @@
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+    }
+    /* Waar backdrop-filter wél werkt, mag de achtergrond semi-transparant zijn
+       voor het glas-effect (maar nooit volledig doorzichtig). */
+    @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      #mob-nav { background: color-mix(in srgb, var(--surface) 72%, transparent); }
     }
     #mob-nav::-webkit-scrollbar { display: none; }
 
@@ -1004,8 +1011,20 @@
       transform: scale(1.15);
     }
 
-    /* Main content iets minder padding + ruimte voor floating nav (60px hoogte) */
-    main { padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 12px); }
+    /* Main content iets minder padding + ruimere onderruimte voor de floating
+       nav (60px hoog). Extra marge (28px) zodat knoppen die helemaal onderaan
+       een scherm staan — zoals "✅ Wedstrijd afronden" — nooit achter de balk
+       vallen en altijd volledig aantikbaar blijven. */
+    main { padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px); }
+
+    /* De afrond-knop staat helemaal onderaan het wedstrijddag-scherm. Geef de
+       container op mobiel extra onderruimte zodat de knop altijd boven de
+       floating nav uitkomt, ook als dit scherm door de HTML-structuur buiten
+       de main-padding zou vallen. */
+    .wd-afrond-actie {
+      margin-top: 18px;
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
+    }
 
     /* Page headers wrappen netjes */
     .page-header {
@@ -1087,6 +1106,7 @@
   }
 
   /* ── Wedstrijddag-modus (patch 47) ── */
+  .wd-afrond-actie { margin-top: 18px; }
   .wd-live-badge {
     display:inline-block; font-size:11px; font-weight:700; padding:3px 9px;
     border-radius:6px; background:rgba(232,56,61,.15); color:var(--accent2);
@@ -1431,7 +1451,7 @@
     <div class="wd-tabs" id="wd-ploeg-tabs"></div>
     <div class="wd-scorebalk" id="wd-scorebalk"></div>
     <div id="wd-lijst"></div>
-    <div style="margin-top:18px;">
+    <div class="wd-afrond-actie">
       <button class="btn btn-primary" onclick="openWdAfronden()">✅ Wedstrijd afronden — PR's bijwerken</button>
     </div>
   </div>

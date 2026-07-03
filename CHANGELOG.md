@@ -6,6 +6,31 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 48] — 2026-07-03
+
+### 🐛 Mobiele navigatiebalk: twee fixes
+
+Twee problemen met de floating navigatiebalk onderaan het scherm op de telefoon zijn opgelost.
+
+- **De afrondknop van de wedstrijddag was niet bruikbaar.** De knop **✅ Wedstrijd afronden — PR's bijwerken** (patch 47) viel precies achter de navigatiebalk, waardoor je hem niet kon aantikken. De balk had bovendien een volledig doorzichtige achtergrond, waardoor de content er tijdens het scrollen doorheen scheen — dat versterkte het "zwevende" gevoel. Nu heeft de balk een ondoorzichtige achtergrond (met glas-effect waar de telefoon dat ondersteunt) en krijgt de afrondknop genoeg onderruimte, zodat hij altijd volledig boven de balk uitkomt.
+- **De balk leek mee te schuiven tijdens het scrollen.** Dit kwam deels door diezelfde doorzichtige achtergrond en doordat de onderste content te weinig ruimte had. De content reserveert nu meer ruimte onderaan, zodat er niets meer achter de balk verdwijnt.
+
+Het **horizontaal scrollen** door de menuknoppen blijft behouden — dat is bewust zo, zodat alle acht knoppen bereikbaar zijn zonder ze kleiner te maken.
+
+#### Technisch
+- `#mob-nav`: `background: transparent` vervangen door een ondoorzichtige `var(--surface)`, met een `@supports`-regel die alleen waar `backdrop-filter` wordt ondersteund een semi-transparant glas-effect toepast (`color-mix`). Zo schijnt content nooit door de balk op toestellen zonder `backdrop-filter`.
+- `main` `padding-bottom` verhoogd van `+12px` naar `+28px` bovenop de balkhoogte + safe-area.
+- De afrondknop staat nu in een container `.wd-afrond-actie` die op mobiel een eigen `padding-bottom` van `60px + safe-area + 20px` krijgt — een vangnet zodat de knop gegarandeerd boven de balk uitkomt, ook los van de `main`-padding.
+- `position: fixed; bottom: 0` bewust behouden: dat is in moderne mobiele browsers de correcte manier om een balk op de zichtbare onderrand te houden (conform de huidige aanbeveling met sv/dvh-viewporteenheden). Er is geen fragiele JavaScript- of `dvh`-truc toegevoegd.
+
+#### Wat niet getest kon worden
+- Het echte gedrag op je telefoon (iOS Safari / Android Chrome) tijdens het in-/uitschuiven van de browserbalk. Het meebewegen van een `fixed` balk met de browser-UI is toestel- en browserafhankelijk en met CSS niet altijd 100% te elimineren; deze fix pakt de aanwijsbare oorzaken (doorzichtige achtergrond + te weinig onderruimte) aan. De JavaScript-syntax is gevalideerd met `node --check`; de wijziging is puur CSS/HTML.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Geen Supabase-wijziging.
+
+---
+
 ## [juli 2026 — patch 47] — 2026-07-03
 
 ### 🏟️ Wedstrijddag-modus: live resultaten invoeren

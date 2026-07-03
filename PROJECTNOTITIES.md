@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 47)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 48)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Mobiele floating nav: ondoorzichtig + onderruimte (patch 48, juli 2026)
+De floating bottom nav (`#mob-nav`, alleen op mobiel, `position: fixed; bottom: 0`) had twee problemen: (1) een `background: transparent` waardoor content er tijdens scrollen doorheen scheen én de balk "leek te zweven", en (2) te weinig onderruimte in de content, waardoor de knop `✅ Wedstrijd afronden` uit patch 47 achter de balk viel en niet aantikbaar was. Opgelost met puur CSS: ondoorzichtige `var(--surface)`-achtergrond met een `@supports (backdrop-filter)`-regel voor het glas-effect (semi-transparant via `color-mix`); `main` `padding-bottom` verhoogd naar balkhoogte + safe-area + 28px; en een aparte container `.wd-afrond-actie` met eigen mobiele `padding-bottom` als vangnet. `position: fixed; bottom: 0` bewust behouden (correcte moderne aanpak; geen dvh-/JS-truc). Horizontaal scrollen door de 8 knoppen blijft bewust behouden. **Let op (bestaande HTML-eigenaardigheid):** het document heeft 1× `<main>` maar 2× `</main>`; de views wedstrijden/wedstrijddag/opstelling/punten/admin staan daardoor feitelijk buiten `<main>`. Browsers herstellen dit, maar reken er niet op dat `main`-padding die schermen raakt — vandaar het vangnet op `.wd-afrond-actie` zelf. Niet aangeraakt in patch 48 (buiten scope, risicovol om te herstructureren).
 
 ### Wedstrijddag-modus: live resultaten (patch 47, juli 2026)
 Nieuwe tabel `resultaten` met sleutelkolom `sleutel` (individueel = atleet-id als tekst, estafette = `ploeg-A/B/C`) en UNIQUE op `(categorie_id, wedstrijd_id, discipline, sleutel)`. Elke invoer wordt per veld direct ge-upsert (`onConflict` op die vier kolommen) — daardoor kunnen meerdere trainers tegelijk invoeren (laatste schrijver wint per veld); `🔄 Vernieuwen` (`vernieuwWedstrijddag()`) haalt alleen de resultaten opnieuw op. `atleet_id` is nullable (leeg bij estafette-teamtijden) met `ON DELETE CASCADE`. Status `dns` = niet gestart (invoerveld geblokkeerd, telt als afgehandeld, geen PR-kandidaat). **Estafettetijden zijn teamresultaten en worden bij het afronden bewust nooit als PR overgenomen.** De afrond-flow (`openWdAfronden()`/`verwerkWdAfronden()`) kijkt over *alle* geladen resultaten van de wedstrijd (beide geslachten) en volgt de PR-import-aanpak: gerichte DELETE per atleet+discipline vóór de insert; PR-datum = wedstrijddatum. `wdUpdateRegel()` werkt na invoer alleen de punten/badge/rand van die ene rij bij (geen volledige re-render), zodat de tab-volgorde intact blijft. `verwijderCategorie()` bevat `resultaten` in tel- én verwijderlijst; `wisselCategorie()` verlaat een geopende wedstrijddag. **RLS:** zelfde `trainer_categorie_…`-patroon als `prestaties`. **Let op:** de tabel moet eenmalig handmatig worden aangemaakt (SQL in changelog/chat); zonder tabel toont het scherm een duidelijke foutmelding.
