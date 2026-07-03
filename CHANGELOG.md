@@ -6,9 +6,41 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 52] — 2026-07-03
+
+### 📥 Release notes importeren uit GitHub
+
+<!--RELEASENOTE
+versie: Patch 52
+titel: 📥 Release notes importeren uit GitHub
+type: feature
+beschrijving: Nieuwe knop "📥 Uit GitHub" in de releasenotes-sectie haalt de nieuwste releasenotes op en voegt ze met één tik toe — geen velden meer overtypen. Toont alleen versies die nog niet in de app staan, per stuk of allemaal tegelijk.
+-->
+
+Release notes hoefden niet langer met de hand ingevoerd te worden. In de **Releasenotes-sectie** (zichtbaar voor admins) staat nu naast **+ Toevoegen** de knop **📥 Uit GitHub**.
+
+- De knop haalt de `CHANGELOG.md` van GitHub op en leest daaruit de release notes die bij elke patch in een onzichtbaar blokje staan.
+- Getoond worden **alleen de versies die nog niet in de app staan** (vergelijking op `versie`).
+- Je voegt ze toe **per stuk** (➕ Toevoegen) of **allemaal tegelijk** (✅ Voeg alle nieuwe toe). Eén tik = direct opgeslagen; corrigeren kan daarna met de bewerkknop (patch 50).
+
+Vanaf deze patch bevat elke changelog-entry een onzichtbaar `<!--RELEASENOTE …-->`-blokje (versie/titel/type/beschrijving) dat de app uitleest. Deze blokjes zijn niet zichtbaar wanneer je de changelog leest.
+
+#### Technisch
+- Nieuwe knop `#btn-note-import` (admin-only, zichtbaar gemaakt in `laadReleasenotes()`) en modal `#releasenoteImportModal`.
+- `openReleasenoteImport()` fetcht de rauwe `CHANGELOG.md` (`raw.githubusercontent.com`, cache-buster), `parseChangelogReleasenotes()` haalt alle `<!--RELEASENOTE …-->`-blokken eruit (per regel `sleutel: waarde`), en de versies worden vergeleken met bestaande `releasenotes.versie` in Supabase. `voegImportNoteToe(i)` / `voegAlleImportNotesToe()` inserten via de bestaande `releasenotes`-tabel. Geen schemawijziging.
+
+---
+
 ## [juli 2026 — patch 51] — 2026-07-03
 
 ### 🏟️ Wedstrijddag als aparte tab + individuele modus voor gewone wedstrijden
+
+<!--RELEASENOTE
+versie: Patch 51
+titel: 🏟️ Wedstrijddag-tab + individuele modus
+type: feature
+beschrijving: Wedstrijddag is nu een eigen tab met een lijst van je wedstrijden. Bij een wedstrijd zonder opstelling verschijnt de nieuwe individuele modus: voeg zelf atleten toe per onderdeel (iedereen kan overal meedoen), zie meteen punten en PR-vergelijking, en werk bij "Afronden" de verbeterde PR's bij. Bij een competitie (met opstelling) blijft de teamscore gewoon werken.
+-->
 
 De wedstrijddag-modus was alleen bereikbaar via een knopje op de wedstrijdkaart en ging altijd uit van een opstelling met teamscore (competitie). Vanaf nu is er een **aparte tab "🏟️ Wedstrijddag"** en werkt live invoeren óók voor gewone wedstrijden.
 

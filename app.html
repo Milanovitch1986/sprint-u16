@@ -1314,6 +1314,7 @@
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;">📋 Releasenotes</div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost btn-sm" id="btn-archief" style="display:none;" onclick="toggleArchief()">📦 Archief</button>
+          <button class="btn btn-ghost btn-sm" id="btn-note-import" style="display:none;border-color:var(--accent);color:var(--accent);" onclick="openReleasenoteImport()">📥 Uit GitHub</button>
           <button class="btn btn-primary btn-sm" id="btn-note-toevoegen" style="display:none;" onclick="openNoteModal()">+ Toevoegen</button>
         </div>
       </div>
@@ -2039,6 +2040,18 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('noteModal')">Annuleren</button>
       <button class="btn btn-primary" onclick="slaaNoteOp()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Releasenotes importeren uit GitHub (patch 52) -->
+<div class="modal-overlay" id="releasenoteImportModal">
+  <div class="modal" style="max-width:520px;max-height:88vh;overflow-y:auto;">
+    <div class="modal-title">📥 Releasenotes importeren</div>
+    <div id="releasenote-import-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('releasenoteImportModal')">Sluiten</button>
+      <button class="btn btn-primary" id="btn-import-alle" style="display:none;" onclick="voegAlleImportNotesToe()">✅ Voeg alle nieuwe toe</button>
     </div>
   </div>
 </div>
@@ -8074,6 +8087,8 @@ async function laadReleasenotes() {
   if (huidigeProfiel?.rol === "admin") {
     document.getElementById("btn-note-toevoegen").style.display = "";
     document.getElementById("btn-archief").style.display = "";
+    const imp = document.getElementById("btn-note-import");
+    if (imp) imp.style.display = "";
   }
 
   // Archiveer noten ouder dan 1 maand automatisch
@@ -8129,6 +8144,110 @@ async function laadReleasenotes() {
 function toggleArchief() {
   toonArchief = !toonArchief;
   document.getElementById("btn-archief").textContent = toonArchief ? "📋 Actueel" : "📦 Archief";
+  laadReleasenotes();
+}
+
+// ── Releasenotes importeren uit GitHub (patch 52) ─────────────
+// Leest de onzichtbare <!--RELEASENOTE …--> blokjes uit de CHANGELOG.md
+// op GitHub en laat de admin de versies die nog niet in de app staan
+// met één tik toevoegen.
+const RELEASENOTE_TYPES = ["feature", "bugfix", "update", "removed"];
+let releasenoteImportNieuw = [];
+
+function parseChangelogReleasenotes(text) {
+  const out = [];
+  const re = /<!--RELEASENOTE([\s\S]*?)-->/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const blok = m[1];
+    const veld = (naam) => {
+      const mm = blok.match(new RegExp("^\\s*" + naam + ":\\s*(.+?)\\s*$", "mi"));
+      return mm ? mm[1].trim() : "";
+    };
+    const versie = veld("versie");
+    const titel  = veld("titel");
+    let type     = (veld("type") || "feature").toLowerCase();
+    if (!RELEASENOTE_TYPES.includes(type)) type = "feature";
+    const beschrijving = veld("beschrijving");
+    if (versie && titel) out.push({ versie, titel, type, beschrijving });
+  }
+  return out;
+}
+
+async function openReleasenoteImport() {
+  const body = document.getElementById("releasenote-import-body");
+  const alleBtn = document.getElementById("btn-import-alle");
+  if (alleBtn) alleBtn.style.display = "none";
+  body.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Laden vanaf GitHub…</div>`;
+  openModal("releasenoteImportModal");
+  try {
+    const resp = await fetch("https://raw.githubusercontent.com/Milanovitch1986/sprint-u16/main/CHANGELOG.md?t=" + Date.now());
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const text = await resp.text();
+    const alle = parseChangelogReleasenotes(text);
+    const { data, error } = await sb.from("releasenotes").select("versie");
+    if (error) throw error;
+    const bestaand = new Set((data || []).map(r => (r.versie || "").trim().toLowerCase()));
+    releasenoteImportNieuw = alle.filter(n => !bestaand.has(n.versie.trim().toLowerCase()));
+    renderReleasenoteImport();
+  } catch(e) {
+    body.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Kon de CHANGELOG niet ophalen: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderReleasenoteImport() {
+  const body = document.getElementById("releasenote-import-body");
+  const alleBtn = document.getElementById("btn-import-alle");
+  const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
+  if (!releasenoteImportNieuw.length) {
+    body.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Alle releasenotes uit de CHANGELOG staan al in de app ✓</div>`;
+    if (alleBtn) alleBtn.style.display = "none";
+    return;
+  }
+  if (alleBtn) {
+    alleBtn.style.display = "";
+    alleBtn.textContent = `✅ Voeg alle nieuwe toe (${releasenoteImportNieuw.length})`;
+  }
+  body.innerHTML =
+    `<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">${releasenoteImportNieuw.length} nieuwe releasenote${releasenoteImportNieuw.length === 1 ? "" : "s"} gevonden die nog niet in de app staan.</div>` +
+    releasenoteImportNieuw.map((n, i) => `
+      <div class="note-kaart">
+        <div class="note-kaart-header">
+          <span class="note-badge ${esc(n.type)}">${typeLabel[n.type] || esc(n.type)}</span>
+          <strong style="font-size:14px;">${esc(n.titel)}</strong>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)}</span>
+        </div>
+        ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);margin:6px 0 8px;white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
+        <button class="btn btn-primary btn-sm" onclick="voegImportNoteToe(${i})">➕ Toevoegen</button>
+      </div>`).join("");
+}
+
+async function voegImportNoteToe(i) {
+  const n = releasenoteImportNieuw[i];
+  if (!n) return;
+  try {
+    const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving });
+    if (error) throw error;
+    toast(`"${n.versie}" toegevoegd ✓`);
+    releasenoteImportNieuw.splice(i, 1);
+    renderReleasenoteImport();
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+async function voegAlleImportNotesToe() {
+  if (!releasenoteImportNieuw.length) return;
+  let gelukt = 0, mislukt = 0;
+  for (const n of [...releasenoteImportNieuw]) {
+    try {
+      const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving });
+      if (error) throw error;
+      gelukt++;
+    } catch(e) { console.warn("Import mislukt:", n.versie, e.message); mislukt++; }
+  }
+  releasenoteImportNieuw = [];
+  toast(mislukt ? `${gelukt} toegevoegd · ${mislukt} mislukt` : `${gelukt} releasenote(s) toegevoegd ✓`, mislukt ? "err" : "ok");
+  renderReleasenoteImport();
   laadReleasenotes();
 }
 

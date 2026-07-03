@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 51)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 52)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Releasenotes importeren uit GitHub (patch 52, juli 2026)
+Release notes hoeven niet meer met de hand ingevoerd te worden (kopiëren/plakken van 4 velden was lastig op mobiel). In de Releasenotes-sectie staat naast **+ Toevoegen** de admin-only knop **📥 Uit GitHub** (`#btn-note-import`, zichtbaar gemaakt in `laadReleasenotes()`). `openReleasenoteImport()` fetcht de rauwe `CHANGELOG.md` van `raw.githubusercontent.com/Milanovitch1986/sprint-u16/main/CHANGELOG.md` (met cache-buster `?t=`), `parseChangelogReleasenotes()` haalt met regex alle `<!--RELEASENOTE …-->`-blokken eruit (per regel `sleutel: waarde`: versie/titel/type/beschrijving; type genormaliseerd naar feature/bugfix/update/removed). De versies worden vergeleken met bestaande `releasenotes.versie` (query zonder gearchiveerd-filter, trim+lowercase) en **alleen de nieuwe** worden getoond in modal `#releasenoteImportModal`, elk met een ➕-knop (`voegImportNoteToe`) plus een knop "voeg alle nieuwe toe" (`voegAlleImportNotesToe`). Insert via de bestaande `releasenotes`-tabel (`gepubliceerd_op` defaultt in de DB). **Vanaf patch 52 bevat elke changelog-entry een onzichtbaar `<!--RELEASENOTE …-->`-blokje** (ook toegevoegd voor patch 51) — Claude vult dit standaard in bij elke nieuwe patch. HTML-comments renderen niet in de changelog-weergave, dus ze zijn onzichtbaar voor lezers. **Werkt vanaf de browser** omdat de repo publiek is en raw.githubusercontent.com CORS toestaat. Geen schemawijziging. LET OP: het `type`-veld gebruikt interne codes (feature/bugfix/update/removed), niet het emoji-label — zet in het blokje dus de code.
 
 ### Wedstrijddag als aparte tab + individuele modus (patch 51, juli 2026)
 De wedstrijddag-modus is nu een eigen tab (`showTab("wedstrijddag")`, desktop-knop `#tab-wedstrijddag` + mobiel `#mob-tab-wedstrijddag` met ⏱️-icoon). De view `#view-wedstrijddag` is opgesplitst in `#wd-overzicht` (lijst van wedstrijden, `renderWedstrijddagLijst()`, aankomende bovenaan) en `#wd-detail` (het invoerscherm). `showTab("wedstrijddag")` toont de lijst; `openWedstrijddag(id)` (ook nog via het 🏟️-knopje op de wedstrijdkaart) schakelt door naar het detail via `toonWdDetail()`. `sluitWedstrijddag()` gaat terug naar de lijst (niet meer naar de Wedstrijden-tab).
