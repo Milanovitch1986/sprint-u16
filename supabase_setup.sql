@@ -400,5 +400,38 @@ grant all on all sequences in schema public to anon, authenticated, service_role
 grant execute on all functions in schema public to anon, authenticated, service_role;
 
 -- ============================================================================
+-- 7. WEDSTRIJDDAG-MODUS (patch 47, juli 2026)
+-- ============================================================================
+-- Live wedstrijdresultaten. Individueel resultaat: sleutel = atleet-id (tekst).
+-- Estafette-teamtijd: atleet_id leeg, sleutel = 'ploeg-A' / 'ploeg-B' / 'ploeg-C'.
+-- De UNIQUE maakt upsert-per-invoerveld mogelijk (laatste schrijver wint),
+-- zodat meerdere trainers tegelijk kunnen invoeren.
+
+create table public.resultaten (
+  id            uuid primary key default gen_random_uuid(),
+  categorie_id  uuid not null references public.categorieen(id),
+  wedstrijd_id  uuid not null references public.wedstrijden(id) on delete cascade,
+  atleet_id     uuid references public.atleten(id) on delete cascade,
+  discipline    text not null,
+  sleutel       text not null,
+  resultaat     text,
+  status        text not null default 'ok' check (status in ('ok', 'dns')),
+  ingevoerd_op  timestamptz not null default now(),
+  unique (categorie_id, wedstrijd_id, discipline, sleutel)
+);
+
+alter table public.resultaten enable row level security;
+
+create policy "trainer_categorie_resultaten" on public.resultaten
+  for all using (
+    categorie_id in (
+      select trainer_categorieen.categorie_id from trainer_categorieen
+      where trainer_categorieen.trainer_id = auth.uid()
+    )
+  );
+
+grant select, insert, update, delete on public.resultaten to authenticated;
+
+-- ============================================================================
 -- Einde setup
 -- ============================================================================

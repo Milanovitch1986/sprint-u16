@@ -6,6 +6,40 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 47] — 2026-07-03
+
+### 🏟️ Wedstrijddag-modus: live resultaten invoeren
+
+Een nieuwe modus voor op de wedstrijddag zelf. Vanaf de wedstrijdkaart open je met de knop **🏟️ Wedstrijddag** een invoerscherm dat het programma en de opgeslagen opstelling combineert: per onderdeel zie je de opgestelde atleten met een invoerveld, het huidige PR, direct berekende NAU-punten en een **▲ PR!**-badge zodra een resultaat beter is dan het PR.
+
+**Wat je kunt doen:**
+- **Resultaten live invoeren** per atleet per onderdeel. Elke invoer wordt direct opgeslagen — geen aparte opslaan-knop. Invoer accepteert komma's en m:ss-notatie; alles wordt genormaliseerd naar het World Athletics-formaat (tijden ≥ 60 sec als `m:ss.hh`).
+- **Live teamscore** bovenin: het puntentotaal van de gekozen ploeg volgens de officiële telregels (loop: beste 2, technisch: beste 1, estafette: alles), plus tellers voor "ingevoerd" en "nieuwe PR's".
+- **Estafette als teamtijd:** één invoerveld per ploeg per estafette-onderdeel (een estafettetijd is een teamresultaat, geen persoonlijk PR).
+- **DNS-knop** per atleet voor wie niet gestart is; het invoerveld wordt dan geblokkeerd en het onderdeel telt als "afgehandeld" in de voortgangsteller.
+- **Meerdere trainers tegelijk:** doordat elke invoer per veld wordt opgeslagen, kunnen collega-trainers op hun eigen telefoon andere onderdelen invoeren. Met **🔄 Vernieuwen** haal je hun invoer op.
+- **✅ Wedstrijd afronden:** een overzicht van alle resultaten (beide geslachten, alle ploegen) die beter zijn dan het huidige PR — met vinkjes, in dezelfde stijl als de Excel-import. Eén klik werkt de PR's bij in de Prestaties-tab, met de wedstrijddatum als PR-datum.
+
+Wissel je tussen Jongens/Meisjes of tussen ploegen, dan laadt het scherm de bijbehorende opstelling. Zonder opgeslagen opstelling toont het scherm een duidelijke melding.
+
+#### Technisch
+- Nieuwe Supabase-tabel **`resultaten`**: `categorie_id`, `wedstrijd_id`, `atleet_id` (nullable — leeg bij estafette), `discipline`, `sleutel` (individueel = atleet-id, estafette = `ploeg-A/B/C`), `resultaat`, `status` (`ok`/`dns`), `ingevoerd_op`. UNIQUE op `(categorie_id, wedstrijd_id, discipline, sleutel)` zodat invoer per veld via `upsert` (met `onConflict`) altijd de laatste waarde bewaart — dit maakt gelijktijdig invoeren door meerdere trainers mogelijk (laatste schrijver wint per veld).
+- Nieuwe view `view-wedstrijddag` (opgenomen in de `showTab()`-lijst) + modal `wdAfrondModal`. Kernfuncties: `openWedstrijddag()`, `laadWedstrijddag()`, `renderWedstrijddag()`, `wdInvoer()`, `wdInvoerEstafette()`, `wdToggleDNS()`, `wdUpdateRegel()` (gerichte DOM-update zodat de focus/tab-volgorde intact blijft), `renderWdScore()`, `vernieuwWedstrijddag()`, `openWdAfronden()`, `verwerkWdAfronden()`.
+- Hergebruik van bestaande logica: `normaliserenResultaat()`, `formateerResultaatWeergave()`, `parseResultaat()`, `berekenPunten()`, `bestePrestatie()`, `getPREenheid()`, `getPRPlaceholder()`; de opstelling wordt met dezelfde opschoning geladen als in de Opstelling-tab (technisch max 1 slot).
+- PR-bijwerking bij afronden volgt de PR-import-aanpak: gerichte DELETE op bestaande prestaties van die atleet + discipline vóór de insert (voorkomt duplicaten). Alleen individuele resultaten met status `ok` die **strikt beter** zijn dan het PR (of een eerste PR) komen in het overzicht.
+- `verwijderCategorie()` uitgebreid met `resultaten` in zowel de tel- als verwijderlijst (afspraak uit patch 46).
+- `wisselCategorie()` verlaat nu ook een geopende wedstrijddag, net zoals sinds patch 46 een geopende opstelling.
+
+**Supabase SQL (eenmalig zelf uitvoeren vóór gebruik):** zie de release-instructies in de chat — nieuwe tabel `resultaten` met RLS-policy volgens het bestaande `trainer_categorie_…`-patroon.
+
+#### Wat niet getest kon worden
+- De echte Supabase-queries (upsert/delete op `resultaten`, RLS), het gelijktijdig invoeren door twee trainers, en de browserweergave. De kernlogica (PR-vergelijking lager/hoger = beter, normalisatie incl. m:ss.hh, NAU-punten incl. hoogspringen-drempel, telregel-labels, resultaat-sleutels) is gecontroleerd met 21 losse unit-asserties; JavaScript-syntax is gevalideerd met `node --check`.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Supabase: nieuwe tabel `resultaten` aangemaakt (handmatig via SQL Editor).
+
+---
+
 ## [juni 2026 — patch 46] — 2026-06-16
 
 ### 🐛 Categorie verwijderen werkt nu + opstelling reset bij categoriewissel

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 16 juni 2026 (patch 46)*
+*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 47)*
 
 ---
 
@@ -28,6 +28,7 @@
 | `trainer_categorieen` | Koppeling trainer ↔ categorie (many-to-many) |
 | `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr) |
 | `prestaties` | PR's per atleet per discipline |
+| `resultaten` | Live wedstrijdresultaten per wedstrijd (individueel per atleet, estafette per ploeg via kolom `sleutel`; status `ok`/`dns`) — patch 47 |
 | `onderdelen` | Zelf toegevoegde onderdelen (naam, type, geslacht) — categorie-breed (`atleet_id` leeg) of per atleet (`atleet_id` gevuld, patch 41) — patch 40 |
 | `wedstrijden` | Wedstrijden (naam, datum, locatie, notities, `is_finale`) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
@@ -42,8 +43,11 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Wedstrijddag-modus: live resultaten (patch 47, juli 2026)
+Nieuwe tabel `resultaten` met sleutelkolom `sleutel` (individueel = atleet-id als tekst, estafette = `ploeg-A/B/C`) en UNIQUE op `(categorie_id, wedstrijd_id, discipline, sleutel)`. Elke invoer wordt per veld direct ge-upsert (`onConflict` op die vier kolommen) — daardoor kunnen meerdere trainers tegelijk invoeren (laatste schrijver wint per veld); `🔄 Vernieuwen` (`vernieuwWedstrijddag()`) haalt alleen de resultaten opnieuw op. `atleet_id` is nullable (leeg bij estafette-teamtijden) met `ON DELETE CASCADE`. Status `dns` = niet gestart (invoerveld geblokkeerd, telt als afgehandeld, geen PR-kandidaat). **Estafettetijden zijn teamresultaten en worden bij het afronden bewust nooit als PR overgenomen.** De afrond-flow (`openWdAfronden()`/`verwerkWdAfronden()`) kijkt over *alle* geladen resultaten van de wedstrijd (beide geslachten) en volgt de PR-import-aanpak: gerichte DELETE per atleet+discipline vóór de insert; PR-datum = wedstrijddatum. `wdUpdateRegel()` werkt na invoer alleen de punten/badge/rand van die ene rij bij (geen volledige re-render), zodat de tab-volgorde intact blijft. `verwijderCategorie()` bevat `resultaten` in tel- én verwijderlijst; `wisselCategorie()` verlaat een geopende wedstrijddag. **RLS:** zelfde `trainer_categorie_…`-patroon als `prestaties`. **Let op:** de tabel moet eenmalig handmatig worden aangemaakt (SQL in changelog/chat); zonder tabel toont het scherm een duidelijke foutmelding.
+
 ### Categorie verwijderen = app-side cascade (patch 46, juni 2026)
-Een categorie heeft foreign-key-relaties vanuit negen tabellen (`atleten`, `wedstrijden`, `prestaties`, `opstelling`, `programma`, `beschikbaarheid`, `onderdelen`, `uitnodigingen`, `trainer_categorieen`). De databank weigert daarom een `DELETE` op `categorieen` zolang er nog gekoppelde rijen zijn (`wedstrijden_categorie_id_fkey` e.d.). Bewust gekozen voor opruimen in de **app** i.p.v. `ON DELETE CASCADE` in de databank: geen SQL-migratie nodig en de gebruiker ziet expliciet wat er weggaat. `verwijderCategorie()` telt eerst per tabel (`count: "exact", head: true`), toont de aantallen in de bevestiging en verwijdert daarna in FK-veilige volgorde: eerst `opstelling`/`programma`/`beschikbaarheid`/`prestaties`, dan `wedstrijden`/`atleten`/`onderdelen`/`uitnodigingen`/`trainer_categorieen`, als laatste de categorie. **Let op voor de toekomst:** voeg je ooit een nieuwe tabel met `categorie_id` toe, neem die dan op in zowel de tel- als de verwijderlijst van `verwijderCategorie()`, anders blokkeert de FK het verwijderen weer.
+Een categorie heeft foreign-key-relaties vanuit tien tabellen (`atleten`, `wedstrijden`, `prestaties`, `resultaten` (sinds patch 47), `opstelling`, `programma`, `beschikbaarheid`, `onderdelen`, `uitnodigingen`, `trainer_categorieen`). De databank weigert daarom een `DELETE` op `categorieen` zolang er nog gekoppelde rijen zijn (`wedstrijden_categorie_id_fkey` e.d.). Bewust gekozen voor opruimen in de **app** i.p.v. `ON DELETE CASCADE` in de databank: geen SQL-migratie nodig en de gebruiker ziet expliciet wat er weggaat. `verwijderCategorie()` telt eerst per tabel (`count: "exact", head: true`), toont de aantallen in de bevestiging en verwijdert daarna in FK-veilige volgorde: eerst `opstelling`/`programma`/`beschikbaarheid`/`prestaties`, dan `wedstrijden`/`atleten`/`onderdelen`/`uitnodigingen`/`trainer_categorieen`, als laatste de categorie. **Let op voor de toekomst:** voeg je ooit een nieuwe tabel met `categorie_id` toe, neem die dan op in zowel de tel- als de verwijderlijst van `verwijderCategorie()`, anders blokkeert de FK het verwijderen weer.
 
 ### Categoriewissel verlaat geopende opstelling (patch 46, juni 2026)
 De Opstelling-tab heeft twee stappen: stap 1 = wedstrijdkeuze, stap 2 = het opstellingsscherm van een gekozen wedstrijd (onthouden in `actiefWedstrijdId`). `wisselCategorie()` herlaadt wel de data maar reset stap 2 niet, waardoor je in een wedstrijd van de vorige categorie bleef hangen. Opgelost: bij wisselen wordt `actiefWedstrijdId`/`opstellingAlleenLezen` gewist en stap 1 weer getoond, vóór `syncAll()`.
