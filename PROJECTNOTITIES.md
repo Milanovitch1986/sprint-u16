@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 3 juli 2026 (patch 52)*
+*AV Sprint Breda · Laatste update: 4 juli 2026 (patch 53)*
 
 ---
 
@@ -42,6 +42,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Open wedstrijden + opgeschoonde Wedstrijddag-lijst (patch 53, juli 2026)
+**Databasewijziging (eenmalig):** kolom `wedstrijden.is_open boolean NOT NULL DEFAULT false` toegevoegd via SQL — `ALTER TABLE public.wedstrijden ADD COLUMN IF NOT EXISTS is_open boolean NOT NULL DEFAULT false;`. RLS/rechten op `wedstrijden` ongewijzigd (bestaande categorie-policies gelden ook voor open wedstrijden). Open wedstrijden = losse, niet-competitiewedstrijden (`is_open=true`), aangemaakt vanuit de Wedstrijddag-tab (knop ➕ Open wedstrijd → `openNieuweOpenWedstrijd`/`maakOpenWedstrijd`, insert met `is_open:true` + meteen `openWedstrijddag()`). Ze blijven in de globale `wedstrijden`-array (zodat `.find()`-lookups werken), maar `renderWedstrijden()` en `renderOpstellingWedstrijden()` filteren `!w.is_open`, dus ze verschijnen NIET in de Wedstrijden-/Opstelling-tab. `verwijderOpenWedstrijd(id)` wist eerst de `resultaten` van die wedstrijd, dan de `wedstrijden`-rij (voorkomt verweesde rijen). Modal `#nieuweOpenWedstrijdModal`. Datum via `getFullYear/getMonth/getDate` (lokale tijd, geen UTC-rollback). Open wedstrijd heeft geen opstelling → automatisch individuele modus (patch 51-logica).
+
+`renderWedstrijddagLijst()` splitst nu in twee secties: "Open wedstrijden" (met groen OPEN-label + verwijderknop) en "Competitiewedstrijden" (`!is_open && !isWedstrijdAfgelopen`, eerstvolgende bovenaan). **Afgelopen competitiewedstrijden worden bewust NIET meer in de Wedstrijddag-lijst getoond** (blijven wel in de Wedstrijden-tab). 
+
+**Release notes sorteerfix:** `laadReleasenotes()` sorteert client-side op het nummer uit "… patch N …" (regex `/patch\s*(\d+)/i`, aflopend), met `gepubliceerd_op` als terugval. Reden: bij importeren via de 'Uit GitHub'-knop kregen notes bijna gelijke tijdstempels, waardoor een later toegevoegde lagere patch bovenaan kwam.
 
 ### Releasenotes importeren uit GitHub (patch 52, juli 2026)
 Release notes hoeven niet meer met de hand ingevoerd te worden (kopiëren/plakken van 4 velden was lastig op mobiel). In de Releasenotes-sectie staat naast **+ Toevoegen** de admin-only knop **📥 Uit GitHub** (`#btn-note-import`, zichtbaar gemaakt in `laadReleasenotes()`). `openReleasenoteImport()` fetcht de rauwe `CHANGELOG.md` van `raw.githubusercontent.com/Milanovitch1986/sprint-u16/main/CHANGELOG.md` (met cache-buster `?t=`), `parseChangelogReleasenotes()` haalt met regex alle `<!--RELEASENOTE …-->`-blokken eruit (per regel `sleutel: waarde`: versie/titel/type/beschrijving; type genormaliseerd naar feature/bugfix/update/removed). De versies worden vergeleken met bestaande `releasenotes.versie` (query zonder gearchiveerd-filter, trim+lowercase) en **alleen de nieuwe** worden getoond in modal `#releasenoteImportModal`, elk met een ➕-knop (`voegImportNoteToe`) plus een knop "voeg alle nieuwe toe" (`voegAlleImportNotesToe`). Insert via de bestaande `releasenotes`-tabel (`gepubliceerd_op` defaultt in de DB). **Vanaf patch 52 bevat elke changelog-entry een onzichtbaar `<!--RELEASENOTE …-->`-blokje** (ook toegevoegd voor patch 51) — Claude vult dit standaard in bij elke nieuwe patch. HTML-comments renderen niet in de changelog-weergave, dus ze zijn onzichtbaar voor lezers. **Werkt vanaf de browser** omdat de repo publiek is en raw.githubusercontent.com CORS toestaat. Geen schemawijziging. LET OP: het `type`-veld gebruikt interne codes (feature/bugfix/update/removed), niet het emoji-label — zet in het blokje dus de code.

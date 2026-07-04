@@ -1193,6 +1193,15 @@
     background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
     padding:12px 14px; margin-bottom:16px;
   }
+  .wd-lijst-sectie {
+    font-family:'Barlow Condensed',sans-serif; font-size:15px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:1.5px; margin:18px 0 10px;
+  }
+  .wd-lijst-sectie:first-child { margin-top:0; }
+  .wd-open-badge {
+    font-size:10px; font-weight:800; letter-spacing:.5px; color:#000;
+    background:var(--success); padding:2px 8px; border-radius:6px;
+  }
   .wd-quickadd .qa-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
   .wd-quickadd .qa-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .wd-quickadd select, .wd-quickadd input {
@@ -1504,8 +1513,9 @@
 
     <!-- Overzicht: kies een wedstrijd -->
     <div id="wd-overzicht">
-      <div class="page-header">
+      <div class="page-header" style="flex-wrap:wrap;gap:10px;">
         <div class="page-title">🏟️ Wedstrijddag</div>
+        <button class="btn btn-primary btn-sm ml-auto" onclick="openNieuweOpenWedstrijd()" title="Voeg een losse wedstrijd toe die niet in de Wedstrijden-tab staat">➕ Open wedstrijd</button>
       </div>
       <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om live resultaten in te voeren:</div>
       <div id="wd-wedstrijd-lijst" class="grid"></div>
@@ -2052,6 +2062,20 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('releasenoteImportModal')">Sluiten</button>
       <button class="btn btn-primary" id="btn-import-alle" style="display:none;" onclick="voegAlleImportNotesToe()">✅ Voeg alle nieuwe toe</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nieuwe open wedstrijd (patch 53) -->
+<div class="modal-overlay" id="nieuweOpenWedstrijdModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">➕ Nieuwe open wedstrijd</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Een losse wedstrijd om individuele resultaten in te voeren. Deze staat alleen in de Wedstrijddag-tab, niet in de Wedstrijden-tab.</div>
+    <div class="field"><label>Naam</label><input type="text" id="open-wedstrijd-naam" placeholder="bijv. Baanwedstrijd Roosendaal"></div>
+    <div class="field"><label>Datum</label><input type="date" id="open-wedstrijd-datum"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('nieuweOpenWedstrijdModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="maakOpenWedstrijd()">Aanmaken</button>
     </div>
   </div>
 </div>
@@ -4485,18 +4509,20 @@ function wedstrijdKaartHtml(w, afgelopen) {
 }
 
 function renderWedstrijden() {
-  document.getElementById("wedstrijden-count").textContent = wedstrijden.length;
+  // Open wedstrijden (patch 53) horen niet in de Wedstrijden-tab; die beheer je in de Wedstrijddag-tab.
+  const zichtbaar = wedstrijden.filter(w => !w.is_open);
+  document.getElementById("wedstrijden-count").textContent = zichtbaar.length;
   const grid = document.getElementById("wedstrijden-grid");
-  if (!wedstrijden.length) {
+  if (!zichtbaar.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
     return;
   }
 
   // Splitsen op datum. De rechten zijn al afgehandeld: 'wedstrijden' bevat
   // alleen de wedstrijden van de actieve categorie (RLS + categorie-filter).
-  const aankomend = wedstrijden.filter(w => !isWedstrijdAfgelopen(w))
+  const aankomend = zichtbaar.filter(w => !isWedstrijdAfgelopen(w))
     .sort((a, b) => (a.datum || "9999").localeCompare(b.datum || "9999")); // eerstvolgende bovenaan
-  const afgelopen = wedstrijden.filter(isWedstrijdAfgelopen)
+  const afgelopen = zichtbaar.filter(isWedstrijdAfgelopen)
     .sort((a, b) => (b.datum || "").localeCompare(a.datum || "")); // meest recente bovenaan
 
   let html = "";
@@ -4622,11 +4648,13 @@ async function openProgrammaVanWedstrijd(wedstrijdId) {
 // ── Opstelling scherm ─────────────────────────────────────────
 function renderOpstellingWedstrijden() {
   const lijst = document.getElementById("opstelling-wedstrijd-lijst");
-  if (!wedstrijden.length) {
+  // Open wedstrijden (patch 53) hebben geen opstelling en horen hier niet.
+  const zichtbaar = wedstrijden.filter(w => !w.is_open);
+  if (!zichtbaar.length) {
     lijst.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Voeg eerst een wedstrijd toe via het tabblad Wedstrijden.</div>`;
     return;
   }
-  lijst.innerHTML = wedstrijden.map(w => `
+  lijst.innerHTML = zichtbaar.map(w => `
     <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}" onclick="openOpstelling('${w.id}')">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span class="wedstrijd-datum" style="margin-bottom:0;">${formatDate(w.datum)}</span>
@@ -5824,33 +5852,112 @@ function toonWdDetail() {
   if (det) det.style.display = "";
 }
 
-// Overzichtslijst: alle wedstrijden, aankomende bovenaan.
+// Overzichtslijst in de Wedstrijddag-tab:
+//  - Open wedstrijden (patch 53): losse, niet-competitiewedstrijden, met verwijderknop.
+//  - Competitiewedstrijden: alleen vandaag + toekomst (afgelopen wedstrijden verbergen).
 function renderWedstrijddagLijst() {
   const cont = document.getElementById("wd-wedstrijd-lijst");
   if (!cont) return;
-  if (!wedstrijden.length) {
-    cont.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er eerst een toe via het tabblad Wedstrijden.</div>`;
-    return;
-  }
-  const aankomend = wedstrijden.filter(w => !isWedstrijdAfgelopen(w));
-  const afgelopen = wedstrijden.filter(w => isWedstrijdAfgelopen(w));
+
+  const open = wedstrijden.filter(w => w.is_open)
+    .sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
+  const competitie = wedstrijden.filter(w => !w.is_open && !isWedstrijdAfgelopen(w))
+    .sort((a, b) => (a.datum || "9999").localeCompare(b.datum || "9999")); // eerstvolgende bovenaan
+
+  const datumTekst = (w) => w.datum
+    ? new Date(w.datum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" })
+    : "Geen datum";
+
   const kaart = (w) => {
     const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
-    const datum = w.datum ? new Date(w.datum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" }) : "Geen datum";
     return `
       <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}" onclick="openWedstrijddag('${w.id}')" style="cursor:pointer;" title="Open de wedstrijddag">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <b style="font-family:'Barlow Condensed',sans-serif;font-size:18px;">${esc(w.naam || "Wedstrijd")}</b>
           ${finaleBadge}
         </div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px;">📅 ${esc(datum)}${w.locatie ? " · 📍 " + esc(w.locatie) : ""}</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">📅 ${esc(datumTekst(w))}${w.locatie ? " · 📍 " + esc(w.locatie) : ""}</div>
         <div style="color:var(--accent);font-size:13px;margin-top:8px;font-weight:600;">🏟️ Live resultaten invoeren →</div>
       </div>`;
   };
+
+  // Open wedstrijd: extra "open"-label en een verwijderknop (staat niet in de Wedstrijden-tab).
+  const openKaart = (w) => `
+      <div class="wedstrijd-card" style="border-color:var(--success);">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;" onclick="openWedstrijddag('${w.id}')" title="Open de wedstrijddag">
+          <b style="font-family:'Barlow Condensed',sans-serif;font-size:18px;">${esc(w.naam || "Open wedstrijd")}</b>
+          <span class="wd-open-badge">OPEN</span>
+        </div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">📅 ${esc(datumTekst(w))}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;flex-wrap:wrap;">
+          <span style="color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;" onclick="openWedstrijddag('${w.id}')">🏟️ Live resultaten invoeren →</span>
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent2);" onclick="verwijderOpenWedstrijd('${w.id}')">🗑️ Verwijderen</button>
+        </div>
+      </div>`;
+
   let html = "";
-  if (aankomend.length) html += aankomend.map(kaart).join("");
-  if (afgelopen.length) html += afgelopen.map(kaart).join("");
+  if (open.length) {
+    html += `<div class="wd-lijst-sectie">Open wedstrijden</div>`;
+    html += open.map(openKaart).join("");
+  }
+  html += `<div class="wd-lijst-sectie">Competitiewedstrijden</div>`;
+  if (competitie.length) {
+    html += competitie.map(kaart).join("");
+  } else {
+    html += `<div style="color:var(--muted);font-size:13px;padding:4px 0 8px;">Geen aankomende competitiewedstrijden. Voeg er een toe via het tabblad Wedstrijden, of maak hierboven een open wedstrijd aan.</div>`;
+  }
   cont.innerHTML = html;
+}
+
+// ── Open wedstrijd (patch 53): losse wedstrijd, alleen in de Wedstrijddag-tab ──
+function openNieuweOpenWedstrijd() {
+  document.getElementById("open-wedstrijd-naam").value = "";
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  document.getElementById("open-wedstrijd-datum").value = iso;
+  openModal("nieuweOpenWedstrijdModal");
+}
+
+async function maakOpenWedstrijd() {
+  const cid = actieveCategorie?.id;
+  if (!cid) { toast("Geen categorie actief", "err"); return; }
+  const naam  = document.getElementById("open-wedstrijd-naam").value.trim();
+  const datum = document.getElementById("open-wedstrijd-datum").value; // YYYY-MM-DD uit <input type=date>
+  if (!naam)  { toast("Vul een naam in", "err"); return; }
+  if (!datum) { toast("Kies een datum", "err"); return; }
+  try {
+    const { data, error } = await sb.from("wedstrijden")
+      .insert({ categorie_id: cid, naam, datum, is_open: true })
+      .select().single();
+    if (error) throw error;
+    wedstrijden.push(data);            // lokaal bijhouden zodat lookups blijven werken
+    closeModal("nieuweOpenWedstrijdModal");
+    toast("Open wedstrijd aangemaakt ✓");
+    openWedstrijddag(data.id);         // meteen de individuele modus openen
+  } catch(e) {
+    const hint = /is_open|column/i.test(e.message || "")
+      ? " — draai eerst de SQL die het veld 'is_open' toevoegt."
+      : "";
+    toast("Fout bij aanmaken: " + e.message + hint, "err");
+  }
+}
+
+async function verwijderOpenWedstrijd(id) {
+  const cid = actieveCategorie?.id;
+  const w = wedstrijden.find(x => String(x.id) === String(id));
+  const naam = w ? (w.naam || "deze wedstrijd") : "deze wedstrijd";
+  const ok = await bevestig("Open wedstrijd verwijderen",
+    `Weet je zeker dat je <strong>${esc(naam)}</strong> en alle ingevoerde resultaten wilt verwijderen?\n\nDit kan niet ongedaan worden gemaakt.`);
+  if (!ok) return;
+  try {
+    // Eerst de resultaten van deze wedstrijd wissen (voorkomt verweesde rijen).
+    await sb.from("resultaten").delete().eq("categorie_id", cid).eq("wedstrijd_id", id);
+    const { error } = await sb.from("wedstrijden").delete().eq("id", id).eq("categorie_id", cid);
+    if (error) throw error;
+    wedstrijden = wedstrijden.filter(x => String(x.id) !== String(id));
+    toast("Open wedstrijd verwijderd ✓");
+    renderWedstrijddagLijst();
+  } catch(e) { toast("Fout bij verwijderen: " + e.message, "err"); }
 }
 
 function openWedstrijddag(wedstrijdId) {
@@ -8114,6 +8221,18 @@ async function laadReleasenotes() {
       lijst.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">${toonArchief ? "Geen gearchiveerde notes." : "Nog geen releasenotes."}</div>`;
       return;
     }
+
+    // Nieuwste bovenaan op basis van patchnummer (patch 53). De publicatietijd
+    // klopt niet altijd als notes vlak na elkaar zijn geïmporteerd, dus we
+    // sorteren op het nummer uit "… patch N …"; zonder nummer valt het terug op datum.
+    const patchNr = (v) => { const m = String(v || "").match(/patch\s*(\d+)/i); return m ? parseInt(m[1], 10) : null; };
+    data.sort((a, b) => {
+      const na = patchNr(a.versie), nb = patchNr(b.versie);
+      if (na !== null && nb !== null) return nb - na;
+      if (na !== null) return -1;
+      if (nb !== null) return 1;
+      return new Date(b.gepubliceerd_op) - new Date(a.gepubliceerd_op);
+    });
 
     const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
 

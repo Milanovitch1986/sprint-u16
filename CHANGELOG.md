@@ -6,6 +6,42 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 53] — 2026-07-04
+
+### 🏟️ Open wedstrijden + opgeschoonde Wedstrijddag-lijst
+
+<!--RELEASENOTE
+versie: Patch 53
+titel: 🏟️ Open wedstrijden + opgeschoonde lijst
+type: feature
+beschrijving: Je kunt nu een "open wedstrijd" (losse, niet-competitiewedstrijd) rechtstreeks vanuit de Wedstrijddag-tab aanmaken met de knop ➕ Open wedstrijd — meteen in de individuele modus, zonder dat die in de Wedstrijden-tab komt. De Wedstrijddag-lijst toont bij competitiewedstrijden alleen nog wat vandaag of later is (afgelopen wedstrijden verdwijnen daar). En de release notes staan weer op patchnummer gesorteerd, nieuwste bovenaan.
+-->
+
+> ⚠️ **Databasewijziging nodig (eenmalig).** Draai vóór gebruik in de Supabase SQL-editor:
+> ```sql
+> ALTER TABLE public.wedstrijden
+>   ADD COLUMN IF NOT EXISTS is_open boolean NOT NULL DEFAULT false;
+> ```
+
+**Open wedstrijden**
+
+- Nieuwe knop **➕ Open wedstrijd** bovenaan de Wedstrijddag-tab. Je geeft een naam + datum op en komt meteen in de individuele modus (zelf atleten per onderdeel toevoegen, PR's bijwerken).
+- Een open wedstrijd verschijnt **alleen in de Wedstrijddag-tab** (sectie "Open wedstrijden" met een groen **OPEN**-label), niet in de Wedstrijden- of Opstelling-tab. Je kunt 'm daar ook weer **verwijderen** (inclusief de ingevoerde resultaten).
+
+**Opgeschoonde Wedstrijddag-lijst**
+
+- Bij competitiewedstrijden worden **alleen vandaag + toekomstige** wedstrijden getoond; afgelopen wedstrijden staan niet meer in de Wedstrijddag-lijst (die blijven wel gewoon in de Wedstrijden-tab).
+
+**Release notes sortering (fix)**
+
+- De releasenotes worden weer op **patchnummer** gesorteerd (hoogste bovenaan). Voorheen werd op publicatietijd gesorteerd, waardoor een later geïmporteerde oudere patch bovenaan kon komen.
+
+#### Technisch
+- Nieuwe kolom `wedstrijden.is_open` (boolean, default false). `renderWedstrijden()` en `renderOpstellingWedstrijden()` filteren `!w.is_open`; open wedstrijden blijven wel in de globale `wedstrijden`-array (voor lookups). `renderWedstrijddagLijst()` splitst in open (met verwijderknop) en competitie (`!is_open && !isWedstrijdAfgelopen`, eerstvolgende bovenaan). Nieuwe functies `openNieuweOpenWedstrijd`, `maakOpenWedstrijd` (insert `is_open:true`, opent meteen de individuele modus), `verwijderOpenWedstrijd` (wist eerst de resultaten, dan de wedstrijd). Modal `#nieuweOpenWedstrijdModal`.
+- `laadReleasenotes()` sorteert de opgehaalde notes nu client-side op het nummer uit "… patch N …" (aflopend), met de publicatiedatum als terugval.
+
+---
+
 ## [juli 2026 — patch 52] — 2026-07-03
 
 ### 📥 Release notes importeren uit GitHub
