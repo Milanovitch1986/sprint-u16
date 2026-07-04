@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 juli 2026 (patch 53)*
+*AV Sprint Breda · Laatste update: 4 juli 2026 (patch 54)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Marges buiten-main views (patch 54, juli 2026)
+De views `#view-wedstrijden`, `#view-wedstrijddag` en `#view-opstelling` staan door de HTML-structuur BUITEN `<main>` (er is 1× `<main>` maar 2× `</main>`; de eerste sluit al na view-prestaties). Daardoor kregen ze niet de marge/max-breedte van `main` en plakte de inhoud op mobiel tegen de schermranden. Opgelost met een CSS-regel die diezelfde drie id's dezelfde `padding`/`max-width`/`margin:0 auto` geeft als `main` (24px desktop, 14px mobiel incl. onderruimte voor de floating nav). De losse `padding-bottom` op `.wd-afrond-actie` (mobiel) is verwijderd omdat de view die onderruimte nu al levert. Alleen CSS, geen functionele wijziging. (Structureel netter zou zijn de views ín `<main>` te zetten, maar dat is bewust niet gedaan om risico te vermijden.)
 
 ### Open wedstrijden + opgeschoonde Wedstrijddag-lijst (patch 53, juli 2026)
 **Databasewijziging (eenmalig):** kolom `wedstrijden.is_open boolean NOT NULL DEFAULT false` toegevoegd via SQL — `ALTER TABLE public.wedstrijden ADD COLUMN IF NOT EXISTS is_open boolean NOT NULL DEFAULT false;`. RLS/rechten op `wedstrijden` ongewijzigd (bestaande categorie-policies gelden ook voor open wedstrijden). Open wedstrijden = losse, niet-competitiewedstrijden (`is_open=true`), aangemaakt vanuit de Wedstrijddag-tab (knop ➕ Open wedstrijd → `openNieuweOpenWedstrijd`/`maakOpenWedstrijd`, insert met `is_open:true` + meteen `openWedstrijddag()`). Ze blijven in de globale `wedstrijden`-array (zodat `.find()`-lookups werken), maar `renderWedstrijden()` en `renderOpstellingWedstrijden()` filteren `!w.is_open`, dus ze verschijnen NIET in de Wedstrijden-/Opstelling-tab. `verwijderOpenWedstrijd(id)` wist eerst de `resultaten` van die wedstrijd, dan de `wedstrijden`-rij (voorkomt verweesde rijen). Modal `#nieuweOpenWedstrijdModal`. Datum via `getFullYear/getMonth/getDate` (lokale tijd, geen UTC-rollback). Open wedstrijd heeft geen opstelling → automatisch individuele modus (patch 51-logica).

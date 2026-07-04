@@ -6,6 +6,26 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 54] — 2026-07-04
+
+### 📱 Marges hersteld op de Wedstrijden-, Wedstrijddag- en Opstelling-tab
+
+<!--RELEASENOTE
+versie: Patch 54
+titel: 📱 Marges op de Wedstrijddag-tab hersteld
+type: bugfix
+beschrijving: De inhoud van de tabbladen Wedstrijddag, Wedstrijden en Opstelling plakte op de telefoon tegen de schermranden. Die tabbladen vielen door de HTML-structuur buiten het gedeelte dat normaal de marges geeft; ze krijgen nu dezelfde nette marge links en rechts als de rest van de app.
+-->
+
+Op de telefoon plakte de inhoud van de Wedstrijddag-tab (en ook de Wedstrijden- en Opstelling-tab) tegen de linker- en rechterrand van het scherm. Die drie views vielen door de HTML-structuur buiten het `main`-element, dat normaal de marges verzorgt.
+
+- De views `#view-wedstrijden`, `#view-wedstrijddag` en `#view-opstelling` krijgen nu dezelfde `padding` en `max-width` als `main` (24px desktop, 14px mobiel), zodat de inhoud netjes marge houdt en op grote schermen gecentreerd blijft.
+- De mobiele onderruimte voor de floating nav zit nu op de view zelf; de losse `padding-bottom` op `.wd-afrond-actie` is daardoor overbodig geworden en verwijderd (voorkomt dubbele witruimte onderaan).
+
+Alleen een opmaakwijziging (CSS) — geen functionele of databasewijziging.
+
+---
+
 ## [juli 2026 — patch 53] — 2026-07-04
 
 ### 🏟️ Open wedstrijden + opgeschoonde Wedstrijddag-lijst

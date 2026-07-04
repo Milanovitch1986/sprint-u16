@@ -140,6 +140,11 @@
 
   /* ── Layout ── */
   main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  /* Deze views vallen door de HTML-structuur buiten <main>; geef ze dezelfde
+     marges/max-breedte zodat de inhoud niet tegen de schermranden plakt. */
+  #view-wedstrijden, #view-wedstrijddag, #view-opstelling {
+    padding: 24px; max-width: 1100px; margin: 0 auto;
+  }
 
   /* ── Toast ── */
   #toast {
@@ -1016,14 +1021,14 @@
        een scherm staan — zoals "✅ Wedstrijd afronden" — nooit achter de balk
        vallen en altijd volledig aantikbaar blijven. */
     main { padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px); }
+    #view-wedstrijden, #view-wedstrijddag, #view-opstelling {
+      padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px);
+    }
 
-    /* De afrond-knop staat helemaal onderaan het wedstrijddag-scherm. Geef de
-       container op mobiel extra onderruimte zodat de knop altijd boven de
-       floating nav uitkomt, ook als dit scherm door de HTML-structuur buiten
-       de main-padding zou vallen. */
+    /* De afrond-knop staat helemaal onderaan het wedstrijddag-scherm. De view
+       zelf geeft nu al onderruimte (hierboven), dus hier alleen nog een marge. */
     .wd-afrond-actie {
       margin-top: 18px;
-      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 20px);
     }
 
     /* Page headers wrappen netjes */
