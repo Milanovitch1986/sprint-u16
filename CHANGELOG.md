@@ -6,6 +6,26 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [juli 2026 — patch 55] — 2026-07-06
+
+### 📱 Marges hersteld op de Punten-, Profiel- en Admin-tab
+
+<!--RELEASENOTE
+versie: Patch 55
+titel: 📱 Marges op de Punten-, Profiel- en Admin-tab hersteld
+type: bugfix
+beschrijving: Op de telefoon plakte de inhoud van de tabbladen Punten, Profiel en Admin tegen de schermranden. Net als bij patch 54 vielen deze tabbladen door de HTML-structuur buiten het gedeelte dat normaal de marges verzorgt; ze krijgen nu dezelfde nette marge links en rechts als de rest van de app.
+-->
+
+Op de telefoon plakte de inhoud van de tabbladen **Punten**, **Profiel** en **Admin** tegen de linker- en rechterrand van het scherm. Dit is hetzelfde probleem dat patch 54 al oploste voor de Wedstrijden-, Wedstrijddag- en Opstelling-tab: die views vallen door de HTML-structuur buiten het `main`-element, dat normaal de marges verzorgt. Bij patch 54 waren de tabbladen Punten, Profiel en Admin nog niet meegenomen.
+
+- De views `#view-punten`, `#view-profiel` en `#view-admin` krijgen nu dezelfde `padding` en `max-width` als `main` (24px desktop, 14px mobiel), zodat de inhoud netjes marge houdt en op grote schermen gecentreerd blijft.
+- Deze views zijn toegevoegd aan dezelfde twee CSS-regels die patch 54 introduceerde (desktop + mobiele media query), inclusief de onderruimte voor de floating nav op mobiel.
+
+Alleen een opmaakwijziging (CSS) — geen functionele of databasewijziging.
+
+---
+
 ## [juli 2026 — patch 54] — 2026-07-04
 
 ### 📱 Marges hersteld op de Wedstrijden-, Wedstrijddag- en Opstelling-tab

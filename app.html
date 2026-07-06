@@ -142,7 +142,8 @@
   main { padding: 24px; max-width: 1100px; margin: 0 auto; }
   /* Deze views vallen door de HTML-structuur buiten <main>; geef ze dezelfde
      marges/max-breedte zodat de inhoud niet tegen de schermranden plakt. */
-  #view-wedstrijden, #view-wedstrijddag, #view-opstelling {
+  #view-wedstrijden, #view-wedstrijddag, #view-opstelling,
+  #view-punten, #view-profiel, #view-admin {
     padding: 24px; max-width: 1100px; margin: 0 auto;
   }
 
@@ -1021,7 +1022,8 @@
        een scherm staan — zoals "✅ Wedstrijd afronden" — nooit achter de balk
        vallen en altijd volledig aantikbaar blijven. */
     main { padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px); }
-    #view-wedstrijden, #view-wedstrijddag, #view-opstelling {
+    #view-wedstrijden, #view-wedstrijddag, #view-opstelling,
+    #view-punten, #view-profiel, #view-admin {
       padding: 14px; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px);
     }
 
