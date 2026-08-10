@@ -3,17 +3,10 @@
 # Doel: voorkomt dat het gratis Supabase-project wordt gepauzeerd wegens
 # inactiviteit (dat gebeurt na 7 dagen zonder database-activiteit).
 #
-# Hoe: twee keer per week (maandag en donderdag om 06:00 UTC) stuurt deze
-# workflow een klein leesverzoek naar de tabel `categorieen`. Het resultaat
-# is niet belangrijk — het gaat erom dat de database een query verwerkt,
-# want dat reset de inactiviteitsteller van Supabase.
-#
-# De anon key hieronder is de publieke client-sleutel die ook in app.html
-# staat. Deze is bedoeld om openbaar te zijn; Row Level Security beschermt
-# de data.
-#
-# Handmatig testen: tabblad "Actions" op GitHub → "Supabase keep-alive"
-# → knop "Run workflow".
+# Hoe: twee keer per week (maandag en donderdag om 06:00 UTC) roept deze
+# workflow de databasefunctie ping() aan. Die functie werkt een tijdstempel
+# bij in het tabelletje keepalive -> een ECHTE schrijfactie in de database,
+# en dat telt gegarandeerd als activiteit (een leesverzoek bleek onvoldoende).
 
 name: Supabase keep-alive
 
@@ -26,15 +19,18 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase database
+      - name: Ping Supabase database (schrijfactie via functie ping)
         run: |
           SUPA_URL="https://wntxmxvjvnishwkwvkux.supabase.co"
           ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndudHhteHZqdm5pc2h3a3d2a3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTU4MTUsImV4cCI6MjA5MDc5MTgxNX0.0udcgomCHH_Tyg_uXzuXfr99eE2aHP9UVYF50MppcLw"
 
           status=$(curl -s -o antwoord.txt -w "%{http_code}" \
-            "${SUPA_URL}/rest/v1/categorieen?select=id&limit=1" \
+            -X POST \
+            "${SUPA_URL}/rest/v1/rpc/ping" \
             -H "apikey: ${ANON_KEY}" \
-            -H "Authorization: Bearer ${ANON_KEY}")
+            -H "Authorization: Bearer ${ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
 
           echo "HTTP-status: ${status}"
           echo "Antwoord van de database:"
@@ -42,8 +38,8 @@ jobs:
           echo ""
 
           if [ "${status}" = "200" ]; then
-            echo "✅ Ping geslaagd — de database heeft een query verwerkt."
+            echo "OK Ping geslaagd - de database heeft een schrijfactie verwerkt."
           else
-            echo "❌ Ping mislukt (status ${status}). Controleer de workflow." >&2
+            echo "FOUT Ping mislukt (status ${status}). Controleer de workflow." >&2
             exit 1
           fi
