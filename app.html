@@ -1525,7 +1525,7 @@
         <button class="btn btn-primary btn-sm ml-auto" onclick="openNieuweOpenWedstrijd()" title="Voeg een losse wedstrijd toe die niet in de Wedstrijden-tab staat">➕ Open wedstrijd</button>
       </div>
       <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om live resultaten in te voeren:</div>
-      <div id="wd-wedstrijd-lijst" class="grid"></div>
+      <div id="wd-wedstrijd-lijst"></div>
     </div>
 
     <!-- Detail: invoerscherm voor de gekozen wedstrijd -->
@@ -5903,16 +5903,21 @@ function renderWedstrijddagLijst() {
       </div>`;
 
   let html = "";
-  if (open.length) {
-    html += `<div class="wd-lijst-sectie">Open wedstrijden</div>`;
-    html += open.map(openKaart).join("");
-  }
+
+  // Competitiewedstrijden — kop altijd tonen, kaarten in een eigen raster onder de kop.
   html += `<div class="wd-lijst-sectie">Competitiewedstrijden</div>`;
   if (competitie.length) {
-    html += competitie.map(kaart).join("");
+    html += `<div class="grid">` + competitie.map(kaart).join("") + `</div>`;
   } else {
-    html += `<div style="color:var(--muted);font-size:13px;padding:4px 0 8px;">Geen aankomende competitiewedstrijden. Voeg er een toe via het tabblad Wedstrijden, of maak hierboven een open wedstrijd aan.</div>`;
+    html += `<div style="color:var(--muted);font-size:13px;padding:4px 0 8px;">Geen aankomende competitiewedstrijden. Voeg er een toe via het tabblad Wedstrijden, of maak er een aan met de knop ➕ Open wedstrijd bovenaan.</div>`;
   }
+
+  // Open wedstrijden — eigen sectie eronder, alleen tonen als er zijn.
+  if (open.length) {
+    html += `<div class="wd-lijst-sectie">Open wedstrijden</div>`;
+    html += `<div class="grid">` + open.map(openKaart).join("") + `</div>`;
+  }
+
   cont.innerHTML = html;
 }
 

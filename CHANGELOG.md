@@ -6,6 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 56] — 2026-08-19
+
+### 🏟️ Wedstrijddag-tab: sectiekoppen boven de kaarten
+
+<!--RELEASENOTE
+versie: Patch 56
+titel: 🏟️ Nettere indeling van de Wedstrijddag-lijst
+type: bugfix
+beschrijving: In de Wedstrijddag-tab stond de sectiekop (zoals "Competitiewedstrijden") links naast de wedstrijdkaarten in plaats van erboven. De kop staat nu netjes boven de kaarten en elke soort wedstrijd krijgt een eigen sectie: Competitiewedstrijden bovenaan, Open wedstrijden eronder.
+-->
+
+In de Wedstrijddag-tab stond de sectiekop ("Competitiewedstrijden", en bij open wedstrijden "Open wedstrijden") door de opmaak links **naast** de eerste wedstrijdkaart in plaats van erboven.
+
+- De lijstcontainer `#wd-wedstrijd-lijst` was zelf een raster (`class="grid"`), waardoor zowel de koppen als de kaarten als losse rasterkolommen naast elkaar werden geplaatst. De `grid`-class is van de container gehaald; de kaarten van elke sectie zitten nu in hun **eigen** raster (`<div class="grid">`) onder de bijbehorende kop.
+- De volgorde is aangepast: **Competitiewedstrijden** bovenaan, **Open wedstrijden** in een eigen sectie eronder (voorheen andersom).
+- De kop "Competitiewedstrijden" wordt nu altijd getoond; als er geen aankomende competitiewedstrijden zijn, staat de uitleg netjes onder die kop.
+
+Alleen een opmaak-/weergavewijziging — geen functionele of databasewijziging.
+
+---
+
 ## [juli 2026 — patch 55] — 2026-07-06
 
 ### 📱 Marges hersteld op de Punten-, Profiel- en Admin-tab
