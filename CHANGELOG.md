@@ -6,6 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 57] — 2026-08-24
+
+### 🔀 Nieuwste release notes bovenaan (ook infra-notes)
+
+<!--RELEASENOTE
+versie: Patch 57
+titel: 🔀 Nieuwste release notes bovenaan
+type: bugfix
+beschrijving: De nieuwste release notes staan nu altijd bovenaan de lijst. Notes zonder patchnummer (zoals onderhouds-/infra-updates) belandden voorheen onderaan; die verschijnen nu op datum op de juiste plek.
+-->
+
+De release-notes-lijst sorteerde puur op patchnummer, waarbij notes **zonder** patchnummer (zoals de infra-/onderhoudsnote van 24 augustus) bewust onderaan werden gezet. Daardoor stond de nieuwste note onderaan in plaats van bovenaan.
+
+- De sortering in `laadReleasenotes()` is aangepast: primair op **importdag** (`gepubliceerd_op`, nieuwste eerst), zodat ook notes zonder patchnummer op datum op de juiste plek komen.
+- Binnen dezelfde dag wordt nog steeds op **patchnummer** (hoogste eerst) gesorteerd, zodat een bulk-import van oude patches — die allemaal op dezelfde dag binnenkomen — correct geordend blijft.
+- Een note zonder patchnummer telt binnen zijn eigen dag als nieuwste; twee zulke notes op dezelfde dag vallen terug op de exacte publicatietijd.
+
+Alleen een JS-wijziging in de sorteerfunctie — geen HTML-, CSS- of databasewijziging.
+
+---
+
 ## [augustus 2026 — infra] — 2026-08-24
 
 ### 📧 Brevo API-sleutel automatisch actief gehouden

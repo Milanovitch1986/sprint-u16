@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 24 augustus 2026 (patch 56; infra: Brevo keep-alive)*
+*AV Sprint Breda · Laatste update: 24 augustus 2026 (patch 57)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Release notes: nieuwste bovenaan, ook zonder patchnummer (patch 57, augustus 2026)
+`laadReleasenotes()` sorteerde de notes puur op het patchnummer uit "… patch N …" en zette notes ZONDER patchnummer bewust onderaan (`if (na !== null) return -1`). Daardoor belandde de eerste infra-/onderhoudsnote (versie "Onderhoud augustus 2026", 24 aug.) onderaan i.p.v. bovenaan. Opgelost door de sortering te wijzigen naar: **primair op importdag** (`dagKey = floor(gepubliceerd_op / 86400000)`, nieuwste dag eerst) → **binnen dezelfde dag op patchnummer** (hoogste eerst) → ongenummerde notes tellen binnen hun dag als nieuwste → resterende gelijkspelen op exacte publicatietijd. Bewust op dag-granulariteit i.p.v. exacte tijd, omdat een bulk-import (alle oude patches tegelijk toegevoegd) bijna-gelijke tijdstempels geeft; op patchnummer blijven die dan correct geordend, terwijl latere losse imports (andere dag) vanzelf bovenaan komen. Alleen JS in `laadReleasenotes()` — geen HTML/CSS/database. **Let op voor de toekomst:** infra-notes krijgen geen patchnummer; ze slotten nu vanzelf op datum. Voeg je op dezelfde dag zowel een genummerde patch als een infra-note toe, dan staat de infra-note bovenaan die dag (edge case; normaal komen ze op verschillende dagen binnen).
 
 ### Brevo API-sleutel keep-alive via Cloudflare Cron (augustus 2026)
 Brevo zet API-sleutels na 90 dagen zonder gebruik automatisch op inactief (met een waarschuwingsmail 7 dagen vooraf; inactief ≠ verwijderd, een inactieve sleutel is via het Brevo-dashboard weer te activeren). De sleutel `sprint-u16-worker` (Secret `BREVO_API_KEY` in de Worker `sprint-uitnodiging`) liep hiertegen aan omdat er in de zomer geen uitnodigingen waren verstuurd. Opgelost door aan de Worker een `scheduled`-handler toe te voegen die via een Cron Trigger `0 6 1,15 * *` (1e + 15e van de maand, 06:00 UTC) 2× per maand `GET https://api.brevo.com/v3/account` aanroept met de bestaande sleutel. Dat registreert als "gebruik" → de 90-dagen-teller reset; er wordt **géén** mail verstuurd. Bewust gekozen voor een Cloudflare Cron (i.p.v. GitHub Actions zoals de Supabase keep-alive) omdat de sleutel dan binnen Cloudflare blijft en nergens gedupliceerd hoeft te worden. **Kanttekening:** of een puur-lezende aanroep bij Brevo als "gebruik" telt is niet 100% gedocumenteerd — te verifiëren via de kolom "Last used on" onder *Settings → SMTP & API → API keys & MCP* na de eerste geplande run. Zo niet, plan B: 1× per maand een klein self-mailtje sturen (telt gegarandeerd als gebruik). Een handmatige test-uitnodiging op 24 aug. 2026 kwam aan, dus de Worker komt langs de instelling "block unauthorized IPs voor API-sleutels" heen.

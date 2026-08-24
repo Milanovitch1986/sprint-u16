@@ -8234,16 +8234,22 @@ async function laadReleasenotes() {
       return;
     }
 
-    // Nieuwste bovenaan op basis van patchnummer (patch 53). De publicatietijd
-    // klopt niet altijd als notes vlak na elkaar zijn geïmporteerd, dus we
-    // sorteren op het nummer uit "… patch N …"; zonder nummer valt het terug op datum.
+    // Nieuwste bovenaan (patch 57). Primair op de importdag (dag van gepubliceerd_op,
+    // nieuwste eerst), zodat ook notes ZONDER patchnummer (bijv. infra-/onderhoudsnotes)
+    // op datum op de juiste plek komen. Binnen dezelfde dag sorteren we op het patchnummer
+    // uit "… patch N …" (hoogste eerst) — dat houdt een bulk-import van oude patches, die
+    // allemaal op dezelfde dag binnenkomen, correct geordend. Een note zonder patchnummer
+    // telt binnen zijn eigen dag als nieuwste; twee zulke notes op dezelfde dag vallen
+    // terug op de exacte publicatietijd.
     const patchNr = (v) => { const m = String(v || "").match(/patch\s*(\d+)/i); return m ? parseInt(m[1], 10) : null; };
+    const dagKey  = (v) => { const d = new Date(v); return isNaN(d) ? 0 : Math.floor(d.getTime() / 86400000); };
     data.sort((a, b) => {
+      const da = dagKey(a.gepubliceerd_op), db = dagKey(b.gepubliceerd_op);
+      if (db !== da) return db - da;                 // nieuwste importdag bovenaan
       const na = patchNr(a.versie), nb = patchNr(b.versie);
-      if (na !== null && nb !== null) return nb - na;
-      if (na !== null) return -1;
-      if (nb !== null) return 1;
-      return new Date(b.gepubliceerd_op) - new Date(a.gepubliceerd_op);
+      if (na !== null && nb !== null) return nb - na;                                        // beide genummerd → hoogste patch eerst
+      if (na === null && nb === null) return new Date(b.gepubliceerd_op) - new Date(a.gepubliceerd_op); // beide ongenummerd → op tijd
+      return na === null ? -1 : 1;                    // ongenummerde note bovenaan binnen de dag
     });
 
     const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
