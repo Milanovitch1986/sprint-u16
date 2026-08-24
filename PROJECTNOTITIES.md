@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 19 augustus 2026 (patch 56)*
+*AV Sprint Breda · Laatste update: 24 augustus 2026 (patch 56; infra: Brevo keep-alive)*
 
 ---
 
@@ -42,6 +42,9 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Brevo API-sleutel keep-alive via Cloudflare Cron (augustus 2026)
+Brevo zet API-sleutels na 90 dagen zonder gebruik automatisch op inactief (met een waarschuwingsmail 7 dagen vooraf; inactief ≠ verwijderd, een inactieve sleutel is via het Brevo-dashboard weer te activeren). De sleutel `sprint-u16-worker` (Secret `BREVO_API_KEY` in de Worker `sprint-uitnodiging`) liep hiertegen aan omdat er in de zomer geen uitnodigingen waren verstuurd. Opgelost door aan de Worker een `scheduled`-handler toe te voegen die via een Cron Trigger `0 6 1,15 * *` (1e + 15e van de maand, 06:00 UTC) 2× per maand `GET https://api.brevo.com/v3/account` aanroept met de bestaande sleutel. Dat registreert als "gebruik" → de 90-dagen-teller reset; er wordt **géén** mail verstuurd. Bewust gekozen voor een Cloudflare Cron (i.p.v. GitHub Actions zoals de Supabase keep-alive) omdat de sleutel dan binnen Cloudflare blijft en nergens gedupliceerd hoeft te worden. **Kanttekening:** of een puur-lezende aanroep bij Brevo als "gebruik" telt is niet 100% gedocumenteerd — te verifiëren via de kolom "Last used on" onder *Settings → SMTP & API → API keys & MCP* na de eerste geplande run. Zo niet, plan B: 1× per maand een klein self-mailtje sturen (telt gegarandeerd als gebruik). Een handmatige test-uitnodiging op 24 aug. 2026 kwam aan, dus de Worker komt langs de instelling "block unauthorized IPs voor API-sleutels" heen.
 
 ### Marges buiten-main views (patch 54, juli 2026)
 De views `#view-wedstrijden`, `#view-wedstrijddag` en `#view-opstelling` staan door de HTML-structuur BUITEN `<main>` (er is 1× `<main>` maar 2× `</main>`; de eerste sluit al na view-prestaties). Daardoor kregen ze niet de marge/max-breedte van `main` en plakte de inhoud op mobiel tegen de schermranden. Opgelost met een CSS-regel die diezelfde drie id's dezelfde `padding`/`max-width`/`margin:0 auto` geeft als `main` (24px desktop, 14px mobiel incl. onderruimte voor de floating nav). De losse `padding-bottom` op `.wd-afrond-actie` (mobiel) is verwijderd omdat de view die onderruimte nu al levert. Alleen CSS, geen functionele wijziging. (Structureel netter zou zijn de views ín `<main>` te zetten, maar dat is bewust niet gedaan om risico te vermijden.)
@@ -274,7 +277,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 | Service | Details |
 |---------|---------|
 | Atletiek.nu API | ~~Cloudflare Worker: `atletiek-nu-api-milan.milande-maat.workers.dev`~~ — **Verwijderd (patch 32)**, werkt niet door Cloudflare-beperkingen |
-| E-mail (uitnodiging + welkom) | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo. POST-body: `{ email, link, type }` waarbij `type` = `"uitnodiging"` of `"welkom"`. API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker |
+| E-mail (uitnodiging + welkom) | Cloudflare Worker: `sprint-uitnodiging.milande-maat.workers.dev` + Brevo. POST-body: `{ email, link, type }` waarbij `type` = `"uitnodiging"` of `"welkom"`. API-sleutel: `sprint-u16-worker`, ingesteld als Secret `BREVO_API_KEY` in Worker. **Keep-alive:** `scheduled`-handler + Cron Trigger `0 6 1,15 * *` roept 2×/maand `GET /v3/account` aan zodat de sleutel niet na 90 dagen inactief wordt (aug. 2026) |
 | World Athletics PR | `worldathletics.nimarion.de` |
 | NAU scoretabellen | Ingebouwd (gezamenlijke U14/U16-telling, NAU-document dec. 2025) |
 

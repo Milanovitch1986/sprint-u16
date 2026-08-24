@@ -6,6 +6,27 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — infra] — 2026-08-24
+
+### 📧 Brevo API-sleutel automatisch actief gehouden
+
+<!--RELEASENOTE
+versie: Onderhoud augustus 2026
+titel: 📧 Betrouwbare e-mailverzending (onderhoud)
+type: update
+beschrijving: Achter de schermen zorgen we ervoor dat het versturen van uitnodigings- en welkomstmails betrouwbaar blijft werken. Voor de gebruiker verandert er niets.
+-->
+
+De Brevo API-sleutel `sprint-u16-worker` (waarmee de Cloudflare Worker uitnodigings- en welkomstmails verstuurt) werd door Brevo na 90 dagen zonder gebruik automatisch op inactief gezet. Om dat te voorkomen is aan de Worker een geplande taak (`scheduled`-handler) toegevoegd die 2× per maand een lichte, lezende aanroep naar Brevo doet.
+
+- **Cron Trigger:** `0 6 1,15 * *` (1e en 15e van de maand, 06:00 UTC).
+- De keep-alive roept `GET https://api.brevo.com/v3/account` aan met de bestaande sleutel; er wordt **géén e-mail verstuurd** — het is puur een levensteken zodat de sleutel als "gebruikt" geregistreerd blijft.
+- De sleutel blijft veilig als Secret `BREVO_API_KEY` binnen Cloudflare en is nergens gedupliceerd (daarom via Cloudflare Cron i.p.v. GitHub Actions, anders dan de Supabase keep-alive).
+
+Alleen infrastructuur (Cloudflare Worker) — geen wijziging aan `app.html` of de database. Het app-patchnummer blijft daarom **56**.
+
+---
+
 ## [augustus 2026 — patch 56] — 2026-08-19
 
 ### 🏟️ Wedstrijddag-tab: sectiekoppen boven de kaarten
