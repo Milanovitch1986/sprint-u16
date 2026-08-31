@@ -6,6 +6,50 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 59] — 2026-08-31
+
+### 🔁 Wedstrijddag: rondes en pogingen per onderdeel
+
+<!--RELEASENOTE
+versie: Patch 59
+titel: 🔁 Rondes en pogingen op de wedstrijddag
+type: update
+beschrijving: Je kunt nu meerdere rondes per onderdeel invoeren — serie, halve finale en finale bij de loopnummers, kwalificatie en finale bij de technische onderdelen. Bij een technisch onderdeel kun je per ronde tot zes pogingen invullen, met een X voor een ongeldige poging. De app pakt automatisch de beste prestatie voor de punten en de PR's.
+-->
+
+Het laatste punt uit de wedstrijddag-test: per atleet per onderdeel kon maar één resultaat worden ingevoerd. Nu kan een onderdeel meerdere rondes hebben, en een technische ronde meerdere pogingen.
+
+**Opbouw:** onderdeel → ronde → poging(en).
+
+| Type onderdeel | Rondes (vast lijstje) | Pogingen per ronde |
+|---|---|---|
+| Looponderdelen (en estafette) | Serie · Halve finale · Finale | 1 |
+| Technische onderdelen | Kwalificatie · Finale | maximaal 6, met **X** voor ongeldig |
+
+**Hoe het werkt in de app.**
+Het invoerveld in de lijst blijft de snelle invoer: is er niets bijzonders, dan typ je daar gewoon één resultaat, precies zoals voorheen. Daarnaast staat achter elke rij een knop **📋** (met het aantal rondes erin) die het rondescherm opent. Daar voeg je rondes toe met **＋ ronde toevoegen**; de naam kies je uit het lijstje dat bij het type onderdeel hoort. Bij een loopnummer krijgt elke ronde één tijdveld, bij een technisch onderdeel zes pogingvelden met een X-knop per poging. Een ronde kun je met 🗑️ weer verwijderen (met bevestiging als er al iets is ingevuld).
+
+**Het aantal rondes is vrij.** Voeg je dezelfde ronde nog een keer toe, dan wordt hij genummerd: "Serie 2". In de lijst staan rondes altijd in de volgorde van het vaste lijstje, met een genummerde variant direct achter zijn basis.
+
+**De beste prestatie telt.** Punten, de ▲ PR!-badge, de teamscore en het bijwerken van PR's bij het afronden gebruiken automatisch de beste geldige prestatie over de snelle invoer én alle rondes en pogingen heen — snelste tijd bij loop, verste of hoogste bij techniek. Een X telt nooit mee, en DNS blijft DNS. Onder het PR-regeltje in de lijst staat waar die beste prestatie vandaan komt ("beste: 4.55 · Finale"), en in de afrond-lijst staat de ronde tussen haakjes achter het onderdeel.
+
+#### Technisch
+- **Database:** tabel `resultaten` uitgebreid met `ronde text not null default ''` en `poging_nr int not null default 1`; de status-check accepteert nu ook `'x'` (ongeldige poging); de unique-constraint is `(categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr)` geworden (`resultaten_uniek`). Bestaande rijen kregen automatisch `ronde = ''` en `poging_nr = 1` en blijven dus de snelle invoer. `supabase_setup.sql` is bijgewerkt voor nieuwe installaties.
+- **Nieuwe state:** `wdPogingen` (resKey → lijst met rijen mét ronde) naast het bestaande `wdResultaten` (alleen de snelle invoer), en `wdRondeCtx` voor het geopende rondescherm. Splitsen gebeurt in de nieuwe helper `wdZetLokaal()`, die `wdVerwerkResultaten()` per rij aanroept.
+- **Nieuwe helpers:** `wdRondeNamen()`, `wdAantalPogingen()`, `wdOnderdeelType()` (hint uit programma/onderdelenlijst, anders afgeleid via `isLagerBeter`), `wdPogingLijst()`, `wdRondesVan()` + `wdRondeSorteer()`, `wdBesteResultaat()` en `wdEffectief()`. Die laatste geeft een object in dezelfde vorm als een `wdResultaten`-rij, zodat de bestaande punten-, PR- en scorelogica ongewijzigd kon blijven werken — `renderWdLijst()`, `renderWdScore()`, `wdUpdateRegel()`, `wdIndivRijHtml()` en `openWdAfronden()` gebruiken nu `wdEffectief()` voor punten/PR en `wdResultaten` alleen nog voor de waarde in het invoerveld.
+- **Opslaan:** `wdBewaarResultaat()` en `wdVerwijderResultaat()` hebben er de parameters `ronde` en `poging` bij gekregen (standaard `""` / `1`, dus alle bestaande aanroepen werken ongewijzigd); de upsert gebruikt de nieuwe `onConflict`. Nieuw: `wdVerwijderRonde()` en `wdVerwijderAlles()`. `wdIndivVerwijder()` gebruikt die laatste, zodat een atleet verwijderen ook zijn rondes opruimt.
+- **Rondescherm:** modal `#wdRondesModal` met `openWdRondes()`, `renderWdRondes()`, `wdRondeToevoegen()`, `wdRondeVerwijderen()`, `wdPogingInvoer()`, `wdPogingOngeldig()` en `wdNaRondes()`. Elke invoer wordt direct opgeslagen, net als de rest van de wedstrijddag.
+- **Klein meegenomen:** eigen (categorie-brede) onderdelen in de individuele modus kregen altijd type "technisch"; dat wordt nu afgeleid, zodat een eigen tijdonderdeel als loopnummer behandeld wordt.
+- Nieuwe CSS: `.wd-ronde-btn`, `.wd-ronde-blok`, `.wd-poging*`, `.wd-ronde-toevoegen`, `.wd-beste`; `.wd-rij` heeft een kolom extra (ook in de mobiele variant).
+
+#### Wat niet getest kon worden
+De echte Supabase-calls (upsert met de nieuwe unique-constraint, verwijderen per ronde) en het gedrag in de browser. Wel los getest: het splitsen van rijen, de bepaling van de beste prestatie bij tijd- én afstandsonderdelen, X en DNS die niet meetellen, de rondevolgorde inclusief genummerde varianten, de PR-vergelijking op basis van de beste prestatie, en de opbouw van het rondescherm (6 pogingvelden + X bij techniek, 1 veld zonder X bij loop). JS-syntax gecontroleerd.
+
+**Bestanden gewijzigd:** `app.html`, `supabase_setup.sql`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+Supabase: kolommen `ronde` + `poging_nr` op `resultaten`, status-check met `'x'`, unique-constraint `resultaten_uniek`.
+
+---
+
 ## [augustus 2026 — patch 58] — 2026-08-31
 
 ### 🏟️ Wedstrijddag: zoeken op atleet, atleet bij meerdere onderdelen, afronden zonder PR's

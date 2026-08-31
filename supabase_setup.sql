@@ -406,6 +406,10 @@ grant execute on all functions in schema public to anon, authenticated, service_
 -- Estafette-teamtijd: atleet_id leeg, sleutel = 'ploeg-A' / 'ploeg-B' / 'ploeg-C'.
 -- De UNIQUE maakt upsert-per-invoerveld mogelijk (laatste schrijver wint),
 -- zodat meerdere trainers tegelijk kunnen invoeren.
+-- Rondes en pogingen (patch 59): ronde '' met poging_nr 1 is de snelle invoer
+-- uit de lijst; een ronde met naam (Serie/Halve finale/Finale bij loop,
+-- Kwalificatie/Finale bij techniek) heeft 1 poging bij loop en maximaal 6 bij
+-- technische onderdelen. status 'x' = ongeldige poging (telt nooit mee).
 
 create table public.resultaten (
   id            uuid primary key default gen_random_uuid(),
@@ -415,9 +419,12 @@ create table public.resultaten (
   discipline    text not null,
   sleutel       text not null,
   resultaat     text,
-  status        text not null default 'ok' check (status in ('ok', 'dns')),
+  status        text not null default 'ok' check (status in ('ok', 'dns', 'x')),
+  ronde         text not null default '',
+  poging_nr     int  not null default 1,
   ingevoerd_op  timestamptz not null default now(),
-  unique (categorie_id, wedstrijd_id, discipline, sleutel)
+  constraint resultaten_uniek
+    unique (categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr)
 );
 
 alter table public.resultaten enable row level security;
