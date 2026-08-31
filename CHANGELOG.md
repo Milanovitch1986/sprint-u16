@@ -6,6 +6,65 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 60] — 2026-08-31
+
+### 🔁 Wedstrijddag: rondes en pogingen per onderdeel
+
+<!--RELEASENOTE
+versie: Patch 60
+titel: 🔁 Rondes en pogingen op de wedstrijddag
+type: update
+beschrijving: Je kunt nu meerdere rondes per onderdeel invoeren — serie, halve finale en finale bij de loopnummers, kwalificatie en finale bij de technische onderdelen. Bij een technisch onderdeel kun je per ronde tot zes pogingen invullen, met een X voor een ongeldige poging. De app pakt automatisch de beste prestatie voor de punten en de PR's.
+-->
+
+Per atleet per onderdeel kon maar één resultaat worden ingevoerd. Nu kan een onderdeel meerdere rondes hebben, en een technische ronde meerdere pogingen. Opbouw: **onderdeel → ronde → poging(en)**.
+
+| Type onderdeel | Rondes (vast lijstje) | Pogingen per ronde |
+|---|---|---|
+| Looponderdelen (en estafette) | Serie · Halve finale · Finale | 1 |
+| Technische onderdelen | Kwalificatie · Finale | maximaal 6, met **X** voor ongeldig |
+
+**Hoe het werkt.** Het invoerveld in de lijst blijft de snelle invoer: is er niets bijzonders, dan typ je daar één resultaat, precies zoals voorheen. Achter elke rij staat een knop **📋** (met het aantal rondes erin) die het rondescherm opent. Daar voeg je rondes toe met **＋ ronde toevoegen** en kies je de naam uit het lijstje dat bij het type onderdeel hoort. Bij een loopnummer krijgt elke ronde één tijdveld, bij een technisch onderdeel zes pogingvelden met een X-knop per poging. Met 🗑️ verwijder je een ronde (met bevestiging als er al iets is ingevuld).
+
+**Het aantal rondes is vrij.** Dezelfde ronde nog een keer toevoegen geeft "Serie 2"; in de lijst staan rondes in de volgorde van het vaste lijstje, met de genummerde variant direct achter zijn basis.
+
+**De beste prestatie telt.** Punten, de ▲ PR!-badge, de teamscore en het bijwerken van PR's bij het afronden gebruiken automatisch de beste geldige prestatie over de snelle invoer én alle rondes en pogingen heen — snelste tijd bij loop, verste of hoogste bij techniek. Een X telt nooit mee, DNS blijft DNS. In de lijst staat onder het PR-regeltje waar die beste prestatie vandaan komt ("beste: 4.55 · Finale"), en in de afrond-lijst staat de ronde tussen haakjes achter het onderdeel.
+
+#### Databasewijziging (eenmalig)
+```sql
+alter table public.resultaten add column if not exists ronde     text not null default '';
+alter table public.resultaten add column if not exists poging_nr int  not null default 1;
+
+alter table public.resultaten drop constraint if exists resultaten_status_check;
+alter table public.resultaten
+  add constraint resultaten_status_check check (status in ('ok', 'dns', 'x'));
+
+alter table public.resultaten drop constraint if exists resultaten_uniek;
+alter table public.resultaten
+  add constraint resultaten_uniek
+  unique (categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr);
+
+notify pgrst, 'reload schema';
+```
+Bestaande rijen krijgen `ronde = ''` en `poging_nr = 1` en blijven dus de snelle invoer. **Let op:** deze SQL vervangt de oude 4-koloms unique-constraint. Draai je de SQL wél en de nieuwe app-versie níet (of nog een oude versie uit de browsercache), dan geeft het opslaan `there is no unique or exclusion constraint matching the ON CONFLICT specification` — dan is de code te oud, niet de database.
+
+#### Technisch
+- **Nieuwe state:** `wdPogingen` (resKey → rijen mét ronde) naast `wdResultaten` (alleen de snelle invoer), plus `wdRondeCtx` voor het geopende rondescherm. Splitsen gebeurt in `wdZetLokaal()`, die `wdVerwerkResultaten()` per rij aanroept.
+- **Nieuwe helpers:** `wdRondeNamen()`, `wdAantalPogingen()`, `wdOnderdeelType()` (hint uit programma/onderdelenlijst, anders afgeleid via `isLagerBeter`), `wdPogingLijst()`, `wdRondesVan()` + `wdRondeSorteer()`, `wdBesteResultaat()` en `wdEffectief()`. Die laatste levert een object in dezelfde vorm als een `wdResultaten`-rij, waardoor `renderWdLijst()`, `renderWdScore()`, `wdUpdateRegel()`, `wdIndivRijHtml()` en `openWdAfronden()` grotendeels ongewijzigd konden blijven: zij vragen punten/PR aan `wdEffectief()`, terwijl het invoerveld nog steeds de snelle invoer toont.
+- **Opslaan:** `wdBewaarResultaat(..., ronde = "", poging = 1)` en `wdVerwijderResultaat(..., ronde = "", poging = 1)` — de standaardwaarden houden alle bestaande aanroepen werkend; de upsert gebruikt de nieuwe `onConflict`. Nieuw: `wdVerwijderRonde()` en `wdVerwijderAlles()` (die laatste gebruikt `wdIndivVerwijder`, zodat een atleet verwijderen ook zijn rondes opruimt).
+- **Rondescherm:** modal `#wdRondesModal` met `openWdRondes()`, `renderWdRondes()`, `wdRondeToevoegen()`, `wdRondeVerwijderen()`, `wdPogingInvoer()`, `wdPogingOngeldig()` en `wdNaRondes()`. Elke invoer wordt direct opgeslagen. Een ronde toevoegen slaat een lege poging 1 op; die rij houdt de ronde vast tot er een resultaat in staat.
+- **Klein meegenomen:** eigen (categorie-brede) onderdelen in de individuele modus kregen altijd type "technisch"; dat wordt nu afgeleid, zodat een eigen tijdonderdeel als loopnummer geldt.
+- Nieuwe CSS: `.wd-ronde-btn`, `.wd-ronde-blok`, `.wd-poging*`, `.wd-ronde-toevoegen`, `.wd-beste`; `.wd-rij` heeft een kolom extra (ook mobiel).
+
+> **Historie:** deze wijziging is eerder gepusht als commit `7c83fdd` ("Patch 59: rondes en pogingen"), maar raakte kwijt doordat patch 59 (meerdaagse open wedstrijd) vanuit een oudere kopie van `app.html` werd gecommit. Patch 60 zet hem terug bovenop de meerdaagse-wedstrijdfunctie; beide zitten er nu in.
+
+#### Wat niet getest kon worden
+De echte Supabase-calls en het gedrag in de browser. Wel los getest (26 + 14 tests): het splitsen van rijen, de beste prestatie bij tijd- én afstandsonderdelen, X en DNS die niet meetellen, de rondevolgorde inclusief genummerde varianten, de PR-vergelijking, en de opbouw van het rondescherm. JS-syntax gecontroleerd.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md` (`supabase_setup.sql` was al bijgewerkt)
+
+---
+
 ## [augustus 2026 — patch 59] — 2026-08-31
 
 ### 📅 Open wedstrijd kan nu meerdere dagen duren
