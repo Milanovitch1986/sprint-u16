@@ -1222,6 +1222,18 @@
     color:var(--muted); border-radius:var(--radius); padding:9px; font-size:13px; cursor:pointer;
   }
   .wd-sectie-add:hover { border-color:var(--accent); color:var(--accent); }
+  /* Atleet bij meerdere onderdelen (patch 58) */
+  .wd-ao-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:6px 12px; max-height:300px; overflow-y:auto; padding:4px 2px;
+    border:1px solid var(--border); border-radius:var(--radius);
+  }
+  .wd-ao-grid label {
+    display:flex; align-items:center; gap:8px; font-size:13px;
+    cursor:pointer; padding:4px 6px;
+  }
+  .wd-ao-grid input[type=checkbox] { width:auto; margin:0; accent-color:var(--accent); }
+  .wd-qa-zoek-wrap { position:relative; flex:1; min-width:130px; }
   @media (max-width: 640px) {
     .wd-quickadd .qa-row { flex-direction:column; align-items:stretch; }
     .wd-quickadd select, .wd-quickadd input { max-width:none; width:100%; }
@@ -1548,10 +1560,14 @@
       <div class="wd-quickadd" id="wd-quickadd" style="display:none;">
         <div class="qa-label">Snel toevoegen</div>
         <div class="qa-row">
+          <input id="wd-qa-zoek" placeholder="🔍 zoek atleet…" oninput="filterWdQaAtleten()" title="Typ een (deel van een) naam om de lijst te filteren">
           <select id="wd-qa-atleet"><option value="">Atleet…</option></select>
           <select id="wd-qa-disc"><option value="">Onderdeel…</option></select>
           <input id="wd-qa-res" placeholder="resultaat (optioneel)" onkeydown="if(event.key==='Enter')wdQuickAdd()">
           <button class="btn btn-primary btn-sm" onclick="wdQuickAdd()">＋ Toevoegen</button>
+        </div>
+        <div class="qa-row" style="margin-top:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="openWdAtleetOnderdelen()" title="Kies één atleet en vink meerdere onderdelen aan">👤 Atleet bij meerdere onderdelen…</button>
         </div>
       </div>
       <div id="wd-lijst"></div>
@@ -1568,7 +1584,32 @@
       <div id="wd-afrond-body"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal('wdAfrondModal')">Annuleren</button>
+        <button class="btn btn-primary" id="wd-afrond-beeindig-btn" style="display:none;" onclick="beeindigWedstrijddagZonderPr()">🏁 Wedstrijd beëindigen</button>
         <button class="btn btn-primary" id="wd-afrond-btn" onclick="verwerkWdAfronden()">PR's bijwerken</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEDSTRIJDDAG: atleet bij meerdere onderdelen tegelijk (patch 58) -->
+  <div class="modal-overlay" id="wdAtleetOnderdelenModal">
+    <div class="modal" style="max-width:560px;max-height:88vh;overflow-y:auto;">
+      <div class="modal-title">👤 Atleet bij meerdere onderdelen</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Kies één atleet en vink alle onderdelen aan waaraan hij of zij meedoet.
+        De resultaten vul je daarna gewoon per onderdeel in.
+      </div>
+      <div class="field">
+        <label>Atleet</label>
+        <input id="wd-ao-zoek" placeholder="🔍 zoek op naam…" oninput="filterWdAoAtleten()" style="margin-bottom:8px;">
+        <select id="wd-ao-atleet" onchange="renderWdAoOnderdelen()"><option value="">Kies een atleet…</option></select>
+      </div>
+      <div class="field">
+        <label>Onderdelen</label>
+        <div id="wd-ao-onderdelen" class="wd-ao-grid"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('wdAtleetOnderdelenModal')">Annuleren</button>
+        <button class="btn btn-primary" onclick="wdAoToevoegen()">＋ Toevoegen</button>
       </div>
     </div>
   </div>
@@ -6286,18 +6327,53 @@ function wdIndivDisciplines() {
   return uit;
 }
 
+// Atleten alfabetisch, eventueel gefilterd op een zoekterm (patch 58).
+// Wordt gebruikt door de snelinvoer-balk én door de modal "atleet bij
+// meerdere onderdelen", zodat beide dezelfde zoeklogica hebben.
+function wdAtletenGefilterd(zoek) {
+  const q = (zoek || "").trim().toLowerCase();
+  return atleten
+    .filter(a => !q || (a.naam || "").toLowerCase().includes(q))
+    .sort((a, b) => (a.naam || "").localeCompare(b.naam || ""));
+}
+
+// Vul één atleet-dropdown met de (gefilterde) lijst. Houdt de bestaande keuze
+// vast zolang die in de lijst blijft staan; bij precies één treffer wordt die
+// atleet meteen gekozen, zodat je na het typen direct verder kunt.
+function vulWdAtleetSelect(selectId, zoekId, leegLabel) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const zoekEl = document.getElementById(zoekId);
+  const zoek = zoekEl ? zoekEl.value : "";
+  const vorige = sel.value;
+  const lijst = wdAtletenGefilterd(zoek);
+  sel.innerHTML = `<option value="">${esc(leegLabel)}</option>` +
+    lijst.map(a => `<option value="${a.id}">${esc(a.naam || "")} (${a.geslacht || ""})</option>`).join("");
+  if (vorige && lijst.some(a => String(a.id) === String(vorige))) {
+    sel.value = vorige;
+  } else if (lijst.length === 1 && zoek.trim()) {
+    sel.value = String(lijst[0].id);
+  }
+  if (!lijst.length) {
+    sel.innerHTML = `<option value="">Geen atleet gevonden</option>`;
+  }
+}
+
 // Vul de selects van de snelinvoer-balk (atleten + onderdelen).
 function vulWdQuickAdd() {
-  const atlSel = document.getElementById("wd-qa-atleet");
+  vulWdAtleetSelect("wd-qa-atleet", "wd-qa-zoek", "Atleet…");
   const discSel = document.getElementById("wd-qa-disc");
-  if (atlSel) {
-    atlSel.innerHTML = `<option value="">Atleet…</option>` +
-      atleten.map(a => `<option value="${a.id}">${esc(a.naam || "")} (${a.geslacht || ""})</option>`).join("");
-  }
   if (discSel) {
+    const vorige = discSel.value;
     discSel.innerHTML = `<option value="">Onderdeel…</option>` +
       wdIndivDisciplines().map(d => `<option value="${esc(d.naam)}">${esc(d.naam)}</option>`).join("");
+    if (vorige) discSel.value = vorige;   // gekozen onderdeel niet verliezen bij een herrender
   }
+}
+
+// Zoekveld boven de atleet-keuze in de snelinvoer-balk (patch 58).
+function filterWdQaAtleten() {
+  vulWdAtleetSelect("wd-qa-atleet", "wd-qa-zoek", "Atleet…");
 }
 
 function renderWdIndividueel() {
@@ -6375,6 +6451,9 @@ async function wdQuickAdd() {
   const ok = await wdIndivVoegToe(disc, atleetId, raw || null);
   if (ok) {
     resInp.value = "";
+    const zoekEl = document.getElementById("wd-qa-zoek");
+    if (zoekEl) zoekEl.value = "";           // zoekterm wissen (patch 58)
+    vulWdQuickAdd();                          // volledige lijst weer tonen
     document.getElementById("wd-qa-atleet").value = "";
   }
 }
@@ -6446,11 +6525,86 @@ async function wdIndivVerwijder(discipline, atleetId) {
 // snelinvoer-balk en focus de atleet-keuze.
 function wdIndivAddPrompt(discipline) {
   const discSel = document.getElementById("wd-qa-disc");
+  const zoekEl = document.getElementById("wd-qa-zoek");
   const atlSel = document.getElementById("wd-qa-atleet");
   const balk = document.getElementById("wd-quickadd");
   if (discSel) discSel.value = discipline;
   if (balk) balk.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (atlSel) setTimeout(() => atlSel.focus(), 200);
+  // Focus op het zoekveld (patch 58): typen gaat sneller dan scrollen.
+  const doel = zoekEl || atlSel;
+  if (doel) setTimeout(() => doel.focus(), 200);
+}
+
+// ── Atleet bij meerdere onderdelen tegelijk (patch 58) ────────
+// De bestaande manier (per onderdeel een atleet toevoegen) blijft bestaan;
+// dit is de omgekeerde route: één atleet, meerdere onderdelen aanvinken.
+function openWdAtleetOnderdelen() {
+  const zoekEl = document.getElementById("wd-ao-zoek");
+  if (zoekEl) zoekEl.value = "";
+  const sel = document.getElementById("wd-ao-atleet");
+  if (sel) sel.value = "";
+  vulWdAtleetSelect("wd-ao-atleet", "wd-ao-zoek", "Kies een atleet…");
+  renderWdAoOnderdelen();
+  openModal("wdAtleetOnderdelenModal");
+  if (zoekEl) setTimeout(() => zoekEl.focus(), 150);
+}
+
+function filterWdAoAtleten() {
+  vulWdAtleetSelect("wd-ao-atleet", "wd-ao-zoek", "Kies een atleet…");
+  // Bij precies één treffer wordt de atleet automatisch gekozen; de
+  // onchange van de select vuurt dan niet, dus de lijst hier bijwerken.
+  renderWdAoOnderdelen();
+}
+
+// Aanvinklijst met alle onderdelen die individueel ingevoerd kunnen worden.
+// Onderdelen waar de atleet al bij staat, worden aangevinkt en uitgezet
+// (dubbel toevoegen kan niet).
+function renderWdAoOnderdelen() {
+  const cont = document.getElementById("wd-ao-onderdelen");
+  if (!cont) return;
+  const atleetId = document.getElementById("wd-ao-atleet")?.value || "";
+  cont.innerHTML = wdIndivDisciplines().map((d, i) => {
+    const staatAl = atleetId && wdResultaten[wdResKey(d.naam, String(atleetId))];
+    return `
+      <label title="${staatAl ? "Staat al in de lijst" : ""}">
+        <input type="checkbox" id="wd-ao-chk-${i}" ${staatAl ? "checked disabled" : ""}>
+        <span style="${staatAl ? "color:var(--muted);" : ""}">${esc(d.naam)}</span>
+      </label>`;
+  }).join("");
+}
+
+async function wdAoToevoegen() {
+  const cid = actieveCategorie?.id;
+  const atleetId = document.getElementById("wd-ao-atleet")?.value || "";
+  if (!cid || !wdWedstrijdId) { toast("Geen wedstrijd actief", "err"); return; }
+  if (!atleetId) { toast("Kies eerst een atleet", "err"); return; }
+  const disciplines = wdIndivDisciplines();
+  const gekozen = disciplines.filter((d, i) => {
+    const chk = document.getElementById(`wd-ao-chk-${i}`);
+    return chk && chk.checked && !chk.disabled;
+  });
+  if (!gekozen.length) { toast("Vink minstens één onderdeel aan", "err"); return; }
+
+  let toegevoegd = 0, fouten = 0;
+  for (const d of gekozen) {
+    const sleutel = String(atleetId);
+    if (wdResultaten[wdResKey(d.naam, sleutel)]) continue;   // stond er al
+    try {
+      await wdBewaarResultaat(d.naam, sleutel, atleetId, null, "ok");
+      toegevoegd++;
+    } catch(e) {
+      console.warn("Fout bij toevoegen onderdeel", d.naam, e.message);
+      fouten++;
+    }
+  }
+  renderWdIndividueel();
+  closeModal("wdAtleetOnderdelenModal");
+  const a = atleten.find(x => String(x.id) === String(atleetId));
+  const naam = a ? (a.naam || "atleet") : "atleet";
+  toast(fouten
+    ? `${naam}: ${toegevoegd} toegevoegd · ${fouten} mislukt`
+    : `${naam} toegevoegd bij ${toegevoegd} onderdeel${toegevoegd === 1 ? "" : "en"} ✓`,
+    fouten ? "err" : "ok");
 }
 
 // ── Live invoer: individueel ──────────────────────────────────
@@ -6657,10 +6811,19 @@ function openWdAfronden() {
 
   const body = document.getElementById("wd-afrond-body");
   if (!wdAfrondKandidaten.length) {
-    body.innerHTML = `<div style="font-size:13px;color:var(--muted);">Geen resultaten gevonden die beter zijn dan het huidige PR.</div>`;
+    // Patch 58: geen PR's = niets op te slaan. Voorheen bleef alleen
+    // "Annuleren" over; nu kun je de wedstrijd hier netjes beëindigen.
+    body.innerHTML = `
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+        <b style="color:var(--text);font-size:14px;">Geen nieuwe PR's deze wedstrijd.</b><br>
+        Geen enkel ingevoerd resultaat is beter dan het huidige PR, dus er is niets om op te slaan.<br>
+        Met <b>🏁 Wedstrijd beëindigen</b> sluit je de wedstrijddag af; de ingevoerde resultaten worden dan gewist.
+      </div>`;
     document.getElementById("wd-afrond-btn").style.display = "none";
+    zetWdBeeindigBtn(true);
   } else {
     document.getElementById("wd-afrond-btn").style.display = "";
+    zetWdBeeindigBtn(false);
     body.innerHTML = `
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
         ${wdAfrondKandidaten.length} resulta${wdAfrondKandidaten.length === 1 ? "at is" : "ten zijn"} beter dan het huidige PR. Vink aan wat je wilt overnemen.
@@ -6674,6 +6837,33 @@ function openWdAfronden() {
         </label>`).join("")}`;
   }
   openModal("wdAfrondModal");
+}
+
+// Toon/verberg de knop "Wedstrijd beëindigen" in de afrond-modal (patch 58).
+function zetWdBeeindigBtn(aan) {
+  const b = document.getElementById("wd-afrond-beeindig-btn");
+  if (b) b.style.display = aan ? "" : "none";
+}
+
+// Afsluiten zonder PR's (patch 58). Er valt niets bij te werken, dus de
+// ingevoerde resultaten van deze wedstrijd worden gewist en de wedstrijddag
+// wordt gesloten. Onomkeerbaar, daarom eerst een bevestiging.
+async function beeindigWedstrijddagZonderPr() {
+  const cid = actieveCategorie?.id;
+  if (!cid || !wdWedstrijdId) return;
+  const ok = await bevestig("Wedstrijd beëindigen",
+    "Weet je het zeker? Alle ingevoerde resultaten van deze wedstrijd worden gewist. Dit kan niet ongedaan worden gemaakt.");
+  if (!ok) return;
+  try {
+    const { error } = await sb.from("resultaten").delete()
+      .eq("categorie_id", cid)
+      .eq("wedstrijd_id", wdWedstrijdId);
+    if (error) throw error;
+    wdResultaten = {};
+    closeModal("wdAfrondModal");
+    toast("Wedstrijd beëindigd — resultaten gewist ✓");
+    sluitWedstrijddag();
+  } catch(e) { toast("Fout bij beëindigen: " + e.message, "err"); }
 }
 
 async function verwerkWdAfronden() {

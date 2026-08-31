@@ -6,6 +6,46 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 58] — 2026-08-31
+
+### 🏟️ Wedstrijddag: zoeken op atleet, atleet bij meerdere onderdelen, afronden zonder PR's
+
+<!--RELEASENOTE
+versie: Patch 58
+titel: 🏟️ Wedstrijddag makkelijker invoeren
+type: update
+beschrijving: Drie verbeteringen in de Wedstrijddag-tab. Je kunt nu zoeken op naam bij het toevoegen van een atleet, je kunt één atleet in één keer bij meerdere onderdelen zetten, en als niemand een PR heeft gehaald kun je de wedstrijd netjes beëindigen in plaats van alleen annuleren.
+-->
+
+Drie punten uit de wedstrijddag-test van 29/30 augustus, alle drie in de **individuele modus** (open wedstrijden) van de Wedstrijddag-tab.
+
+**1. Zoeken op atletennaam.**
+De snelinvoer-balk heeft een zoekveld 🔍 vóór de atleet-keuze. Typen filtert de dropdown live (op elk deel van de naam, hoofdletterongevoelig); bij precies één treffer wordt die atleet meteen gekozen. De lijst staat nu ook alfabetisch. Bij ＋ Toevoegen wordt de zoekterm gewist zodat de volledige lijst weer klaarstaat. Zijn er geen treffers, dan meldt de dropdown "Geen atleet gevonden".
+
+**2. Atleet bij meerdere onderdelen tegelijk.**
+Nieuwe knop **👤 Atleet bij meerdere onderdelen…** onder de snelinvoer-balk. Je kiest één atleet (ook hier met zoekveld) en vinkt in één scherm alle onderdelen aan waaraan hij of zij meedoet. Onderdelen waar de atleet al bij staat, staan vast aangevinkt en zijn niet aan te vinken, zodat dubbel toevoegen niet kan. De bestaande route (per onderdeel een atleet toevoegen) blijft ongewijzigd bestaan.
+
+**3. Afronden als niemand een PR heeft gehaald.**
+Voorheen bleef in de afrond-modal alleen **Annuleren** over als geen enkel resultaat beter was dan het PR — er was dan geen nette manier om af te sluiten. Nu verschijnt de tekst "Geen nieuwe PR's deze wedstrijd" plus de knop **🏁 Wedstrijd beëindigen**. Die vraagt eerst om bevestiging, wist daarna de ingevoerde resultaten van deze wedstrijd en sluit de wedstrijddag. Zijn er wél PR-kandidaten, dan is het scherm ongewijzigd (PR's bijwerken).
+
+#### Technisch
+- Nieuwe helpers `wdAtletenGefilterd(zoek)` (alfabetisch + filter op naam) en `vulWdAtleetSelect(selectId, zoekId, leegLabel)` (vult één atleet-dropdown, houdt de bestaande keuze vast, kiest bij één treffer automatisch). `vulWdQuickAdd()` gebruikt deze helper en bewaart nu ook de gekozen onderdeel-waarde bij een herrender; `filterWdQaAtleten()` hangt aan het nieuwe zoekveld `#wd-qa-zoek`.
+- Nieuwe modal `#wdAtleetOnderdelenModal` met `openWdAtleetOnderdelen()`, `filterWdAoAtleten()`, `renderWdAoOnderdelen()` en `wdAoToevoegen()`. Toevoegen gaat via de bestaande `wdBewaarResultaat(discipline, sleutel, atleetId, null, "ok")` — dus per onderdeel één rij in `resultaten` zonder resultaatwaarde, precies zoals de snelinvoer dat al deed.
+- `openWdAfronden()` zet bij nul kandidaten de nieuwe knop `#wd-afrond-beeindig-btn` aan via `zetWdBeeindigBtn()`; `beeindigWedstrijddagZonderPr()` doet de bevestiging, de `delete` op `resultaten` (op `categorie_id` + `wedstrijd_id`) en `sluitWedstrijddag()`.
+- `wdIndivAddPrompt()` zet de focus op het zoekveld in plaats van op de dropdown.
+- Nieuwe CSS: `.wd-ao-grid` (aanvinkraster in de modal).
+
+**Geen databasewijziging** — patch 58 gebruikt de bestaande tabel `resultaten`.
+
+#### Wat niet getest kon worden
+De echte Supabase-calls (het wissen van de resultaten bij beëindigen, en het toevoegen van meerdere onderdelen achter elkaar) en het gedrag in de browser zelf. De pure logica (zoekfilter, automatische keuze bij één treffer, behouden van de onderdeelkeuze, vergrendelen van al toegevoegde onderdelen) is los getest, en het JS is op syntax gecontroleerd.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+**Nog open uit dezelfde test (volgende patch):** meerdere pogingen per technisch onderdeel (max 6, met X voor ongeldig) en meerdere rondes per onderdeel (kwalificatie/serie/halve finale/finale, vrij aantal, naam uit een vast lijstje), met automatisch de beste prestatie als eindresultaat. Dat vraagt wél een aanpassing aan de tabel `resultaten`.
+
+---
+
 ## [augustus 2026 — patch 57] — 2026-08-24
 
 ### 🔀 Nieuwste release notes bovenaan (ook infra-notes)
