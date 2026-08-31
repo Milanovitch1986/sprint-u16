@@ -8,45 +8,39 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ## [augustus 2026 — patch 59] — 2026-08-31
 
-### 🔁 Wedstrijddag: rondes en pogingen per onderdeel
+### 📅 Open wedstrijd kan nu meerdere dagen duren
 
 <!--RELEASENOTE
 versie: Patch 59
-titel: 🔁 Rondes en pogingen op de wedstrijddag
-type: update
-beschrijving: Je kunt nu meerdere rondes per onderdeel invoeren — serie, halve finale en finale bij de loopnummers, kwalificatie en finale bij de technische onderdelen. Bij een technisch onderdeel kun je per ronde tot zes pogingen invullen, met een X voor een ongeldige poging. De app pakt automatisch de beste prestatie voor de punten en de PR's.
+titel: 📅 Meerdaagse open wedstrijd
+type: feature
+beschrijving: Bij het aanmaken van een open wedstrijd in de Wedstrijddag-tab kun je nu aangeven dat de wedstrijd meerdere dagen duurt (bijvoorbeeld een NK). Vink "Meerdaagse wedstrijd" aan en kies een einddatum; de kaart toont dan het hele datumbereik, bijvoorbeeld "13 – 14 juni 2026". Eendaagse wedstrijden blijven precies zoals ze waren.
 -->
 
-Het laatste punt uit de wedstrijddag-test: per atleet per onderdeel kon maar één resultaat worden ingevoerd. Nu kan een onderdeel meerdere rondes hebben, en een technische ronde meerdere pogingen.
+Sommige open wedstrijden, zoals een nationaal kampioenschap, duren meer dan één dag. Bij het aanmaken van een open wedstrijd (Wedstrijddag-tab → ➕ Open wedstrijd) staat nu onder "Datum" een vinkje **Meerdaagse wedstrijd (bijv. NK)**. Vink je dat aan, dan verschijnt een veld **Einddatum** (standaard de dag ná de startdatum). De kaart in de Wedstrijddag-lijst toont vervolgens het datumbereik, bijv. "13 – 14 juni 2026". Vink je niets aan, dan verandert er niets: eendaagse wedstrijden tonen één datum, precies zoals voorheen.
 
-**Opbouw:** onderdeel → ronde → poging(en).
+#### Databasewijziging (eenmalig)
+Er is één nieuwe kolom nodig op de tabel `wedstrijden`. Draai deze SQL eenmalig in de Supabase SQL-editor:
 
-| Type onderdeel | Rondes (vast lijstje) | Pogingen per ronde |
-|---|---|---|
-| Looponderdelen (en estafette) | Serie · Halve finale · Finale | 1 |
-| Technische onderdelen | Kwalificatie · Finale | maximaal 6, met **X** voor ongeldig |
+```sql
+ALTER TABLE public.wedstrijden ADD COLUMN einddatum date;
+```
 
-**Hoe het werkt in de app.**
-Het invoerveld in de lijst blijft de snelle invoer: is er niets bijzonders, dan typ je daar gewoon één resultaat, precies zoals voorheen. Daarnaast staat achter elke rij een knop **📋** (met het aantal rondes erin) die het rondescherm opent. Daar voeg je rondes toe met **＋ ronde toevoegen**; de naam kies je uit het lijstje dat bij het type onderdeel hoort. Bij een loopnummer krijgt elke ronde één tijdveld, bij een technisch onderdeel zes pogingvelden met een X-knop per poging. Een ronde kun je met 🗑️ weer verwijderen (met bevestiging als er al iets is ingevuld).
-
-**Het aantal rondes is vrij.** Voeg je dezelfde ronde nog een keer toe, dan wordt hij genummerd: "Serie 2". In de lijst staan rondes altijd in de volgorde van het vaste lijstje, met een genummerde variant direct achter zijn basis.
-
-**De beste prestatie telt.** Punten, de ▲ PR!-badge, de teamscore en het bijwerken van PR's bij het afronden gebruiken automatisch de beste geldige prestatie over de snelle invoer én alle rondes en pogingen heen — snelste tijd bij loop, verste of hoogste bij techniek. Een X telt nooit mee, en DNS blijft DNS. Onder het PR-regeltje in de lijst staat waar die beste prestatie vandaan komt ("beste: 4.55 · Finale"), en in de afrond-lijst staat de ronde tussen haakjes achter het onderdeel.
+Bestaande wedstrijden houden `einddatum = NULL` (eendaags). Rechten/RLS op `wedstrijden` blijven ongewijzigd — de bestaande categorie-policies gelden ook voor deze kolom. Zolang de kolom nog niet bestaat, geeft het aanmaken van een open wedstrijd een nette foutmelding die naar deze SQL verwijst.
 
 #### Technisch
-- **Database:** tabel `resultaten` uitgebreid met `ronde text not null default ''` en `poging_nr int not null default 1`; de status-check accepteert nu ook `'x'` (ongeldige poging); de unique-constraint is `(categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr)` geworden (`resultaten_uniek`). Bestaande rijen kregen automatisch `ronde = ''` en `poging_nr = 1` en blijven dus de snelle invoer. `supabase_setup.sql` is bijgewerkt voor nieuwe installaties.
-- **Nieuwe state:** `wdPogingen` (resKey → lijst met rijen mét ronde) naast het bestaande `wdResultaten` (alleen de snelle invoer), en `wdRondeCtx` voor het geopende rondescherm. Splitsen gebeurt in de nieuwe helper `wdZetLokaal()`, die `wdVerwerkResultaten()` per rij aanroept.
-- **Nieuwe helpers:** `wdRondeNamen()`, `wdAantalPogingen()`, `wdOnderdeelType()` (hint uit programma/onderdelenlijst, anders afgeleid via `isLagerBeter`), `wdPogingLijst()`, `wdRondesVan()` + `wdRondeSorteer()`, `wdBesteResultaat()` en `wdEffectief()`. Die laatste geeft een object in dezelfde vorm als een `wdResultaten`-rij, zodat de bestaande punten-, PR- en scorelogica ongewijzigd kon blijven werken — `renderWdLijst()`, `renderWdScore()`, `wdUpdateRegel()`, `wdIndivRijHtml()` en `openWdAfronden()` gebruiken nu `wdEffectief()` voor punten/PR en `wdResultaten` alleen nog voor de waarde in het invoerveld.
-- **Opslaan:** `wdBewaarResultaat()` en `wdVerwijderResultaat()` hebben er de parameters `ronde` en `poging` bij gekregen (standaard `""` / `1`, dus alle bestaande aanroepen werken ongewijzigd); de upsert gebruikt de nieuwe `onConflict`. Nieuw: `wdVerwijderRonde()` en `wdVerwijderAlles()`. `wdIndivVerwijder()` gebruikt die laatste, zodat een atleet verwijderen ook zijn rondes opruimt.
-- **Rondescherm:** modal `#wdRondesModal` met `openWdRondes()`, `renderWdRondes()`, `wdRondeToevoegen()`, `wdRondeVerwijderen()`, `wdPogingInvoer()`, `wdPogingOngeldig()` en `wdNaRondes()`. Elke invoer wordt direct opgeslagen, net als de rest van de wedstrijddag.
-- **Klein meegenomen:** eigen (categorie-brede) onderdelen in de individuele modus kregen altijd type "technisch"; dat wordt nu afgeleid, zodat een eigen tijdonderdeel als loopnummer behandeld wordt.
-- Nieuwe CSS: `.wd-ronde-btn`, `.wd-ronde-blok`, `.wd-poging*`, `.wd-ronde-toevoegen`, `.wd-beste`; `.wd-rij` heeft een kolom extra (ook in de mobiele variant).
+- Formulier `#nieuweOpenWedstrijdModal`: nieuwe checkbox `#open-wedstrijd-meerdaags` (`onchange="toggleOpenWedstrijdEinddatum()"`) en veld `#open-wedstrijd-einddatum-veld` (standaard verborgen).
+- `toggleOpenWedstrijdEinddatum()` toont/verbergt het einddatum-veld en vult bij aanvinken de einddatum standaard met startdatum + 1 dag (lokale datum via `getFullYear/getMonth/getDate`, geen UTC-rollback).
+- `openNieuweOpenWedstrijd()` reset de checkbox + einddatum bij elke keer openen.
+- `maakOpenWedstrijd()` neemt `einddatum` mee in de insert (`null` bij eendaags) en valideert bij meerdaags dat de einddatum ná de startdatum ligt. Foutmelding-hint uitgebreid voor een ontbrekende `einddatum`-kolom.
+- Nieuwe helper `formatDatumBereik(startISO, eindISO)` toont een enkele datum of een net datumbereik (zelfde maand → "13 – 14 juni 2026"; zelfde jaar, andere maand → "30 juni – 2 juli 2026"; ander jaar → beide datums volledig). `datumTekst` in `renderWedstrijddagLijst()` gebruikt nu deze helper, dus de kaarten tonen automatisch het bereik.
+
+**Geen wijziging aan de Wedstrijden-tab (competitiewedstrijden)** — de einddatum-optie zit alleen bij open wedstrijden.
 
 #### Wat niet getest kon worden
-De echte Supabase-calls (upsert met de nieuwe unique-constraint, verwijderen per ronde) en het gedrag in de browser. Wel los getest: het splitsen van rijen, de bepaling van de beste prestatie bij tijd- én afstandsonderdelen, X en DNS die niet meetellen, de rondevolgorde inclusief genummerde varianten, de PR-vergelijking op basis van de beste prestatie, en de opbouw van het rondescherm (6 pogingvelden + X bij techniek, 1 veld zonder X bij loop). JS-syntax gecontroleerd.
+De echte Supabase-call (of `einddatum` correct wordt opgeslagen en teruggelezen) en het gedrag in de browser zelf. De datum-bereiklogica en de validatie zijn los getest, en het JS is op syntax gecontroleerd.
 
-**Bestanden gewijzigd:** `app.html`, `supabase_setup.sql`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
-Supabase: kolommen `ronde` + `poging_nr` op `resultaten`, status-check met `'x'`, unique-constraint `resultaten_uniek`.
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
 
 ---
 

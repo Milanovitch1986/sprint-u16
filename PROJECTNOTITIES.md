@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 24 augustus 2026 (patch 57)*
+*AV Sprint Breda · Laatste update: 31 augustus 2026 (patch 59)*
 
 ---
 
@@ -30,7 +30,7 @@
 | `prestaties` | PR's per atleet per discipline |
 | `resultaten` | Live wedstrijdresultaten per wedstrijd (individueel per atleet, estafette per ploeg via kolom `sleutel`; status `ok`/`dns`) — patch 47 |
 | `onderdelen` | Zelf toegevoegde onderdelen (naam, type, geslacht) — categorie-breed (`atleet_id` leeg) of per atleet (`atleet_id` gevuld, patch 41) — patch 40 |
-| `wedstrijden` | Wedstrijden (naam, datum, locatie, notities, `is_finale`) |
+| `wedstrijden` | Wedstrijden (naam, datum, `einddatum`, locatie, notities, `is_finale`, `is_open`) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
 | `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
@@ -43,14 +43,8 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
-### Rondes en pogingen op de wedstrijddag (patch 59, aug 2026)
-Per atleet per onderdeel kon maar één resultaat bestaan. Nu geldt de opbouw **onderdeel → ronde → poging**. Looponderdelen en estafettes: rondes uit `Serie / Halve finale / Finale`, 1 tijd per ronde. Technische onderdelen: `Kwalificatie / Finale`, maximaal 6 pogingen per ronde, met status `x` voor een ongeldige poging. Het aantal rondes is vrij: dezelfde naam nog eens toevoegen geeft "Serie 2" (sortering via `wdRondeSorteer()`, genummerde variant direct achter zijn basis).
-- **Schemawijziging:** `resultaten` heeft `ronde text not null default ''` en `poging_nr int not null default 1`; status-check nu `('ok','dns','x')`; unique-constraint is `resultaten_uniek (categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr)`. **Ronde `''` + poging 1 = de snelle invoer** uit de lijst, dus alle rijen van vóór patch 59 blijven werken.
-- **Twee stores:** `wdResultaten` houdt alleen de snelle invoer, `wdPogingen` (resKey → lijst) de rijen mét ronde. `wdZetLokaal()` splitst; `wdVerwerkResultaten()` roept die per rij aan.
-- **Kern van de aanpak:** `wdBesteResultaat()` bepaalt de beste geldige prestatie over snelle invoer + alle pogingen (X en DNS tellen niet mee), en `wdEffectief()` verpakt die als een object met dezelfde vorm als een `wdResultaten`-rij. Daardoor konden `renderWdLijst()`, `renderWdScore()`, `wdUpdateRegel()`, `wdIndivRijHtml()` en `openWdAfronden()` grotendeels blijven zoals ze waren: zij vragen punten/PR aan `wdEffectief()`, terwijl het invoerveld in de lijst nog steeds de snelle invoer toont. **Bij een volgende wijziging in de wedstrijddag: gebruik `wdEffectief()` als je met "het resultaat" rekent, en `wdResultaten` alleen voor het snelle-invoerveld.**
-- **Opslaan:** `wdBewaarResultaat(..., ronde = "", poging = 1)` en `wdVerwijderResultaat(..., ronde = "", poging = 1)` — standaardwaarden houden alle oude aanroepen werkend. Daarnaast `wdVerwijderRonde()` en `wdVerwijderAlles()` (die laatste gebruikt `wdIndivVerwijder`, zodat een atleet verwijderen ook zijn rondes wist).
-- **Rondescherm:** modal `#wdRondesModal`, geopend met de 📋-knop achter elke rij (`wdRondeKnopHtml()` toont het aantal rondes). Een ronde toevoegen slaat een lege poging 1 op — die rij houdt de ronde vast tot er een resultaat in staat; leegmaken van poging 1 wist de ronde dus niet, hogere pogingen wel.
-- **Let op bij het type:** `wdOnderdeelType(discipline, hint)` gebruikt de hint uit het programma (`item.type`) of de onderdelenlijst en leidt het anders af met `isLagerBeter()` (tijd = loop, afstand/hoogte = technisch). Dat bepaalt zowel het rondelijstje als het aantal pogingvelden.
+### Meerdaagse open wedstrijd (patch 59, augustus 2026)
+**Databasewijziging (eenmalig):** kolom `wedstrijden.einddatum date` (nullable) toegevoegd via `ALTER TABLE public.wedstrijden ADD COLUMN einddatum date;`. `NULL` = eendaags; RLS/rechten op `wedstrijden` ongewijzigd (bestaande categorie-policies gelden ook voor deze kolom). Een open wedstrijd kan nu meerdere dagen beslaan (bijv. NK). In `#nieuweOpenWedstrijdModal` staat onder "Datum" de checkbox `#open-wedstrijd-meerdaags`; aanvinken toont `#open-wedstrijd-einddatum-veld` via `toggleOpenWedstrijdEinddatum()`, die de einddatum standaard vult met start + 1 dag (lokale datum, geen UTC-rollback). `openNieuweOpenWedstrijd()` reset checkbox + einddatum bij elke keer openen. `maakOpenWedstrijd()` stuurt `einddatum` mee (`null` bij eendaags) en eist bij meerdaags dat eind ná start ligt. Nieuwe helper `formatDatumBereik(startISO, eindISO)` maakt de weergave: zelfde maand → "13 – 14 juni 2026", zelfde jaar andere maand → "30 juni – 2 juli 2026", ander jaar → beide datums volledig. `datumTekst()` in `renderWedstrijddagLijst()` gebruikt deze helper, dus zowel open- als competitiekaarten tonen automatisch een bereik als er een einddatum is (competitiewedstrijden hebben die niet → gedragen zich als voorheen). **De einddatum-optie zit alleen bij open wedstrijden** — de Wedstrijden-tab (competitie) is niet aangepast. De datum ín het geopende wedstrijddag-scherm zelf toont nog de startdatum (bewust buiten scope gehouden). Foutmelding-hint in `maakOpenWedstrijd()` uitgebreid: bij een ontbrekende kolom `einddatum` wordt naar de SQL verwezen.
 
 ### Wedstrijddag individuele modus: zoeken, meerdere onderdelen, afronden zonder PR (patch 58, aug 2026)
 Drie verbeteringen uit de wedstrijddag-test, alle in de individuele modus (open wedstrijden). **Geen schemawijziging.**

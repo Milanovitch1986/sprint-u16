@@ -1170,7 +1170,7 @@
     background:rgba(245,166,35,.12); color:var(--accent); text-transform:uppercase;
   }
   .wd-rij {
-    display:grid; grid-template-columns: minmax(120px,1.4fr) 110px minmax(80px,1fr) 70px 60px 54px;
+    display:grid; grid-template-columns: minmax(120px,1.4fr) 110px minmax(80px,1fr) 70px 60px;
     gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--border);
     font-size:13px;
   }
@@ -1233,52 +1233,13 @@
     cursor:pointer; padding:4px 6px;
   }
   .wd-ao-grid input[type=checkbox] { width:auto; margin:0; accent-color:var(--accent); }
-  /* Rondes en pogingen (patch 59) */
-  .wd-ronde-btn {
-    font-size:11px; padding:3px 7px; border-radius:6px; cursor:pointer; white-space:nowrap;
-    background:var(--surface2); border:1px solid var(--border); color:var(--muted);
-  }
-  .wd-ronde-btn.actief { border-color:var(--accent); color:var(--accent); }
-  .wd-ronde-blok {
-    border:1px solid var(--border); border-radius:var(--radius);
-    padding:10px 12px; margin-bottom:10px; background:var(--surface2);
-  }
-  .wd-ronde-kop { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-  .wd-ronde-kop b { font-size:14px; }
-  .wd-ronde-del {
-    font-size:12px; padding:2px 7px; border-radius:6px; cursor:pointer;
-    background:transparent; border:1px solid var(--border); color:var(--muted);
-  }
-  .wd-ronde-del:hover { border-color:var(--accent2); color:var(--accent2); }
-  .wd-poging-grid { display:flex; gap:8px; flex-wrap:wrap; }
-  .wd-poging { display:flex; align-items:center; gap:4px; }
-  .wd-poging-nr {
-    font-size:10px; color:var(--muted); width:14px; text-align:right; font-weight:700;
-  }
-  .wd-poging input {
-    width:82px; background:var(--bg); border:1px solid var(--border); color:var(--text);
-    border-radius:6px; padding:6px 8px; font-size:13px; font-family:'Barlow',sans-serif;
-  }
-  .wd-poging input:disabled { opacity:.5; }
-  .wd-poging-x {
-    font-size:11px; font-weight:700; padding:4px 7px; border-radius:6px; cursor:pointer;
-    background:transparent; border:1px solid var(--border); color:var(--muted);
-  }
-  .wd-poging-x.actief { background:rgba(232,56,61,.12); border-color:var(--accent2); color:var(--accent2); }
-  .wd-ronde-toevoegen { display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
-  .wd-ronde-toevoegen select {
-    flex:1; min-width:140px; background:var(--surface2); border:1px solid var(--border);
-    color:var(--text); border-radius:var(--radius); padding:9px 11px; font-size:14px;
-    font-family:'Barlow',sans-serif;
-  }
-  .wd-beste { font-size:11px; color:var(--muted); display:block; }
   .wd-qa-zoek-wrap { position:relative; flex:1; min-width:130px; }
   @media (max-width: 640px) {
     .wd-quickadd .qa-row { flex-direction:column; align-items:stretch; }
     .wd-quickadd select, .wd-quickadd input { max-width:none; width:100%; }
   }
   @media (max-width: 640px) {
-    .wd-rij { grid-template-columns: minmax(100px,1.2fr) 90px 60px 46px 44px; }
+    .wd-rij { grid-template-columns: minmax(100px,1.2fr) 90px 60px 46px; }
     .wd-rij .wd-pr { display:none; }
     .wd-rij input { max-width:90px; }
     .wd-scorebalk { gap:14px; }
@@ -1625,22 +1586,6 @@
         <button class="btn btn-ghost" onclick="closeModal('wdAfrondModal')">Annuleren</button>
         <button class="btn btn-primary" id="wd-afrond-beeindig-btn" style="display:none;" onclick="beeindigWedstrijddagZonderPr()">🏁 Wedstrijd beëindigen</button>
         <button class="btn btn-primary" id="wd-afrond-btn" onclick="verwerkWdAfronden()">PR's bijwerken</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- WEDSTRIJDDAG: rondes en pogingen per atleet/onderdeel (patch 59) -->
-  <div class="modal-overlay" id="wdRondesModal">
-    <div class="modal" style="max-width:640px;max-height:88vh;overflow-y:auto;">
-      <div class="modal-title">📋 Rondes &amp; pogingen</div>
-      <div id="wd-rondes-kop" style="margin-bottom:14px;"></div>
-      <div id="wd-rondes-body"></div>
-      <div class="wd-ronde-toevoegen">
-        <select id="wd-ronde-keuze"></select>
-        <button class="btn btn-ghost btn-sm" onclick="wdRondeToevoegen()">＋ ronde toevoegen</button>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="closeModal('wdRondesModal'); wdNaRondes()">Klaar</button>
       </div>
     </div>
   </div>
@@ -2176,6 +2121,13 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Een losse wedstrijd om individuele resultaten in te voeren. Deze staat alleen in de Wedstrijddag-tab, niet in de Wedstrijden-tab.</div>
     <div class="field"><label>Naam</label><input type="text" id="open-wedstrijd-naam" placeholder="bijv. Baanwedstrijd Roosendaal"></div>
     <div class="field"><label>Datum</label><input type="date" id="open-wedstrijd-datum"></div>
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text);font-size:14px;">
+        <input type="checkbox" id="open-wedstrijd-meerdaags" onchange="toggleOpenWedstrijdEinddatum()" style="width:auto;margin:0;accent-color:var(--accent);cursor:pointer;">
+        Meerdaagse wedstrijd (bijv. NK)
+      </label>
+    </div>
+    <div class="field" id="open-wedstrijd-einddatum-veld" style="display:none;"><label>Einddatum</label><input type="date" id="open-wedstrijd-einddatum"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('nieuweOpenWedstrijdModal')">Annuleren</button>
       <button class="btn btn-primary" onclick="maakOpenWedstrijd()">Aanmaken</button>
@@ -5929,9 +5881,7 @@ let wdPloeg             = "A";
 let wdProgramma         = [];   // programmaregels van het actieve geslacht
 let wdOpstellingPerPloeg = {};  // { A: {slotKey: atleetId}, B: {...}, ... }
 let wdPloegen           = [];   // ploegen met een opgeslagen (gevulde) opstelling
-let wdResultaten        = {};   // resKey -> { discipline, atleetId, sleutel, resultaat, status } — snelle invoer (ronde "")
-let wdPogingen          = {};   // resKey -> [ { ronde, poging, resultaat, status, ... } ] — rijen mét ronde (patch 59)
-let wdRondeCtx          = null;  // context van het geopende rondescherm (patch 59)
+let wdResultaten        = {};   // resKey -> { discipline, atleetId, sleutel, resultaat, status }
 let wdAfrondKandidaten  = [];   // kandidaten voor PR-bijwerking in de afrond-modal
 let wdModus             = "competitie"; // "competitie" (met opstelling + teamscore) of "individueel" (gewone wedstrijd, patch 51)
 
@@ -5969,9 +5919,7 @@ function renderWedstrijddagLijst() {
   const competitie = wedstrijden.filter(w => !w.is_open && !isWedstrijdAfgelopen(w))
     .sort((a, b) => (a.datum || "9999").localeCompare(b.datum || "9999")); // eerstvolgende bovenaan
 
-  const datumTekst = (w) => w.datum
-    ? new Date(w.datum).toLocaleDateString("nl-NL", { day:"numeric", month:"long", year:"numeric" })
-    : "Geen datum";
+  const datumTekst = (w) => formatDatumBereik(w.datum, w.einddatum);
 
   const kaart = (w) => {
     const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
@@ -6025,7 +5973,48 @@ function openNieuweOpenWedstrijd() {
   const d = new Date();
   const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   document.getElementById("open-wedstrijd-datum").value = iso;
+  // Meerdaags standaard uit: checkbox leeg, einddatum-veld verborgen en leeg.
+  document.getElementById("open-wedstrijd-meerdaags").checked = false;
+  document.getElementById("open-wedstrijd-einddatum").value = "";
+  document.getElementById("open-wedstrijd-einddatum-veld").style.display = "none";
   openModal("nieuweOpenWedstrijdModal");
+}
+
+// Toont/verbergt het einddatum-veld op basis van de checkbox "meerdaagse wedstrijd".
+// Bij aanvinken vult het de einddatum standaard met startdatum + 1 dag.
+function toggleOpenWedstrijdEinddatum() {
+  const aan   = document.getElementById("open-wedstrijd-meerdaags").checked;
+  const veld  = document.getElementById("open-wedstrijd-einddatum-veld");
+  const eindEl = document.getElementById("open-wedstrijd-einddatum");
+  veld.style.display = aan ? "" : "none";
+  if (aan && !eindEl.value) {
+    const startVal = document.getElementById("open-wedstrijd-datum").value;
+    if (startVal) {
+      const dt = new Date(startVal);
+      dt.setDate(dt.getDate() + 1);
+      eindEl.value = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+    }
+  }
+}
+
+// Toont een datum of een datumbereik in het Nederlands.
+//  - geen einddatum (of gelijk aan start):        "13 juni 2026"
+//  - zelfde maand + jaar:                          "13 – 14 juni 2026"
+//  - zelfde jaar, andere maand:                    "30 juni – 2 juli 2026"
+//  - ander jaar:                                   "31 december 2026 – 2 januari 2027"
+function formatDatumBereik(startISO, eindISO) {
+  if (!startISO) return "Geen datum";
+  const opts = { day: "numeric", month: "long", year: "numeric" };
+  const start = new Date(startISO);
+  const startTekst = start.toLocaleDateString("nl-NL", opts);
+  if (!eindISO || eindISO === startISO) return startTekst;
+  const eind = new Date(eindISO);
+  const eindTekst = eind.toLocaleDateString("nl-NL", opts);
+  const zelfdeJaar  = start.getFullYear() === eind.getFullYear();
+  const zelfdeMaand = zelfdeJaar && start.getMonth() === eind.getMonth();
+  if (zelfdeMaand) return `${start.getDate()} – ${eindTekst}`;
+  if (zelfdeJaar)  return `${start.toLocaleDateString("nl-NL", { day:"numeric", month:"long" })} – ${eindTekst}`;
+  return `${startTekst} – ${eindTekst}`;
 }
 
 async function maakOpenWedstrijd() {
@@ -6035,9 +6024,19 @@ async function maakOpenWedstrijd() {
   const datum = document.getElementById("open-wedstrijd-datum").value; // YYYY-MM-DD uit <input type=date>
   if (!naam)  { toast("Vul een naam in", "err"); return; }
   if (!datum) { toast("Kies een datum", "err"); return; }
+
+  // Meerdaags: einddatum ophalen en controleren. Bij een eendaagse wedstrijd blijft einddatum leeg (null).
+  const meerdaags = document.getElementById("open-wedstrijd-meerdaags").checked;
+  let einddatum = null;
+  if (meerdaags) {
+    einddatum = document.getElementById("open-wedstrijd-einddatum").value;
+    if (!einddatum)      { toast("Kies een einddatum", "err"); return; }
+    if (einddatum <= datum) { toast("De einddatum moet ná de startdatum liggen", "err"); return; }
+  }
+
   try {
     const { data, error } = await sb.from("wedstrijden")
-      .insert({ categorie_id: cid, naam, datum, is_open: true })
+      .insert({ categorie_id: cid, naam, datum, einddatum, is_open: true })
       .select().single();
     if (error) throw error;
     wedstrijden.push(data);            // lokaal bijhouden zodat lookups blijven werken
@@ -6045,9 +6044,11 @@ async function maakOpenWedstrijd() {
     toast("Open wedstrijd aangemaakt ✓");
     openWedstrijddag(data.id);         // meteen de individuele modus openen
   } catch(e) {
-    const hint = /is_open|column/i.test(e.message || "")
-      ? " — draai eerst de SQL die het veld 'is_open' toevoegt."
-      : "";
+    const hint = /einddatum/i.test(e.message || "")
+      ? " — draai eerst de SQL die de kolom 'einddatum' toevoegt (zie release notes)."
+      : /is_open|column/i.test(e.message || "")
+        ? " — draai eerst de SQL die het veld 'is_open' toevoegt."
+        : "";
     toast("Fout bij aanmaken: " + e.message + hint, "err");
   }
 }
@@ -6183,31 +6184,15 @@ function toonWdModusUI() {
 
 function wdVerwerkResultaten(rijen) {
   wdResultaten = {};
-  wdPogingen = {};
-  rijen.forEach(r => wdZetLokaal({
-    discipline: r.discipline,
-    atleetId:   r.atleet_id,
-    sleutel:    r.sleutel,
-    resultaat:  r.resultaat,
-    status:     r.status || "ok",
-    ronde:      r.ronde || "",
-    poging:     r.poging_nr || 1
-  }));
-}
-
-// Eén rij in de lokale kopie zetten. Ronde "" met poging 1 is de snelle
-// invoer uit de lijst; al het andere is een poging binnen een ronde (patch 59).
-function wdZetLokaal(rij) {
-  const key = wdResKey(rij.discipline, rij.sleutel);
-  const basis = {
-    discipline: rij.discipline, atleetId: rij.atleetId, sleutel: rij.sleutel,
-    resultaat: rij.resultaat, status: rij.status
-  };
-  if (!rij.ronde && Number(rij.poging) === 1) { wdResultaten[key] = basis; return; }
-  const lijst = wdPogingen[key] = wdPogingen[key] || [];
-  const nieuw = { ...basis, ronde: rij.ronde, poging: Number(rij.poging) };
-  const i = lijst.findIndex(p => p.ronde === rij.ronde && Number(p.poging) === Number(rij.poging));
-  if (i >= 0) lijst[i] = nieuw; else lijst.push(nieuw);
+  rijen.forEach(r => {
+    wdResultaten[wdResKey(r.discipline, r.sleutel)] = {
+      discipline: r.discipline,
+      atleetId:   r.atleet_id,
+      sleutel:    r.sleutel,
+      resultaat:  r.resultaat,
+      status:     r.status || "ok"
+    };
+  });
 }
 
 // Alleen de resultaten opnieuw ophalen (invoer van collega-trainers).
@@ -6290,11 +6275,10 @@ function renderWdLijst() {
       }
       if (!lopers.length) return; // geen lopers opgesteld → rij overslaan
       const res = wdResultaten[wdResKey(item.discipline, `ploeg-${wdPloeg}`)];
-      const eff = wdEffectief(item.discipline, `ploeg-${wdPloeg}`);   // beste over alle rondes (patch 59)
       const val = res && res.status === "ok" && res.resultaat
         ? formateerResultaatWeergave(res.resultaat, item.discipline) : "";
-      const pts = eff && eff.status === "ok" && eff.resultaat
-        ? berekenPunten(item.discipline, eff.resultaat, wdGeslacht) : null;
+      const pts = res && res.status === "ok" && res.resultaat
+        ? berekenPunten(item.discipline, res.resultaat, wdGeslacht) : null;
       kaarten += `
         <div class="wd-kaart">
           <div class="wd-kaart-kop">
@@ -6307,10 +6291,9 @@ function renderWdLijst() {
             <input id="wd-inp-est-${idx}" value="${esc(val)}" class="${val ? "gevuld" : ""}"
                    placeholder="${esc(getPRPlaceholder(item.discipline))}"
                    onchange="wdInvoerEstafette(${idx}, this)">
-            <span class="wd-pr">${wdBesteTekst(item.discipline, `ploeg-${wdPloeg}`)}</span>
+            <span class="wd-pr"></span>
             <b id="wd-pts-est-${idx}">${pts !== null ? pts : "—"}</b>
             <span></span>
-            ${wdRondeKnopHtml(item.discipline, `ploeg-${wdPloeg}`, null, "estafette")}
           </div>
         </div>`;
       return;
@@ -6324,15 +6307,14 @@ function renderWdLijst() {
       const a = atleten.find(x => String(x.id) === String(aid));
       if (!a) continue;
       const res = wdResultaten[wdResKey(item.discipline, String(aid))];
-      const eff = wdEffectief(item.discipline, String(aid));          // beste over alle rondes (patch 59)
       const isDns = res && res.status === "dns";
       const val = res && res.status === "ok" && res.resultaat
         ? formateerResultaatWeergave(res.resultaat, item.discipline) : "";
       const pr = bestePrestatie(aid, item.discipline);
       const prTekst = pr ? `PR: ${formateerResultaatWeergave(pr.resultaat, item.discipline)}` : "PR: —";
-      const pts = eff && eff.status === "ok" && eff.resultaat
-        ? berekenPunten(item.discipline, eff.resultaat, wdGeslacht) : null;
-      const beter = wdIsBeterDanPR(eff, pr, item.discipline);
+      const pts = res && res.status === "ok" && res.resultaat
+        ? berekenPunten(item.discipline, res.resultaat, wdGeslacht) : null;
+      const beter = wdIsBeterDanPR(res, pr, item.discipline);
       rijen += `
         <div class="wd-rij">
           <span>${esc(a.naam)}</span>
@@ -6340,13 +6322,12 @@ function renderWdLijst() {
                  placeholder="${esc(getPRPlaceholder(item.discipline))}"
                  ${isDns ? "disabled" : ""}
                  onchange="wdInvoer(${idx}, ${s}, this)">
-          <span class="wd-pr">${prTekst}${wdBesteTekst(item.discipline, String(aid))}</span>
+          <span class="wd-pr">${prTekst}</span>
           <span><b id="wd-pts-${idx}-${s}">${pts !== null ? pts : "—"}</b>
                 <span id="wd-badge-${idx}-${s}">${beter ? `<span class="wd-badge-pr">▲ PR!</span>` : ""}</span></span>
           <button class="wd-dns-btn ${isDns ? "actief" : ""}" id="wd-dns-${idx}-${s}"
                   title="Markeer als niet gestart (Did Not Start)"
                   onclick="wdToggleDNS(${idx}, ${s})">DNS</button>
-          ${wdRondeKnopHtml(item.discipline, String(aid), aid, item.type)}
         </div>`;
     }
     if (!rijen) return; // niets opgesteld voor dit onderdeel → kaart overslaan
@@ -6375,276 +6356,6 @@ function wdIsBeterDanPR(res, pr, discipline) {
   return isLagerBeter(discipline) ? nieuw < huidig : nieuw > huidig;
 }
 
-// ══ Rondes en pogingen (patch 59) ═════════════════════════════
-// Elke invoer staat in de tabel `resultaten` met een `ronde` en `poging_nr`.
-// Het veld in de lijst is de "snelle invoer" (ronde "", poging 1); in het
-// rondescherm voeg je rondes toe met een naam uit een vaste lijst. Wat
-// meetelt voor punten en PR's is altijd de BESTE geldige prestatie over de
-// snelle invoer en alle rondes/pogingen heen; een X telt nooit mee.
-
-const WD_RONDES = {
-  loop:      ["Serie", "Halve finale", "Finale"],
-  estafette: ["Serie", "Halve finale", "Finale"],
-  technisch: ["Kwalificatie", "Finale"]
-};
-const WD_MAX_POGINGEN = 6;            // alleen bij technische onderdelen
-
-function wdRondeNamen(type)     { return WD_RONDES[type] || WD_RONDES.loop; }
-function wdAantalPogingen(type) { return type === "technisch" ? WD_MAX_POGINGEN : 1; }
-
-// Type van een onderdeel: gebruik de hint uit het programma of de
-// onderdelenlijst; is die er niet, leid het dan af (tijd = loop, afstand of
-// hoogte = technisch).
-function wdOnderdeelType(discipline, hint) {
-  if (hint === "technisch" || hint === "loop" || hint === "estafette") return hint;
-  return isLagerBeter(discipline) ? "loop" : "technisch";
-}
-
-function wdPogingLijst(discipline, sleutel) {
-  return wdPogingen[wdResKey(discipline, sleutel)] || [];
-}
-
-// Sorteersleutel voor een rondenaam: volgorde van de vaste lijst, waarbij
-// een genummerde variant ("Serie 2") direct achter zijn basis komt.
-function wdRondeSorteer(naam, basis) {
-  const m = String(naam).match(/^(.*?)(?:\s+(\d+))?$/);
-  const i = basis.indexOf(m[1]);
-  return (i < 0 ? 90 : i) * 100 + parseInt(m[2] || "1", 10);
-}
-
-function wdRondesVan(discipline, sleutel, type) {
-  const namen = [];
-  wdPogingLijst(discipline, sleutel).forEach(p => {
-    if (p.ronde && !namen.includes(p.ronde)) namen.push(p.ronde);
-  });
-  const basis = wdRondeNamen(type);
-  return namen.sort((a, b) => wdRondeSorteer(a, basis) - wdRondeSorteer(b, basis));
-}
-
-// De beste geldige prestatie over snelle invoer + alle pogingen.
-// Geeft { resultaat, ronde, poging } terug, of null als er niets geldig is.
-function wdBesteResultaat(discipline, sleutel) {
-  const lager = isLagerBeter(discipline);
-  const kandidaten = [];
-  const hoofd = wdResultaten[wdResKey(discipline, sleutel)];
-  if (hoofd && hoofd.status === "ok" && hoofd.resultaat) {
-    kandidaten.push({ resultaat: hoofd.resultaat, ronde: "", poging: 1 });
-  }
-  wdPogingLijst(discipline, sleutel).forEach(p => {
-    if (p.status === "ok" && p.resultaat) {
-      kandidaten.push({ resultaat: p.resultaat, ronde: p.ronde, poging: p.poging });
-    }
-  });
-  let beste = null, besteWaarde = null;
-  kandidaten.forEach(k => {
-    const w = parseResultaat(k.resultaat);
-    if (w === null || w <= 0) return;
-    if (besteWaarde === null || (lager ? w < besteWaarde : w > besteWaarde)) {
-      besteWaarde = w; beste = k;
-    }
-  });
-  return beste;
-}
-
-// Het resultaat dat meetelt, in dezelfde vorm als een rij uit wdResultaten,
-// zodat de bestaande punten-, PR- en scorelogica er direct mee werkt.
-function wdEffectief(discipline, sleutel) {
-  const hoofd = wdResultaten[wdResKey(discipline, sleutel)] || null;
-  if (hoofd && hoofd.status === "dns") return hoofd;      // DNS blijft DNS
-  const beste = wdBesteResultaat(discipline, sleutel);
-  if (!beste) return hoofd;
-  const eersteP = wdPogingLijst(discipline, sleutel)[0] || {};
-  return {
-    discipline, sleutel,
-    atleetId:  hoofd ? hoofd.atleetId : (eersteP.atleetId || null),
-    resultaat: beste.resultaat,
-    status:    "ok",
-    ronde:     beste.ronde,
-    poging:    beste.poging
-  };
-}
-
-// Knopje achter een rij om het rondescherm te openen; toont het aantal rondes.
-function wdRondeKnopHtml(discipline, sleutel, atleetId, type) {
-  const aantal = wdRondesVan(discipline, sleutel, type).length;
-  const aid = atleetId ? `'${esc(String(atleetId))}'` : "null";
-  return `<button class="wd-ronde-btn${aantal ? " actief" : ""}"
-            title="Rondes en pogingen invoeren"
-            onclick="openWdRondes('${esc(discipline)}','${esc(String(sleutel))}',${aid},'${esc(type)}')">📋${aantal ? " " + aantal : ""}</button>`;
-}
-
-// Klein regeltje onder de punten: waar komt de beste prestatie vandaan?
-function wdBesteTekst(discipline, sleutel) {
-  const beste = wdBesteResultaat(discipline, sleutel);
-  if (!beste || !beste.ronde) return "";
-  return `<span class="wd-beste">beste: ${esc(formateerResultaatWeergave(beste.resultaat, discipline))} · ${esc(beste.ronde)}</span>`;
-}
-
-function openWdRondes(discipline, sleutel, atleetId, type) {
-  wdRondeCtx = {
-    discipline,
-    sleutel:  String(sleutel),
-    atleetId: atleetId || null,
-    type:     wdOnderdeelType(discipline, type)
-  };
-  renderWdRondes();
-  openModal("wdRondesModal");
-}
-
-function renderWdRondes() {
-  if (!wdRondeCtx) return;
-  const { discipline, sleutel, type } = wdRondeCtx;
-  const a = atleten.find(x => String(x.id) === String(wdRondeCtx.atleetId));
-  const wie = a ? esc(a.naam || "")
-    : (String(sleutel).startsWith("ploeg-") ? "Ploeg " + esc(String(sleutel).replace("ploeg-", "")) : "");
-  const beste = wdBesteResultaat(discipline, sleutel);
-
-  const kop = document.getElementById("wd-rondes-kop");
-  if (kop) {
-    const herkomst = !beste ? ""
-      : beste.ronde
-        ? ` <span style="color:var(--muted);">(${esc(beste.ronde)}${type === "technisch" ? ", poging " + beste.poging : ""})</span>`
-        : ` <span style="color:var(--muted);">(snelle invoer)</span>`;
-    kop.innerHTML = `
-      <div style="font-size:15px;margin-bottom:4px;"><b>${esc(discipline)}</b>${wie ? " · " + wie : ""}</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
-        ${type === "technisch"
-          ? `Kwalificatie en finale, maximaal ${WD_MAX_POGINGEN} pogingen per ronde. Gebruik de X voor een ongeldige poging.`
-          : "Serie, halve finale en finale — één tijd per ronde."}
-      </div>
-      <div style="margin-top:8px;font-size:14px;">Beste prestatie:
-        <b style="color:var(--success);">${beste ? esc(formateerResultaatWeergave(beste.resultaat, discipline)) : "—"}</b>${herkomst}
-      </div>`;
-  }
-
-  const rondes = wdRondesVan(discipline, sleutel, type);
-  const lijst  = wdPogingLijst(discipline, sleutel);
-  const aantal = wdAantalPogingen(type);
-  const vind   = (ronde, n) => lijst.find(p => p.ronde === ronde && Number(p.poging) === Number(n));
-
-  const body = document.getElementById("wd-rondes-body");
-  if (body) {
-    body.innerHTML = rondes.length ? rondes.map(r => {
-      let velden = "";
-      for (let n = 1; n <= aantal; n++) {
-        const p = vind(r, n);
-        const isX = p && p.status === "x";
-        const val = p && p.status === "ok" && p.resultaat
-          ? formateerResultaatWeergave(p.resultaat, discipline) : "";
-        velden += `
-          <div class="wd-poging">
-            ${aantal > 1 ? `<span class="wd-poging-nr">${n}</span>` : ""}
-            <input value="${esc(isX ? "X" : val)}" ${isX ? "disabled" : ""}
-                   placeholder="${esc(getPRPlaceholder(discipline))}"
-                   onchange="wdPogingInvoer('${esc(r)}',${n},this)">
-            ${type === "technisch"
-              ? `<button class="wd-poging-x${isX ? " actief" : ""}" title="Ongeldige poging"
-                    onclick="wdPogingOngeldig('${esc(r)}',${n})">X</button>`
-              : ""}
-          </div>`;
-      }
-      return `
-        <div class="wd-ronde-blok">
-          <div class="wd-ronde-kop">
-            <b>${esc(r)}</b>
-            <button class="wd-ronde-del" title="Ronde verwijderen" onclick="wdRondeVerwijderen('${esc(r)}')">🗑️ ronde</button>
-          </div>
-          <div class="wd-poging-grid">${velden}</div>
-        </div>`;
-    }).join("") : `<div style="font-size:13px;color:var(--muted);padding:6px 0 2px;">
-        Nog geen rondes toegevoegd. Kies hieronder een ronde en voeg hem toe.
-      </div>`;
-  }
-
-  const sel = document.getElementById("wd-ronde-keuze");
-  if (sel) {
-    sel.innerHTML = wdRondeNamen(type)
-      .map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
-  }
-}
-
-// Ronde toevoegen. Bestaat de naam al, dan wordt hij genummerd ("Serie 2"),
-// zodat het aantal rondes vrij is terwijl de namen uit de vaste lijst komen.
-async function wdRondeToevoegen() {
-  if (!wdRondeCtx) return;
-  const { discipline, sleutel, atleetId, type } = wdRondeCtx;
-  const keuze = document.getElementById("wd-ronde-keuze");
-  const basis = keuze ? keuze.value : "";
-  if (!basis) return;
-  const bestaand = wdRondesVan(discipline, sleutel, type);
-  let naam = basis, n = 1;
-  while (bestaand.includes(naam)) { n++; naam = `${basis} ${n}`; }
-  try {
-    // Lege poging 1 houdt de ronde vast tot er een resultaat wordt ingevuld.
-    await wdBewaarResultaat(discipline, sleutel, atleetId, null, "ok", naam, 1);
-    renderWdRondes();
-  } catch(e) { toast("Fout bij toevoegen ronde: " + e.message, "err"); }
-}
-
-async function wdRondeVerwijderen(ronde) {
-  if (!wdRondeCtx) return;
-  const { discipline, sleutel } = wdRondeCtx;
-  const heeftInvoer = wdPogingLijst(discipline, sleutel)
-    .some(p => p.ronde === ronde && ((p.status === "ok" && p.resultaat) || p.status === "x"));
-  if (heeftInvoer) {
-    const ok = await bevestig("Ronde verwijderen",
-      `Verwijder de ronde "${ronde}" met alle ingevoerde pogingen? Dit kan niet ongedaan worden gemaakt.`);
-    if (!ok) return;
-  }
-  try {
-    await wdVerwijderRonde(discipline, sleutel, ronde);
-    renderWdRondes();
-  } catch(e) { toast("Fout bij verwijderen: " + e.message, "err"); }
-}
-
-// Poging invoeren. Leeg maken wist de poging (poging 1 blijft bestaan zodat
-// de ronde niet verdwijnt); "x" typen markeert hem als ongeldig.
-async function wdPogingInvoer(ronde, poging, inputEl) {
-  if (!wdRondeCtx) return;
-  const { discipline, sleutel, atleetId } = wdRondeCtx;
-  const raw = inputEl.value.trim();
-  try {
-    if (!raw) {
-      if (Number(poging) === 1) await wdBewaarResultaat(discipline, sleutel, atleetId, null, "ok", ronde, 1);
-      else                      await wdVerwijderResultaat(discipline, sleutel, ronde, poging);
-    } else if (raw.toLowerCase() === "x") {
-      await wdBewaarResultaat(discipline, sleutel, atleetId, null, "x", ronde, poging);
-    } else {
-      const genorm = normaliserenResultaat(raw, discipline);
-      if (parseResultaat(genorm) === null) {
-        toast("Ongeldig resultaat — controleer het formaat", "err");
-        return;
-      }
-      await wdBewaarResultaat(discipline, sleutel, atleetId, genorm, "ok", ronde, poging);
-    }
-    renderWdRondes();
-  } catch(e) { toast("Fout bij opslaan: " + e.message, "err"); }
-}
-
-// X aan/uit voor één poging (ongeldige poging).
-async function wdPogingOngeldig(ronde, poging) {
-  if (!wdRondeCtx) return;
-  const { discipline, sleutel, atleetId } = wdRondeCtx;
-  const p = wdPogingLijst(discipline, sleutel)
-    .find(q => q.ronde === ronde && Number(q.poging) === Number(poging));
-  try {
-    if (p && p.status === "x") {
-      if (Number(poging) === 1) await wdBewaarResultaat(discipline, sleutel, atleetId, null, "ok", ronde, 1);
-      else                      await wdVerwijderResultaat(discipline, sleutel, ronde, poging);
-    } else {
-      await wdBewaarResultaat(discipline, sleutel, atleetId, null, "x", ronde, poging);
-    }
-    renderWdRondes();
-  } catch(e) { toast("Fout: " + e.message, "err"); }
-}
-
-// Na het sluiten van het rondescherm: lijst en teamscore bijwerken.
-function wdNaRondes() {
-  wdRondeCtx = null;
-  if (wdModus === "individueel") renderWdIndividueel();
-  else { renderWdLijst(); renderWdScore(); }
-}
-
 // ══ Individuele modus (gewone wedstrijd, patch 51) ════════════
 // Geen opstelling en geen teamscore: je voegt zelf atleten toe per
 // onderdeel en voert resultaten in. Betere resultaten worden bij het
@@ -6669,7 +6380,7 @@ function wdIndivDisciplines() {
     const k = (o.naam || "").trim().toLowerCase();
     if (!k || gezien.has(k)) return;
     gezien.add(k);
-    uit.push({ naam: o.naam, type: wdOnderdeelType(o.naam, null) });
+    uit.push({ naam: o.naam, type: "technisch" });
   });
   return uit;
 }
@@ -6750,7 +6461,7 @@ function renderWdIndividueel() {
     kaarten += `
       <div class="wd-kaart">
         <div class="wd-kaart-kop"><b>${esc(d.naam)}</b></div>
-        ${rijen.map(r => wdIndivRijHtml(d.naam, r, d.type)).join("")}
+        ${rijen.map(r => wdIndivRijHtml(d.naam, r)).join("")}
         <button class="wd-sectie-add" onclick="wdIndivAddPrompt('${esc(d.naam)}')">＋ atleet toevoegen bij ${esc(d.naam)}</button>
       </div>`;
   });
@@ -6761,31 +6472,29 @@ function renderWdIndividueel() {
     </div>`;
 }
 
-function wdIndivRijHtml(discipline, res, type) {
+function wdIndivRijHtml(discipline, res) {
   const a = atleten.find(x => String(x.id) === String(res.atleetId));
   const naam = a ? a.naam : "Onbekende atleet";
   const geslacht = a ? a.geslacht : "M";
-  const aid = String(res.atleetId);
-  const eff = wdEffectief(discipline, aid);          // beste over alle rondes (patch 59)
   const val = res.status === "ok" && res.resultaat
     ? formateerResultaatWeergave(res.resultaat, discipline) : "";
   const pr = bestePrestatie(res.atleetId, discipline);
   const prTekst = pr ? `PR: ${formateerResultaatWeergave(pr.resultaat, discipline)}` : "PR: —";
-  const pts = eff && eff.status === "ok" && eff.resultaat
-    ? berekenPunten(discipline, eff.resultaat, geslacht) : null;
-  const beter = wdIsBeterDanPR(eff, pr, discipline);
+  const pts = res.status === "ok" && res.resultaat
+    ? berekenPunten(discipline, res.resultaat, geslacht) : null;
+  const beter = wdIsBeterDanPR(res, pr, discipline);
+  const aid = String(res.atleetId);
   return `
     <div class="wd-rij">
       <span>${esc(naam)}</span>
       <input value="${esc(val)}" class="${val ? "gevuld" : ""}"
              placeholder="${esc(getPRPlaceholder(discipline))}"
              onchange="wdIndivInvoer('${esc(discipline)}','${aid}',this)">
-      <span class="wd-pr">${prTekst}${wdBesteTekst(discipline, aid)}</span>
+      <span class="wd-pr">${prTekst}</span>
       <span><b>${pts !== null ? pts : "—"}</b>
             <span>${beter ? `<span class="wd-badge-pr">▲ PR!</span>` : ""}</span></span>
       <button class="wd-dns-btn" title="Verwijder deze atleet bij dit onderdeel"
               onclick="wdIndivVerwijder('${esc(discipline)}','${aid}')">✕</button>
-      ${wdRondeKnopHtml(discipline, aid, aid, type)}
     </div>`;
 }
 
@@ -6859,16 +6568,13 @@ async function wdIndivVerwijder(discipline, atleetId) {
   const sleutel = String(atleetId);
   const res = wdResultaten[wdResKey(discipline, sleutel)];
   const a = atleten.find(x => String(x.id) === String(atleetId));
-  // Patch 59: ook rondes/pogingen tellen mee bij de vraag of er invoer is.
-  const heeftInvoer = (res && res.status === "ok" && res.resultaat) ||
-    wdPogingLijst(discipline, sleutel).some(p => (p.status === "ok" && p.resultaat) || p.status === "x");
-  if (heeftInvoer) {
+  if (res && res.status === "ok" && res.resultaat) {
     const ok = await bevestig("Atleet verwijderen",
-      `Verwijder ${a ? a.naam : "deze atleet"} bij ${discipline}?\n\nAlle ingevoerde resultaten, rondes en pogingen worden verwijderd. Dit werkt geen PR bij.`);
+      `Verwijder <strong>${esc(a ? a.naam : "deze atleet")}</strong> bij <strong>${esc(discipline)}</strong>?\n\nHet ingevoerde resultaat wordt verwijderd. Dit werkt geen PR bij.`);
     if (!ok) return;
   }
   try {
-    await wdVerwijderAlles(discipline, sleutel);   // snelle invoer + alle rondes
+    await wdVerwijderResultaat(discipline, sleutel);
     renderWdIndividueel();
   } catch(e) { toast("Fout bij verwijderen: " + e.message, "err"); }
 }
@@ -7013,7 +6719,7 @@ async function wdInvoerEstafette(idx, inputEl) {
   } catch(e) { toast("Fout bij opslaan: " + e.message, "err"); }
 }
 
-async function wdBewaarResultaat(discipline, sleutel, atleetId, resultaat, status, ronde = "", poging = 1) {
+async function wdBewaarResultaat(discipline, sleutel, atleetId, resultaat, status) {
   const cid = actieveCategorie?.id;
   const { error } = await sb.from("resultaten").upsert({
     categorie_id: cid,
@@ -7023,53 +6729,13 @@ async function wdBewaarResultaat(discipline, sleutel, atleetId, resultaat, statu
     sleutel,
     resultaat,
     status,
-    ronde,
-    poging_nr:    poging,
     ingevoerd_op: new Date().toISOString()
-  }, { onConflict: "categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr" });
+  }, { onConflict: "categorie_id,wedstrijd_id,discipline,sleutel" });
   if (error) throw error;
-  wdZetLokaal({ discipline, sleutel, atleetId, resultaat, status, ronde, poging });
+  wdResultaten[wdResKey(discipline, sleutel)] = { discipline, atleetId, sleutel, resultaat, status };
 }
 
-// Eén rij weg (standaard de snelle invoer; met ronde/poging een losse poging).
-async function wdVerwijderResultaat(discipline, sleutel, ronde = "", poging = 1) {
-  const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").delete()
-    .eq("categorie_id", cid)
-    .eq("wedstrijd_id", wdWedstrijdId)
-    .eq("discipline", discipline)
-    .eq("sleutel", sleutel)
-    .eq("ronde", ronde)
-    .eq("poging_nr", poging);
-  if (error) throw error;
-  const key = wdResKey(discipline, sleutel);
-  if (!ronde && Number(poging) === 1) {
-    delete wdResultaten[key];
-  } else if (wdPogingen[key]) {
-    wdPogingen[key] = wdPogingen[key].filter(p => !(p.ronde === ronde && Number(p.poging) === Number(poging)));
-    if (!wdPogingen[key].length) delete wdPogingen[key];
-  }
-}
-
-// Alle pogingen van één ronde weg (patch 59).
-async function wdVerwijderRonde(discipline, sleutel, ronde) {
-  const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").delete()
-    .eq("categorie_id", cid)
-    .eq("wedstrijd_id", wdWedstrijdId)
-    .eq("discipline", discipline)
-    .eq("sleutel", sleutel)
-    .eq("ronde", ronde);
-  if (error) throw error;
-  const key = wdResKey(discipline, sleutel);
-  if (wdPogingen[key]) {
-    wdPogingen[key] = wdPogingen[key].filter(p => p.ronde !== ronde);
-    if (!wdPogingen[key].length) delete wdPogingen[key];
-  }
-}
-
-// Alles van deze atleet bij dit onderdeel weg: snelle invoer én alle rondes.
-async function wdVerwijderAlles(discipline, sleutel) {
+async function wdVerwijderResultaat(discipline, sleutel) {
   const cid = actieveCategorie?.id;
   const { error } = await sb.from("resultaten").delete()
     .eq("categorie_id", cid)
@@ -7077,9 +6743,7 @@ async function wdVerwijderAlles(discipline, sleutel) {
     .eq("discipline", discipline)
     .eq("sleutel", sleutel);
   if (error) throw error;
-  const key = wdResKey(discipline, sleutel);
-  delete wdResultaten[key];
-  delete wdPogingen[key];
+  delete wdResultaten[wdResKey(discipline, sleutel)];
 }
 
 // DNS aan/uit: aan = status 'dns' opslaan (resultaat vervalt), uit = rij verwijderen.
@@ -7110,17 +6774,15 @@ function wdUpdateRegel(idx, s) {
   const aid = (wdOpstellingPerPloeg[wdPloeg] || {})[`${wdPloeg}_${idx}_${s}`];
   if (!aid) return;
   const res = wdResultaten[wdResKey(item.discipline, String(aid))];
-  const eff = wdEffectief(item.discipline, String(aid));   // beste over alle rondes (patch 59)
   const inp = document.getElementById(`wd-inp-${idx}-${s}`);
   const ptsEl = document.getElementById(`wd-pts-${idx}-${s}`);
   const badgeEl = document.getElementById(`wd-badge-${idx}-${s}`);
   if (!inp || !ptsEl || !badgeEl) return;
   const heeftRes = res && res.status === "ok" && res.resultaat;
-  const heeftEff = eff && eff.status === "ok" && eff.resultaat;
   inp.classList.toggle("gevuld", !!heeftRes);
-  ptsEl.textContent = heeftEff ? berekenPunten(item.discipline, eff.resultaat, wdGeslacht) : "—";
+  ptsEl.textContent = heeftRes ? berekenPunten(item.discipline, res.resultaat, wdGeslacht) : "—";
   const pr = bestePrestatie(aid, item.discipline);
-  badgeEl.innerHTML = wdIsBeterDanPR(eff, pr, item.discipline) ? `<span class="wd-badge-pr">▲ PR!</span>` : "";
+  badgeEl.innerHTML = wdIsBeterDanPR(res, pr, item.discipline) ? `<span class="wd-badge-pr">▲ PR!</span>` : "";
 }
 
 // ── Live teamscore (telregels zoals in de opstellingstab) ─────
@@ -7145,7 +6807,7 @@ function renderWdScore() {
       const heeftLopers = [0,1,2,3].some(s => opst[`${wdPloeg}_${idx}_${s}`]);
       if (!heeftLopers) return;
       totaalUnits++;
-      const res = wdEffectief(item.discipline, `ploeg-${wdPloeg}`);
+      const res = wdResultaten[wdResKey(item.discipline, `ploeg-${wdPloeg}`)];
       if (res && ((res.status === "ok" && res.resultaat) || res.status === "dns")) ingevoerd++;
       if (res && res.status === "ok" && res.resultaat) {
         puntePerDiscipline[item.discipline].puntenLijst.push(
@@ -7159,7 +6821,7 @@ function renderWdScore() {
       const aid = opst[`${wdPloeg}_${idx}_${s}`];
       if (!aid) continue;
       totaalUnits++;
-      const res = wdEffectief(item.discipline, String(aid));
+      const res = wdResultaten[wdResKey(item.discipline, String(aid))];
       if (res && ((res.status === "ok" && res.resultaat) || res.status === "dns")) ingevoerd++;
       if (res && res.status === "ok" && res.resultaat) {
         puntePerDiscipline[item.discipline].puntenLijst.push(
@@ -7189,35 +6851,21 @@ function openWdAfronden() {
   // Verzamel over ALLE geladen resultaten van deze wedstrijd (beide geslachten,
   // alle ploegen) de individuele resultaten die beter zijn dan het huidige PR.
   // Estafette-teamtijden (sleutel "ploeg-…") zijn teamresultaten, geen PR's.
-  // Patch 59: kijk per atleet/onderdeel naar de BESTE prestatie over de
-  // snelle invoer en alle rondes/pogingen heen (X en DNS tellen niet mee).
   wdAfrondKandidaten = [];
-  const paren = {};
-  const onthou = (r) => {
-    if (!r || !r.atleetId || String(r.sleutel).startsWith("ploeg-")) return;
-    paren[wdResKey(r.discipline, r.sleutel)] = {
-      discipline: r.discipline, sleutel: r.sleutel, atleetId: r.atleetId
-    };
-  };
-  Object.values(wdResultaten).forEach(onthou);
-  Object.values(wdPogingen).forEach(lijst => (lijst || []).forEach(onthou));
-
-  Object.values(paren).forEach(paar => {
-    const res = wdEffectief(paar.discipline, paar.sleutel);
-    if (!res || res.status !== "ok" || !res.resultaat) return;
-    const pr = bestePrestatie(paar.atleetId, paar.discipline);
-    if (!wdIsBeterDanPR(res, pr, paar.discipline)) return;
-    const atleet = atleten.find(a => String(a.id) === String(paar.atleetId));
+  Object.values(wdResultaten).forEach(res => {
+    if (!res.atleetId || String(res.sleutel).startsWith("ploeg-")) return;
+    if (res.status !== "ok" || !res.resultaat) return;
+    const pr = bestePrestatie(res.atleetId, res.discipline);
+    if (!wdIsBeterDanPR(res, pr, res.discipline)) return;
+    const atleet = atleten.find(a => String(a.id) === String(res.atleetId));
     wdAfrondKandidaten.push({
-      atleetId:   paar.atleetId,
+      atleetId:   res.atleetId,
       naam:       atleet ? atleet.naam : "Onbekende atleet",
-      discipline: paar.discipline,
+      discipline: res.discipline,
       nieuw:      res.resultaat,
-      ronde:      res.ronde || "",
       huidig:     pr ? pr.resultaat : null
     });
   });
-  wdAfrondKandidaten.sort((a, b) => a.naam.localeCompare(b.naam));
 
   const body = document.getElementById("wd-afrond-body");
   if (!wdAfrondKandidaten.length) {
@@ -7241,7 +6889,7 @@ function openWdAfronden() {
       ${wdAfrondKandidaten.map((k, i) => `
         <label style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
           <input type="checkbox" id="wd-afrond-chk-${i}" checked>
-          <span style="flex:1;">${esc(k.naam)} — ${esc(k.discipline)}${k.ronde ? ` <span style="color:var(--muted);font-size:12px;">(${esc(k.ronde)})</span>` : ""}</span>
+          <span style="flex:1;">${esc(k.naam)} — ${esc(k.discipline)}</span>
           <b style="color:var(--success);">${esc(formateerResultaatWeergave(k.nieuw, k.discipline))}</b>
           <span style="color:var(--muted);font-size:12px;">${k.huidig ? "was " + esc(formateerResultaatWeergave(k.huidig, k.discipline)) : "eerste PR"}</span>
         </label>`).join("")}`;
