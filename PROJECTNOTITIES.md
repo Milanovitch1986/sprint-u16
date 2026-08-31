@@ -43,6 +43,12 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Rondes in het hoofdscherm (patch 61, aug 2026)
+De popup uit patch 60 is weg; rondes worden nu ingevoerd op de regel zelf. **Loop/estafette:** per ronde een veld met de rondenaam erboven, plus een `＋ ronde`-keuzelijst en een ✕ per ronde. **Techniek:** op de regel een alleen-lezen veld *Beste*, daaronder uitklapbare blokken per ronde met 6 pogingen + X-knop (`wdPogingenDicht` houdt bij wat is ingeklapt).
+- Bouwstenen: `wdVeldenHtml()` (invoercel van een regel), `wdVeldHtml()` (één veld met titel), `wdRondeAddHtml()`, `wdRondeBlokkenHtml()`, `wdArgs()` (handler-argumenten). Handlers: `wdLosInvoer`, `wdRondeInvoer`, `wdPogingOngeldig`, `wdRondeErbij`, `wdRondeWeg`, `wdTogglePogingen`, met `wdHerteken()` als gedeelde hertekening.
+- **Variant A (bewuste keuze van de gebruiker):** staat er een los resultaat en voeg je de eerste ronde toe, dan verhuist die waarde naar die ronde en blijft de losse rij leeg achter (de rij zelf blijft bestaan, anders verdwijnt de atleet uit de lijst). Een los resultaat dat door oudere data naast rondes staat, wordt nog wél getoond als veld "Resultaat".
+- Vervallen: `#wdRondesModal`, `openWdRondes`, `renderWdRondes`, `wdRondeKnopHtml`, `wdNaRondes`, `wdRondeCtx`, en de oude invoerhandlers `wdInvoer`, `wdInvoerEstafette`, `wdIndivInvoer`, `wdUpdateRegel`. Er wordt na elke invoer volledig hertekend — dat houdt "beste", punten en teamscore kloppend; focusverlies valt weg omdat `onchange` toch pas bij blur vuurt.
+
 ### Rondes en pogingen op de wedstrijddag (patch 60, aug 2026)
 Per atleet per onderdeel kon maar één resultaat bestaan. Nu geldt **onderdeel → ronde → poging**. Loop en estafette: rondes uit `Serie / Halve finale / Finale`, 1 tijd per ronde. Techniek: `Kwalificatie / Finale`, maximaal 6 pogingen per ronde, status `x` = ongeldige poging. Het aantal rondes is vrij: dezelfde naam nog eens toevoegen geeft "Serie 2" (sortering via `wdRondeSorteer()`).
 - **Schemawijziging:** `resultaten` heeft `ronde text not null default ''` en `poging_nr int not null default 1`; status-check `('ok','dns','x')`; unique-constraint `resultaten_uniek (categorie_id, wedstrijd_id, discipline, sleutel, ronde, poging_nr)` **vervangt** de oude 4-koloms constraint. Ronde `''` + poging 1 = de snelle invoer, dus oudere rijen blijven werken.

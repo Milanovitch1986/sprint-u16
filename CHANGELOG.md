@@ -6,6 +6,40 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [augustus 2026 — patch 61] — 2026-08-31
+
+### 📋 Rondes in het hoofdscherm in plaats van een popup
+
+<!--RELEASENOTE
+versie: Patch 61
+titel: 📋 Rondes direct op de regel
+type: update
+beschrijving: De rondes staan nu op de regel van de atleet zelf, met de naam van de ronde boven het invoerveld — geen apart schermpje meer. Bij technische onderdelen staat op de regel de beste prestatie en klappen de rondes met hun zes pogingen daaronder open.
+-->
+
+Patch 60 zette de rondes achter een knopje 📋 dat een popup opende. Dat werkt, maar op de wedstrijddag wil je alles in één blik zien en zo min mogelijk klikken. De rondes staan nu in het hoofdscherm zelf.
+
+**Loopnummers en estafettes.** Op de regel staat per ronde een invoerveld met de rondenaam erboven: *Serie*, *Halve finale*, *Finale*. Met de keuzelijst **＋ ronde** achter de velden voeg je er een toe; het ✕ achter een rondenaam haalt die ronde weg (met bevestiging als er iets is ingevuld). Het veld met de groene rand is de beste prestatie — die telt voor de punten en de PR's.
+
+**Technische onderdelen.** Zes pogingen × twee rondes passen niet op één regel. Daarom staat op de regel het veld **Beste** (alleen-lezen) en klappen de rondes daaronder open, elk met zes pogingvelden en een X-knop per poging. Met **▾ pogingen** klap je ze in of uit; ook dit blijft in het hoofdscherm.
+
+**Nog geen rondes?** Dan staat er gewoon één veld **Resultaat**, precies zoals je gewend was. Voeg je daarna een ronde toe, dan **verhuist die ingevulde tijd mee naar die ronde** (variant A uit de mockup), zodat elk veld bij één ronde hoort en je nooit een losse tijd overhoudt waarvan je niet meer weet in welke ronde hij gelopen is.
+
+#### Technisch
+- Het rondescherm (`#wdRondesModal`) en alles wat daarbij hoorde (`openWdRondes`, `renderWdRondes`, `wdRondeKnopHtml`, `wdNaRondes`, `wdRondeCtx`) is verwijderd en vervangen door invoer in de lijst zelf: `wdVeldenHtml()` bouwt de invoercel van een regel, `wdVeldHtml()` één veld met titel, `wdRondeAddHtml()` de ＋ ronde-keuze en `wdRondeBlokkenHtml()` de uitklapbare pogingblokken onder een technische regel. `wdArgs()` maakt de handler-argumenten.
+- Handlers werken nu met expliciete parameters in plaats van een modal-context: `wdLosInvoer()`, `wdRondeInvoer()`, `wdPogingOngeldig()`, `wdRondeErbij()`, `wdRondeWeg()`, `wdTogglePogingen()`. Na elke wijziging tekent `wdHerteken()` de lijst opnieuw (individuele modus of competitie + score).
+- **Variant A** zit in `wdRondeErbij()`: is er nog geen ronde en staat er een los resultaat, dan wordt dat resultaat opgeslagen als poging 1 van de nieuwe ronde en wordt de losse rij leeggemaakt (de rij blijft bestaan zodat de atleet in de lijst blijft staan). Een los resultaat dat door oudere data tóch naast rondes staat, wordt nog gewoon getoond als veld "Resultaat" — het verdwijnt dus nergens stilletjes.
+- `wdInvoer()`, `wdInvoerEstafette()`, `wdIndivInvoer()` en `wdUpdateRegel()` zijn vervallen; alle invoervelden lopen nu via `wdLosInvoer()` / `wdRondeInvoer()` met een volledige hertekening (dat houdt "beste", de punten en de teamscore kloppend).
+- `.wd-rij` heeft een flexibele tweede kolom gekregen (de invoercel) en lijnt onderaan uit, zodat de titels boven de velden passen; onder 640 px staat alles onder elkaar. Nieuwe CSS: `.wd-velden`, `.wd-veld`, `.wd-ronde-add`, `.wd-pog-toggle`.
+- Geen databasewijziging — de opslag uit patch 60 (`ronde`, `poging_nr`, status `x`) is ongewijzigd.
+
+#### Wat niet getest kon worden
+De echte Supabase-calls en het gedrag in de browser. Wel los getest (34 tests): de opbouw van de invoercel bij loop en techniek, titels en volgorde van de rondes, de groene "beste"-rand op het juiste veld, uitgeschakelde velden bij DNS, de pogingblokken (12 velden + X-knoppen), in-/uitklappen, en het verhuizen van een los resultaat naar de eerste ronde inclusief de "Serie 2"-nummering.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [augustus 2026 — patch 60] — 2026-08-31
 
 ### 🔁 Wedstrijddag: rondes en pogingen per onderdeel
