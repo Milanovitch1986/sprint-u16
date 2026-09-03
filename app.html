@@ -1144,6 +1144,28 @@
     border-radius:6px; background:rgba(232,56,61,.15); color:var(--accent2);
     border:1px solid var(--accent2); letter-spacing:.5px;
   }
+  /* Offline-first wedstrijddag (patch 62): sync-statusbadge, wacht-label en afrond-waarschuwing */
+  .wd-sync-badge {
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap; user-select:none;
+    font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.5px; padding:4px 11px;
+    border-radius:999px; border:1px solid var(--border);
+  }
+  .wd-sync-badge.ok      { background:rgba(34,197,94,.12);  color:var(--success); border-color:var(--success); }
+  .wd-sync-badge.offline { background:rgba(245,166,35,.12); color:var(--accent);  border-color:var(--accent);  }
+  .wd-sync-badge.bezig   { background:var(--surface2);      color:var(--muted);   border-color:var(--border);  }
+  .wd-wacht-label {
+    display:inline-block; margin-top:4px; font-size:10px; font-weight:700;
+    padding:2px 7px; border-radius:6px; letter-spacing:.3px;
+    background:rgba(245,166,35,.10); color:var(--accent); border:1px solid var(--accent);
+  }
+  .wd-afrond-waarschuwing {
+    display:flex; gap:10px; align-items:flex-start;
+    background:rgba(245,166,35,.10); border:1px solid var(--accent);
+    border-radius:8px; padding:10px 12px; margin-bottom:12px;
+    font-size:13px; color:var(--text); line-height:1.5;
+  }
+  .wd-afrond-waarschuwing .ico { font-size:16px; line-height:1.3; }
   .wd-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
   .wd-tab {
     padding:7px 14px; border-radius:8px; font-size:13px; font-weight:600;
@@ -1612,7 +1634,8 @@
           <span class="wd-live-badge">● LIVE</span>
           <span class="wd-modus-badge" id="wd-modus-badge" style="display:none;"></span>
         </div>
-        <div class="ml-auto">
+        <div class="ml-auto" style="display:flex;align-items:center;gap:10px;">
+          <span class="wd-sync-badge ok" id="wd-sync-badge" title="Status van het opslaan op de wedstrijddag">● Alles opgeslagen</span>
           <button class="btn btn-ghost btn-sm" onclick="vernieuwWedstrijddag()" title="Haal de invoer van collega-trainers op">🔄 Vernieuwen</button>
         </div>
       </div>
@@ -6144,6 +6167,7 @@ function openWedstrijddag(wedstrijdId) {
   document.getElementById("wd-titel").textContent = w ? (w.naam || "Wedstrijddag") : "Wedstrijddag";
   toonWdDetail();                 // schakel over naar het invoerscherm
   laadWedstrijddag();
+  wdInitOutbox();                 // wachtrij-status laden + evt. syncen (patch 62)
 }
 
 function sluitWedstrijddag() {
@@ -6279,6 +6303,7 @@ function wdZetLokaal(rij) {
 async function vernieuwWedstrijddag() {
   const cid = actieveCategorie?.id;
   if (!cid || !wdWedstrijdId) return;
+  await synchroniseerWachtrij();   // eigen wachtrij eerst wegwerken (patch 62)
   try {
     const { data, error } = await sb.from("resultaten").select("*")
       .eq("categorie_id", cid)
@@ -6368,7 +6393,7 @@ function renderWdLijst() {
           </div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Lopers: ${lopers.join(" · ")}</div>
           <div class="wd-rij">
-            <span>Teamtijd Ploeg ${wdPloeg}</span>
+            <span>Teamtijd Ploeg ${wdPloeg}${wdWachtLabelHtml(item.discipline, `ploeg-${wdPloeg}`)}</span>
             ${wdVeldenHtml(item.discipline, `ploeg-${wdPloeg}`, null, "estafette", false)}
             <span class="wd-pr">${wdBesteTekst(item.discipline, `ploeg-${wdPloeg}`)}</span>
             <b id="wd-pts-est-${idx}">${pts !== null ? pts : "—"}</b>
@@ -6398,7 +6423,7 @@ function renderWdLijst() {
       const wdType = wdOnderdeelType(item.discipline, item.type);
       rijen += `
         <div class="wd-rij">
-          <span>${esc(a.naam)}</span>
+          <span>${esc(a.naam)}${wdWachtLabelHtml(item.discipline, String(aid))}</span>
           ${wdVeldenHtml(item.discipline, String(aid), aid, wdType, !!isDns)}
           <span class="wd-pr">${prTekst}${wdBesteTekst(item.discipline, String(aid))}</span>
           <span><b id="wd-pts-${idx}-${s}">${pts !== null ? pts : "—"}</b>
@@ -6903,7 +6928,7 @@ function wdIndivRijHtml(discipline, res, type) {
   const wdType = wdOnderdeelType(discipline, type);
   return `
     <div class="wd-rij">
-      <span>${esc(naam)}</span>
+      <span>${esc(naam)}${wdWachtLabelHtml(discipline, aid)}</span>
       ${wdVeldenHtml(discipline, aid, aid, wdType, false)}
       <span class="wd-pr">${prTekst}${wdBesteTekst(discipline, aid)}</span>
       <span><b>${pts !== null ? pts : "—"}</b>
@@ -7062,9 +7087,237 @@ async function wdAoToevoegen() {
     fouten ? "err" : "ok");
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  OFFLINE-FIRST WEDSTRIJDDAG — uitgaande wachtrij (outbox)  (patch 62)
+// ------------------------------------------------------------------
+//  Op de baan is de ontvangst vaak slecht. Elke invoer werkt daarom
+//  EERST het scherm/de lokale staat bij en probeert daarna pas te
+//  versturen. Lukt versturen niet (offline), dan gaat die ene
+//  wijziging in een lokale wachtrij in IndexedDB in plaats van
+//  verloren te raken. Zodra er weer verbinding is, wordt de wachtrij
+//  op volgorde alsnog verstuurd.
+// ══════════════════════════════════════════════════════════════════
+
+const WD_OUTBOX_DB    = "sprintu16-outbox";
+const WD_OUTBOX_STORE = "wachtrij";
+let   _wdOutboxDb     = null;
+
+// De IndexedDB één keer openen (store aanmaken als hij nog niet bestaat).
+function outboxOpen() {
+  if (_wdOutboxDb) return Promise.resolve(_wdOutboxDb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(WD_OUTBOX_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(WD_OUTBOX_STORE)) {
+        db.createObjectStore(WD_OUTBOX_STORE, { keyPath: "id", autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => { _wdOutboxDb = req.result; resolve(_wdOutboxDb); };
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+// Eén wijziging achteraan de wachtrij zetten (geeft het toegekende id terug).
+async function outboxAdd(item) {
+  const db = await outboxOpen();
+  return new Promise((resolve, reject) => {
+    const rq = db.transaction(WD_OUTBOX_STORE, "readwrite").objectStore(WD_OUTBOX_STORE).add(item);
+    rq.onsuccess = () => resolve(rq.result);
+    rq.onerror   = () => reject(rq.error);
+  });
+}
+
+// Alle wachtende items in invoervolgorde (oplopend id).
+async function outboxAlle() {
+  const db = await outboxOpen();
+  return new Promise((resolve, reject) => {
+    const rq = db.transaction(WD_OUTBOX_STORE, "readonly").objectStore(WD_OUTBOX_STORE).getAll();
+    rq.onsuccess = () => resolve((rq.result || []).sort((a, b) => a.id - b.id));
+    rq.onerror   = () => reject(rq.error);
+  });
+}
+
+// Eén item weghalen (na succesvol versturen).
+async function outboxVerwijder(id) {
+  const db = await outboxOpen();
+  return new Promise((resolve, reject) => {
+    const rq = db.transaction(WD_OUTBOX_STORE, "readwrite").objectStore(WD_OUTBOX_STORE).delete(id);
+    rq.onsuccess = () => resolve();
+    rq.onerror   = () => reject(rq.error);
+  });
+}
+
+// Hoeveel items wachten er nog?
+async function outboxAantal() {
+  const db = await outboxOpen();
+  return new Promise((resolve, reject) => {
+    const rq = db.transaction(WD_OUTBOX_STORE, "readonly").objectStore(WD_OUTBOX_STORE).count();
+    rq.onsuccess = () => resolve(rq.result || 0);
+    rq.onerror   = () => reject(rq.error);
+  });
+}
+
+// ── Synchrone spiegel van de wachtrij, zodat de badge en de regel-labels
+//    meteen (zonder await) kunnen tekenen. ──────────────────────────
+let wdOutboxAantal = 0;            // aantal wachtende items
+let wdWachtSet     = new Set();    // resKeys die op verbinding wachten (per-regel label)
+let wdSyncBezig    = false;        // voorkomt dubbel-tegelijk synchroniseren
+let wdSyncTimer    = null;         // herhaal-timer zolang er iets wacht
+
+// Teller + wachtset opnieuw opbouwen uit wat er echt in de outbox staat.
+async function wdHerlaadOutboxStatus() {
+  try {
+    const items = await outboxAlle();
+    wdOutboxAantal = items.length;
+    wdWachtSet = new Set(items.map(it => it.resKey).filter(Boolean));
+  } catch (e) {
+    wdOutboxAantal = 0; wdWachtSet = new Set();
+  }
+  wdRenderSyncBadge();
+}
+
+// Is dit een netwerk/offline-probleem (→ wachtrij) of een echte serverfout
+// (→ melden)? Supabase gooit bij offline een TypeError ("Failed to fetch");
+// een serverfout (RLS/constraint) komt terug als { error } zonder exception.
+function wdIsNetwerkFout(e) {
+  if (!navigator.onLine) return true;
+  if (e instanceof TypeError) return true;
+  const m = String((e && e.message) || e || "").toLowerCase();
+  return m.includes("fetch") || m.includes("network") || m.includes("timeout");
+}
+
+// Eén item in de wachtrij zetten en de status bijwerken.
+async function wdWachtrijToevoegen(item) {
+  await outboxAdd(item);
+  wdOutboxAantal++;
+  if (item.resKey) wdWachtSet.add(item.resKey);
+  wdRenderSyncBadge();
+  wdStartSyncTimer();
+}
+
+// Voer een Supabase-schrijfactie uit. Lukt het niet door de verbinding,
+// dan gaat `item` in de wachtrij. Een echte serverfout wordt gemeld.
+async function wdVerstuurOfWacht(doeCall, item) {
+  try {
+    const { error } = await doeCall();
+    if (error) {
+      if (wdIsNetwerkFout(error)) { await wdWachtrijToevoegen(item); return; }
+      toast("Serverfout bij opslaan: " + error.message, "err");
+      return;
+    }
+    wdRenderSyncBadge();
+  } catch (e) {
+    if (wdIsNetwerkFout(e)) { await wdWachtrijToevoegen(item); }
+    else { toast("Onverwachte fout bij opslaan: " + (e.message || e), "err"); }
+  }
+}
+
+// De wachtrij op volgorde alsnog versturen. Stopt bij het eerste
+// netwerkprobleem (verbinding nog weg). Een item dat de server weigert
+// wordt gemeld én overgeslagen, zodat één rot item de rest niet blokkeert.
+async function synchroniseerWachtrij() {
+  if (wdSyncBezig) return;
+  if (!navigator.onLine) { wdRenderSyncBadge(); return; }
+  let items;
+  try { items = await outboxAlle(); } catch (e) { return; }
+  if (!items.length) { wdStopSyncTimer(); wdRenderSyncBadge(); return; }
+
+  wdSyncBezig = true;
+  let gedaan = 0;
+  const totaal = items.length;
+  wdRenderSyncBadge(0, totaal);
+  try {
+    for (const item of items) {
+      let resultError = null, netwerkWeg = false;
+      try {
+        if (item.type === "bewaar") {
+          ({ error: resultError } = await sb.from("resultaten").upsert(item.payload,
+            { onConflict: "categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr" }));
+        } else {
+          const s = item.sleutels || {};
+          let q = sb.from("resultaten").delete()
+            .eq("categorie_id", s.categorie_id)
+            .eq("wedstrijd_id", s.wedstrijd_id)
+            .eq("discipline",   s.discipline)
+            .eq("sleutel",      s.sleutel);
+          if (s.ronde     !== undefined) q = q.eq("ronde", s.ronde);
+          if (s.poging_nr !== undefined) q = q.eq("poging_nr", s.poging_nr);
+          ({ error: resultError } = await q);
+        }
+      } catch (e) {
+        if (wdIsNetwerkFout(e)) netwerkWeg = true; else resultError = e;
+      }
+      if (netwerkWeg) break;                                  // verbinding weer weg
+      if (resultError && wdIsNetwerkFout(resultError)) break; // idem
+      if (resultError) console.warn("Sync serverfout, item overgeslagen:", resultError.message, item);
+      await outboxVerwijder(item.id);
+      gedaan++;
+      wdRenderSyncBadge(gedaan, totaal);
+    }
+  } finally {
+    wdSyncBezig = false;
+  }
+  await wdHerlaadOutboxStatus();
+  if (wdOutboxAantal === 0) { wdStopSyncTimer(); if (gedaan > 0) toast(`Wachtrij verstuurd ✓ (${gedaan})`); }
+}
+
+// Blijf het elke 30s proberen zolang er iets in de wachtrij staat.
+function wdStartSyncTimer() {
+  if (wdSyncTimer) return;
+  wdSyncTimer = setInterval(() => {
+    if (navigator.onLine && wdOutboxAantal > 0) synchroniseerWachtrij();
+  }, 30000);
+}
+function wdStopSyncTimer() {
+  if (wdSyncTimer) { clearInterval(wdSyncTimer); wdSyncTimer = null; }
+}
+
+// De statusbadge rechtsboven bijwerken. Drie toestanden:
+//  groen "Alles opgeslagen" · oranje "Offline · N wachten" · grijs "Synchroniseren…".
+function wdRenderSyncBadge(gedaan, totaal) {
+  const el = document.getElementById("wd-sync-badge");
+  if (!el) return;
+  el.classList.remove("ok", "offline", "bezig");
+  if (wdSyncBezig) {
+    el.classList.add("bezig");
+    el.textContent = (totaal != null) ? `⏳ Synchroniseren… (${gedaan}/${totaal})` : "⏳ Synchroniseren…";
+    return;
+  }
+  if (wdOutboxAantal > 0) {
+    if (navigator.onLine) { el.classList.add("bezig");   el.textContent = "⏳ Synchroniseren…"; }
+    else                  { el.classList.add("offline"); el.textContent = `📴 Offline · ${wdOutboxAantal} wachten`; }
+    return;
+  }
+  el.classList.add("ok");
+  el.textContent = "● Alles opgeslagen";
+}
+
+// Klein oranje label onder een regel die nog op verbinding wacht.
+function wdWachtLabelHtml(discipline, sleutel) {
+  if (!wdWachtSet.has(wdResKey(discipline, sleutel))) return "";
+  return `<br><span class="wd-wacht-label">⏳ wacht op verbinding</span>`;
+}
+
+// Bij openen van een wedstrijddag: status laden, badge tekenen, proberen te syncen.
+async function wdInitOutbox() {
+  await wdHerlaadOutboxStatus();
+  if (navigator.onLine) synchroniseerWachtrij();
+  else wdStartSyncTimer();
+}
+
+// Reageer op verbinding-aan/uit (één keer geregistreerd bij het laden).
+window.addEventListener("online",  () => { wdRenderSyncBadge(); synchroniseerWachtrij(); });
+window.addEventListener("offline", () => { wdRenderSyncBadge(); });
+
+// ── Einde outbox-laag (patch 62) ──────────────────────────────────
+
 async function wdBewaarResultaat(discipline, sleutel, atleetId, resultaat, status, ronde = "", poging = 1) {
   const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").upsert({
+  // 1) Lokale staat EERST — de ingevoerde waarde raakt zo nooit kwijt (patch 62).
+  wdZetLokaal({ discipline, sleutel, atleetId, resultaat, status, ronde, poging });
+  // 2) Payload klaarzetten en proberen te versturen (offline → wachtrij).
+  const payload = {
     categorie_id: cid,
     wedstrijd_id: wdWedstrijdId,
     atleet_id:    atleetId,
@@ -7075,60 +7328,72 @@ async function wdBewaarResultaat(discipline, sleutel, atleetId, resultaat, statu
     ronde,
     poging_nr:    poging,
     ingevoerd_op: new Date().toISOString()
-  }, { onConflict: "categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr" });
-  if (error) throw error;
-  wdZetLokaal({ discipline, sleutel, atleetId, resultaat, status, ronde, poging });
+  };
+  const resKey = wdResKey(discipline, sleutel);
+  await wdVerstuurOfWacht(
+    () => sb.from("resultaten").upsert(payload,
+      { onConflict: "categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr" }),
+    { type: "bewaar", payload, resKey, ts: Date.now() }
+  );
 }
 
 // Eén rij weg (standaard de snelle invoer; met ronde/poging een losse poging).
 async function wdVerwijderResultaat(discipline, sleutel, ronde = "", poging = 1) {
   const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").delete()
-    .eq("categorie_id", cid)
-    .eq("wedstrijd_id", wdWedstrijdId)
-    .eq("discipline", discipline)
-    .eq("sleutel", sleutel)
-    .eq("ronde", ronde)
-    .eq("poging_nr", poging);
-  if (error) throw error;
   const key = wdResKey(discipline, sleutel);
+  // 1) Lokaal EERST weghalen (patch 62).
   if (!ronde && Number(poging) === 1) {
     delete wdResultaten[key];
   } else if (wdPogingen[key]) {
     wdPogingen[key] = wdPogingen[key].filter(p => !(p.ronde === ronde && Number(p.poging) === Number(poging)));
     if (!wdPogingen[key].length) delete wdPogingen[key];
   }
+  // 2) Verwijdering versturen (offline → wachtrij).
+  const sleutels = { categorie_id: cid, wedstrijd_id: wdWedstrijdId, discipline, sleutel, ronde, poging_nr: poging };
+  await wdVerstuurOfWacht(
+    () => sb.from("resultaten").delete()
+      .eq("categorie_id", cid).eq("wedstrijd_id", wdWedstrijdId)
+      .eq("discipline", discipline).eq("sleutel", sleutel)
+      .eq("ronde", ronde).eq("poging_nr", poging),
+    { type: "verwijder", sleutels, resKey: key, ts: Date.now() }
+  );
 }
 
 // Alle pogingen van één ronde weg (patch 59).
 async function wdVerwijderRonde(discipline, sleutel, ronde) {
   const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").delete()
-    .eq("categorie_id", cid)
-    .eq("wedstrijd_id", wdWedstrijdId)
-    .eq("discipline", discipline)
-    .eq("sleutel", sleutel)
-    .eq("ronde", ronde);
-  if (error) throw error;
   const key = wdResKey(discipline, sleutel);
+  // 1) Lokaal EERST weghalen (patch 62).
   if (wdPogingen[key]) {
     wdPogingen[key] = wdPogingen[key].filter(p => p.ronde !== ronde);
     if (!wdPogingen[key].length) delete wdPogingen[key];
   }
+  // 2) Verwijdering versturen (offline → wachtrij).
+  const sleutels = { categorie_id: cid, wedstrijd_id: wdWedstrijdId, discipline, sleutel, ronde };
+  await wdVerstuurOfWacht(
+    () => sb.from("resultaten").delete()
+      .eq("categorie_id", cid).eq("wedstrijd_id", wdWedstrijdId)
+      .eq("discipline", discipline).eq("sleutel", sleutel)
+      .eq("ronde", ronde),
+    { type: "verwijderRonde", sleutels, resKey: key, ts: Date.now() }
+  );
 }
 
 // Alles van deze atleet bij dit onderdeel weg: snelle invoer én alle rondes.
 async function wdVerwijderAlles(discipline, sleutel) {
   const cid = actieveCategorie?.id;
-  const { error } = await sb.from("resultaten").delete()
-    .eq("categorie_id", cid)
-    .eq("wedstrijd_id", wdWedstrijdId)
-    .eq("discipline", discipline)
-    .eq("sleutel", sleutel);
-  if (error) throw error;
   const key = wdResKey(discipline, sleutel);
+  // 1) Lokaal EERST weghalen (patch 62).
   delete wdResultaten[key];
   delete wdPogingen[key];
+  // 2) Verwijdering versturen (offline → wachtrij).
+  const sleutels = { categorie_id: cid, wedstrijd_id: wdWedstrijdId, discipline, sleutel };
+  await wdVerstuurOfWacht(
+    () => sb.from("resultaten").delete()
+      .eq("categorie_id", cid).eq("wedstrijd_id", wdWedstrijdId)
+      .eq("discipline", discipline).eq("sleutel", sleutel),
+    { type: "verwijderAlles", sleutels, resKey: key, ts: Date.now() }
+  );
 }
 
 // DNS aan/uit: aan = status 'dns' opslaan (resultaat vervalt), uit = rij verwijderen.
@@ -7249,10 +7514,16 @@ function openWdAfronden() {
   wdAfrondKandidaten.sort((a, b) => a.naam.localeCompare(b.naam));
 
   const body = document.getElementById("wd-afrond-body");
+  // Patch 62: waarschuw als er nog wijzigingen op verbinding wachten.
+  const waarschuwing = wdOutboxAantal > 0 ? `
+    <div class="wd-afrond-waarschuwing">
+      <span class="ico">⚠️</span>
+      <span>Nog niet alles is opgeslagen. Er wachten <b>${wdOutboxAantal}</b> wijziging${wdOutboxAantal === 1 ? "" : "en"} op verbinding. Je kunt gewoon doorgaan; zodra er weer verbinding is worden ze alsnog verstuurd.</span>
+    </div>` : "";
   if (!wdAfrondKandidaten.length) {
     // Patch 58: geen PR's = niets op te slaan. Voorheen bleef alleen
     // "Annuleren" over; nu kun je de wedstrijd hier netjes beëindigen.
-    body.innerHTML = `
+    body.innerHTML = waarschuwing + `
       <div style="font-size:13px;color:var(--muted);line-height:1.6;">
         <b style="color:var(--text);font-size:14px;">Geen nieuwe PR's deze wedstrijd.</b><br>
         Geen enkel ingevoerd resultaat is beter dan het huidige PR, dus er is niets om op te slaan.<br>
@@ -7263,7 +7534,7 @@ function openWdAfronden() {
   } else {
     document.getElementById("wd-afrond-btn").style.display = "";
     zetWdBeeindigBtn(false);
-    body.innerHTML = `
+    body.innerHTML = waarschuwing + `
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
         ${wdAfrondKandidaten.length} resulta${wdAfrondKandidaten.length === 1 ? "at is" : "ten zijn"} beter dan het huidige PR. Vink aan wat je wilt overnemen.
       </div>

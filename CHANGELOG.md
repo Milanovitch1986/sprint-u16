@@ -6,6 +6,42 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 62] — 2026-09-03
+
+### 📴 Offline-first wedstrijddag — niets raakt meer kwijt bij slechte ontvangst
+
+<!--RELEASENOTE
+versie: Patch 62
+titel: 📴 Wedstrijddag werkt nu ook offline
+type: update
+beschrijving: Op de baan is de ontvangst vaak slecht. Ingevoerde tijden worden nu eerst op je scherm bewaard en daarna pas verstuurd. Lukt versturen niet, dan komt de wijziging in een lokale wachtrij en wordt hij automatisch nagestuurd zodra je weer verbinding hebt. Rechtsboven zie je een statusbadge en per regel of iets nog op verbinding wacht.
+-->
+
+Op een atletiekbaan valt de verbinding regelmatig weg. Tot nu toe ging elke invoer op de wedstrijddag **eerst** naar Supabase en werd het scherm **daarna** pas bijgewerkt. Was je offline, dan mislukte de verzending, stopte de functie met een fout en werd zelfs het scherm niet bijgewerkt — de ingevoerde tijd raakte kwijt. Dat lek is nu gedicht.
+
+**Scherm eerst, versturen daarna.** Elke invoer (en verwijdering) werkt nu meteen je scherm bij. Pas daarna wordt geprobeerd te versturen. Lukt dat niet door de verbinding, dan gaat die ene wijziging in een **lokale wachtrij** in plaats van verloren te gaan. Zodra er weer verbinding is, wordt de wachtrij **op volgorde** alsnog verstuurd — automatisch, en ook wanneer je op 🔄 Vernieuwen drukt.
+
+**Statusbadge rechtsboven.** Naast de knop 🔄 Vernieuwen staat een badge met drie standen: groen **● Alles opgeslagen**, oranje **📴 Offline · N wachten**, of grijs **⏳ Synchroniseren…** terwijl de wachtrij wordt weggewerkt. Per regel verschijnt bovendien een klein oranje label **⏳ wacht op verbinding** zolang die regel nog niet verstuurd is.
+
+**Waarschuwing bij afronden.** Rond je een wedstrijd af terwijl er nog wijzigingen in de wachtrij staan, dan zie je vóór het opslaan van de PR's een oranje waarschuwing met een teller. Doorgaan mag gewoon; de wachtende wijzigingen worden alsnog nagestuurd.
+
+**Geen databasewijziging.** Deze patch raakt alleen het opslaan; de tabel `resultaten` en de kolommen blijven ongewijzigd. Je hoeft dus niets in Supabase aan te passen.
+
+#### Technisch
+- Nieuw outbox-laagje op **IndexedDB** (database `sprintu16-outbox`, store `wachtrij` met auto-increment id) — geen externe bibliotheek, de app blijft één bestand zonder build-stap. Helpers: `outboxOpen`, `outboxAdd`, `outboxAlle` (gesorteerd op id = invoervolgorde), `outboxVerwijder`, `outboxAantal`.
+- De vier schrijffuncties naar `resultaten` zijn omgedraaid: **eerst** de lokale staat (`wdZetLokaal` / directe `delete` uit `wdResultaten`/`wdPogingen`), **dan** de Supabase-call in een `try/catch`. Bij een netwerk-/offlinefout gaat de wijziging via `wdVerstuurOfWacht` de wachtrij in; een echte serverfout (RLS/constraint) wordt gemeld. Naast `wdBewaarResultaat` en `wdVerwijderResultaat` zijn óók `wdVerwijderRonde` en `wdVerwijderAlles` meegenomen — die hadden hetzelfde lek.
+- `synchroniseerWachtrij()` speelt de wachtrij op volgorde af (upsert voor `bewaar`, `delete` voor de drie verwijdertypes), stopt bij het eerste netwerkprobleem en slaat een door de server geweigerd item over (met een `console.warn`) zodat één rot item de rest niet blokkeert. Een vlag `wdSyncBezig` voorkomt dubbel-tegelijk draaien.
+- Triggers: `window`-events `online` (badge + sync) en `offline` (badge), synchroniseren bij het openen van de wedstrijddag (`wdInitOutbox`) en aan het begin van `vernieuwWedstrijddag()`, plus een herhaal-timer van 30 s zolang er iets wacht.
+- Statusbadge `#wd-sync-badge` in de `.page-header` van `#wd-detail` via `wdRenderSyncBadge()` (leest `navigator.onLine` + een synchrone teller `wdOutboxAantal`). Per-regel label via `wdWachtLabelHtml()` en een `Set` `wdWachtSet` van wachtende `resKey`'s, getoond in de drie render-paden (competitie, estafette, individuele modus). Nieuwe CSS: `.wd-sync-badge` (+ `.ok`/`.offline`/`.bezig`), `.wd-wacht-label`, `.wd-afrond-waarschuwing`.
+- `openWdAfronden()` toont bovenin de modal een oranje waarschuwing met teller als `wdOutboxAantal > 0`.
+
+#### Wat niet getest kon worden
+De echte offline↔online-overgang (DevTools → Network → Offline), de echte Supabase-synchronisatie en het browsergedrag — die moeten in de browser worden getest. Wel los getest (Node): het toevoegen aan en op volgorde legen van de wachtrij, "laatste telt" bij twee wijzigingen op hetzelfde veld, verwijder-dan-opnieuw-toevoegen (en omgekeerd), stoppen bij een netwerkfout met behoud van de resterende volgorde, het overslaan van een geweigerd item, en de netwerk-vs-serverfout-detectie; plus de drie badge-toestanden.
+
+**Bestanden gewijzigd:** `app.html`, `CHANGELOG.md`, `PROJECTNOTITIES.md`
+
+---
+
 ## [augustus 2026 — patch 61] — 2026-08-31
 
 ### 📋 Rondes in het hoofdscherm in plaats van een popup
