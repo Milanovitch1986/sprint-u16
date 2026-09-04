@@ -2431,6 +2431,8 @@ function wisselMetOvergang(doeHet){
 }
 
 function showTab(tab) {
+  // Alleen de schermwissel (tonen/verbergen + actieve tab) in een zachte
+  // overgang (patch 63).
   wisselMetOvergang(() => {   // patch 63: zachte cross-fade rond de schermwissel
     ["home","atleten","prestaties","wedstrijden","opstelling","punten","profiel","admin","wedstrijddag"].forEach(t => {
       const el = document.getElementById("view-" + t);
@@ -2441,14 +2443,19 @@ function showTab(tab) {
       const mb = document.getElementById("mob-tab-" + t);
       if (mb) mb.classList.toggle("active", t === tab);
     });
-    if (tab === "home")        laadReleasenotes();
-    if (tab === "atleten")     laadDoorstroming();
-    if (tab === "prestaties")  populateAtleetSelects();
-    if (tab === "wedstrijden") renderWedstrijden();
-    if (tab === "opstelling")  renderOpstellingWedstrijden();
-    if (tab === "wedstrijddag") { renderWedstrijddagLijst(); toonWdOverzicht(); }
-    if (tab === "admin")       laadAdmin();
   });
+  // Patch 66: de tab-specifieke laadfuncties draaien SYNCHROON, buiten de
+  // overgang. De callback van startViewTransition draait asynchroon; stonden
+  // deze aanroepen daarin, dan liepen ze ná code die de aanroeper direct na
+  // showTab() uitvoert (bijv. openWedstrijddag → toonWdDetail), waardoor o.a.
+  // een geopende wedstrijd meteen weer door het overzicht werd overschreven.
+  if (tab === "home")        laadReleasenotes();
+  if (tab === "atleten")     laadDoorstroming();
+  if (tab === "prestaties")  populateAtleetSelects();
+  if (tab === "wedstrijden") renderWedstrijden();
+  if (tab === "opstelling")  renderOpstellingWedstrijden();
+  if (tab === "wedstrijddag") { renderWedstrijddagLijst(); toonWdOverzicht(); }
+  if (tab === "admin")       laadAdmin();
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────

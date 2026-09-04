@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 september 2026 (patch 65)*
+*AV Sprint Breda · Laatste update: 4 september 2026 (patch 66)*
 
 ---
 
@@ -42,6 +42,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Regressiefix: View Transitions brak showTab-vervolgcode (patch 66, sep 2026)
+Bug (regressie uit patch 63): op de wedstrijddag opende een wedstrijd niet meer — klik op "live resultaten invoeren" bracht je meteen terug naar het overzicht. Trof álle wedstrijden (open + competitie), niet alleen open.
+- **Oorzaak:** `document.startViewTransition(callback)` roept zijn callback ASYNCHROON aan (volgende frame). Patch 63 zette de héle body van `showTab` in die callback, inclusief de `if (tab === …)`-laadaanroepen. Gevolg: in `openWedstrijddag()` draaide de synchrone `toonWdDetail()` (detail zichtbaar) vóór de async callback met `renderWedstrijddagLijst(); toonWdOverzicht();` — die het overzicht wéér zichtbaar maakte en het detail verborg. Overzicht won → wedstrijd opende niet.
+- **Fix:** alleen de display/class-toggle blijft in de `wisselMetOvergang()`-callback (de cross-fade). De tab-specifieke laadaanroepen draaien nu weer SYNCHROON ná `wisselMetOvergang()`, zodat vervolgcode van de aanroeper (zoals `toonWdDetail`) op de juiste staat rekent. Cross-fade blijft werken.
+- **Les:** code die na `showTab()` op de nieuwe view-staat rekent, mag niet afhankelijk zijn van bijwerkingen die in de View-Transition-callback zitten (die draait async). Houd zulke bijwerkingen synchroon.
+- Node --check geldig; echte browser-flow niet testbaar in dit kanaal.
 
 ### Estafettes in de individuele modus (patch 65, sep 2026)
 Open wedstrijden (individuele modus) ondersteunen nu ook estafettetijden. Type feature, geen databasewijziging. KEUZE Milanovitch: meerdere ploegen (A/B/C…) per estafette-onderdeel, niet één vaste teamtijd.

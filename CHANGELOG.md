@@ -6,6 +6,32 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 66] — 2026-09-04
+
+### 🐛 Wedstrijddag opende niet meer na het klikken op "live resultaten invoeren"
+
+<!--RELEASENOTE
+versie: Patch 66
+titel: 🐛 Wedstrijddag opent weer correct
+type: bugfix
+beschrijving: Na de soepele schermovergangen (patch 63) opende een wedstrijd op de wedstrijddag niet meer: je klikte op "live resultaten invoeren" en belandde meteen weer op het overzicht. Dat is verholpen. De zachte overgang tussen tabbladen blijft gewoon werken.
+-->
+
+Sinds de soepele schermovergangen (patch 63) opende een wedstrijd op de wedstrijddag niet meer. Je klikte op **🏟️ Live resultaten invoeren**, maar in plaats van het invoerscherm kwam je meteen weer op het overzicht terecht.
+
+**De oorzaak.** De overgangs-animatie voert zijn schermwissel iets later uit (op de volgende beeldschermverversing). In patch 63 zat daar per ongeluk óók de stap "toon het overzicht" in. Daardoor draaide "toon het overzicht" *ná* "toon het invoerscherm", en won het overzicht — je zag de wedstrijd dus niet opengaan.
+
+**De oplossing.** Alleen de zichtbare schermwissel zit nog in de animatie; alle vervolgstappen draaien weer meteen, in de juiste volgorde. Wedstrijden (open én competitie) openen weer normaal, en de zachte overgang tussen tabbladen blijft behouden.
+
+**Geen databasewijziging.**
+
+#### Technisch
+
+- Regressie uit patch 63: `showTab()` had zijn volledige body in de `document.startViewTransition()`-callback, die asynchroon draait. Daardoor liepen de tab-specifieke laadaanroepen (waaronder `toonWdOverzicht()` voor de wedstrijddag) ná code die de aanroeper direct na `showTab()` uitvoert (`openWedstrijddag()` → `toonWdDetail()`), zodat het detailscherm meteen weer door het overzicht werd overschreven.
+- Fix: alleen de display/class-toggle blijft in de View-Transition-callback; de `if (tab === …)`-laadaanroepen draaien nu synchroon ná `wisselMetOvergang()`. De cross-fade werkt onveranderd.
+
+---
+
 ## [september 2026 — patch 65] — 2026-09-04
 
 ### 🏃 Estafettes invoeren in de individuele modus
