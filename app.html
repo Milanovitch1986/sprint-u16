@@ -6898,14 +6898,13 @@ async function wdPogingOngeldig(discipline, sleutel, atleetId, type, ronde, pogi
 // onderdeel en voert resultaten in. Betere resultaten worden bij het
 // afronden als nieuw PR opgeslagen (hergebruikt de bestaande afrond-modal).
 
-// Onderdelen die je individueel kunt invoeren: alle onderdelen van de
-// categorie behalve estafettes (die zijn een teamtijd), plus de
-// categorie-brede eigen onderdelen.
+// Onderdelen voor de individuele modus: alle onderdelen van de categorie
+// (sinds patch 65 inclusief estafettes — die krijgen teamtijden per ploeg
+// i.p.v. een atleet), plus de categorie-brede eigen onderdelen.
 function wdIndivDisciplines() {
   const uit = [];
   const gezien = new Set();
   getDisciplines().forEach(d => {
-    if (d.type === "estafette") return;
     const k = d.naam.trim().toLowerCase();
     if (gezien.has(k)) return;
     gezien.add(k);
@@ -6960,8 +6959,11 @@ function vulWdQuickAdd() {
   const discSel = document.getElementById("wd-qa-disc");
   if (discSel) {
     const vorige = discSel.value;
+    // Estafettes horen niet in de snelinvoer-balk (die koppelt een atleet aan
+    // een onderdeel); ze krijgen een eigen kaart met teamtijden (patch 65).
     discSel.innerHTML = `<option value="">Onderdeel…</option>` +
-      wdIndivDisciplines().map(d => `<option value="${esc(d.naam)}">${esc(d.naam)}</option>`).join("");
+      wdIndivDisciplines().filter(d => d.type !== "estafette")
+        .map(d => `<option value="${esc(d.naam)}">${esc(d.naam)}</option>`).join("");
     if (vorige) discSel.value = vorige;   // gekozen onderdeel niet verliezen bij een herrender
   }
 }
@@ -6987,6 +6989,12 @@ function renderWdIndividueel() {
   const disciplines = wdIndivDisciplines();
   let kaarten = "";
   disciplines.forEach(d => {
+    // Estafette (patch 65): teamtijd(en) per ploeg, geen atleet — altijd tonen
+    // zodat je een eerste ploeg kunt toevoegen.
+    if (d.type === "estafette") {
+      kaarten += wdIndivEstafetteKaartHtml(d.naam);
+      return;
+    }
     const rijen = perDiscipline[d.naam.trim().toLowerCase()] || [];
     if (!rijen.length) return; // alleen onderdelen tonen waar iemand aan meedoet
     // Sorteer op atletennaam voor rust in het scherm.
@@ -7034,6 +7042,83 @@ function wdIndivRijHtml(discipline, res, type) {
               onclick="wdIndivVerwijder('${esc(discipline)}','${aid}')">✕</button>
     </div>
     ${wdRondeBlokkenHtml(discipline, aid, aid, wdType)}`;
+}
+
+// ── Estafettes in de individuele modus (patch 65) ──────────────
+// Een estafette is een teamtijd, geen individueel PR. In de individuele modus
+// kun je één of meer ploegen (A/B/C…) invoeren, elk met een eigen teamtijd.
+// De sleutel is "ploeg-X" en er is geen atleet, waardoor de afrond-flow deze
+// tijden automatisch nooit als PR overneemt (die kijkt alleen naar rijen met
+// een atleet).
+
+// Welke ploegen zijn al ingevoerd voor dit estafette-onderdeel?
+function wdIndivEstafettePloegen(discipline) {
+  const dl = discipline.trim().toLowerCase();
+  const set = new Set();
+  const pak = (r) => {
+    if (!r || r.atleetId) return;
+    if ((r.discipline || "").trim().toLowerCase() !== dl) return;
+    if (String(r.sleutel).startsWith("ploeg-")) set.add(r.sleutel);
+  };
+  Object.values(wdResultaten).forEach(pak);
+  Object.values(wdPogingen).forEach(lijst => (lijst || []).forEach(pak));
+  // Sorteer op ploegletter: ploeg-A, ploeg-B, …
+  return [...set].sort((a, b) => String(a).localeCompare(String(b)));
+}
+
+// Kaart voor één estafette-onderdeel: een rij per ploeg + knop om er één bij te doen.
+function wdIndivEstafetteKaartHtml(discipline) {
+  const ploegen = wdIndivEstafettePloegen(discipline);
+  const rijen = ploegen.map(sleutel => {
+    const letter = String(sleutel).replace("ploeg-", "");
+    return `
+      <div class="wd-rij">
+        <span>Teamtijd Ploeg ${esc(letter)}${wdWachtLabelHtml(discipline, sleutel)}</span>
+        ${wdVeldenHtml(discipline, sleutel, null, "estafette", false)}
+        <span class="wd-pr">${wdBesteTekst(discipline, sleutel)}</span>
+        <span></span>
+        <button class="wd-dns-btn" title="Verwijder deze ploeg"
+                onclick="wdIndivEstafetteVerwijder('${esc(discipline)}','${esc(sleutel)}')">✕</button>
+      </div>`;
+  }).join("");
+  return `
+    <div class="wd-kaart">
+      <div class="wd-kaart-kop"><b>${esc(discipline)}</b>
+        <span class="wd-telregel">estafette · teamtijd (geen PR)</span></div>
+      ${rijen || `<div style="font-size:12px;color:var(--muted);padding:4px 0 8px;">Nog geen ploeg toegevoegd.</div>`}
+      <button class="wd-sectie-add" onclick="wdIndivEstafetteVoegPloegToe('${esc(discipline)}')">＋ ploeg toevoegen bij ${esc(discipline)}</button>
+    </div>`;
+}
+
+// Voeg de eerstvolgende vrije ploeg (A, B, C, …) toe als lege teamtijd-rij.
+async function wdIndivEstafetteVoegPloegToe(discipline) {
+  const bezet = wdIndivEstafettePloegen(discipline).map(s => String(s).replace("ploeg-", ""));
+  let letter = "A";
+  for (let i = 0; i < 26; i++) {
+    const kand = String.fromCharCode(65 + i);
+    if (!bezet.includes(kand)) { letter = kand; break; }
+  }
+  try {
+    await wdBewaarResultaat(discipline, `ploeg-${letter}`, null, null, "ok");
+    renderWdIndividueel();
+  } catch(e) { toast("Fout bij toevoegen: " + e.message, "err"); }
+}
+
+// Verwijder een ploeg bij een estafette-onderdeel (met bevestiging als er invoer is).
+async function wdIndivEstafetteVerwijder(discipline, sleutel) {
+  const letter = String(sleutel).replace("ploeg-", "");
+  const res = wdResultaten[wdResKey(discipline, sleutel)];
+  const heeftInvoer = (res && res.status === "ok" && res.resultaat) ||
+    wdPogingLijst(discipline, sleutel).some(p => (p.status === "ok" && p.resultaat) || p.status === "x");
+  if (heeftInvoer) {
+    const ok = await bevestig("Ploeg verwijderen",
+      `Verwijder Ploeg ${letter} bij ${discipline}?\n\nAlle ingevoerde teamtijden en rondes worden verwijderd.`);
+    if (!ok) return;
+  }
+  try {
+    await wdVerwijderAlles(discipline, sleutel);   // losse tijd + alle rondes
+    renderWdIndividueel();
+  } catch(e) { toast("Fout bij verwijderen: " + e.message, "err"); }
 }
 
 // Snelinvoer-balk: atleet + onderdeel (+ optioneel resultaat) toevoegen.

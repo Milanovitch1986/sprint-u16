@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 september 2026 (patch 64)*
+*AV Sprint Breda · Laatste update: 4 september 2026 (patch 65)*
 
 ---
 
@@ -42,6 +42,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Estafettes in de individuele modus (patch 65, sep 2026)
+Open wedstrijden (individuele modus) ondersteunen nu ook estafettetijden. Type feature, geen databasewijziging. KEUZE Milanovitch: meerdere ploegen (A/B/C…) per estafette-onderdeel, niet één vaste teamtijd.
+- Sleutel per ploeg = `ploeg-A/B/C…`, atleet_id = null. Dit is exact hetzelfde patroon als de competitiemodus. De DB-unieke sleutel is `categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr` (géén geslacht); omdat elke wedstrijd een eigen `wedstrijd_id` heeft en open wedstrijden alleen in de individuele modus draaien, botsen deze `ploeg-*`-sleutels met niets.
+- `wdIndivDisciplines()`: estafette-filter verwijderd. `vulWdQuickAdd()`: estafettes juist wél uit de snelinvoer-dropdown gefilterd (die koppelt een atleet aan een onderdeel).
+- `renderWdIndividueel()`: estafette-onderdelen via `wdIndivEstafetteKaartHtml(discipline)` — altijd getoond (ook zonder ploeg) zodat je de eerste ploeg kunt aanmaken. Gevolg: in categorieën mét estafettes verschijnt de oude "nog geen resultaten"-empty-state niet meer in de individuele modus; je ziet i.p.v. dat de estafette-kaarten met een toevoegknop.
+- Nieuwe helpers: `wdIndivEstafettePloegen()` (verzamelt `ploeg-*`-sleutels uit `wdResultaten` + `wdPogingen`, atleetId leeg), `wdIndivEstafetteVoegPloegToe()` (eerstvolgende vrije letter A→Z, lege rij via `wdBewaarResultaat(disc,"ploeg-X",null,null,"ok")`), `wdIndivEstafetteVerwijder()` (bevestiging bij invoer → `wdVerwijderAlles`).
+- Invoer/opslag/sync lopen via de bestaande offline-veilige functies (patch 62). `wdArgs` gaf `atleetId=null` al correct door als letterlijke `null`.
+- **Nooit PR:** `openWdAfronden()` neemt alleen rijen mét atleet mee als PR-kandidaat (`onthou`-filter op `!r.atleetId`), dus estafette-teamtijden worden automatisch overgeslagen. Geen wijziging aan de afrond-flow nodig.
+- Puntenkolom bewust leeg (`—`/lege span) voor estafette-indiv: zonder ploeg-/geslacht-context geen betekenisvolle puntenberekening; alleen de teamtijd + beste-over-rondes worden getoond.
+- **Niet getest in dit kanaal:** echte browser-invoer, Supabase upsert/delete van estafette-rijen, echte offline↔online-overgang. JS-syntax wel `node --check`.
 
 ### Eén-klik back-up naar Excel (patch 64, sep 2026)
 Knop 📥 Back-up naar Excel in de Admin-tab (vijfde `detail-panel` in `#view-admin`, onder "Toegang per trainer"). Exporteert de actieve categorie naar één `.xlsx` met drie tabbladen. Type feature, alleen-lezen, geen databasewijziging.

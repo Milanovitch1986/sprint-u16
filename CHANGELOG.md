@@ -6,6 +6,37 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 65] — 2026-09-04
+
+### 🏃 Estafettes invoeren in de individuele modus
+
+<!--RELEASENOTE
+versie: Patch 65
+titel: 🏃 Estafettetijden bij open wedstrijden
+type: feature
+beschrijving: Bij open wedstrijden (individuele modus) kun je nu ook estafettetijden invoeren. Elk estafette-onderdeel toont één of meer ploegen (A, B, C…) met een eigen teamtijd; met "＋ ploeg toevoegen" zet je er een bij. Een estafette is een teamtijd, geen individueel PR, dus deze tijden worden bij het afronden nooit als persoonlijk record overgenomen.
+-->
+
+Tot nu toe kon je op de wedstrijddag in de **individuele modus** (open wedstrijden) alle onderdelen invoeren behalve estafettes. Die waren bewust weggelaten omdat een estafette een teamtijd is en geen atleet heeft. Vanaf nu kun je ze wél kwijt.
+
+**Eén of meer ploegen per onderdeel.** Elk estafette-onderdeel (bijvoorbeeld 4x80m) krijgt een eigen kaart. Met de knop **＋ ploeg toevoegen** zet je een ploeg neer — Ploeg A, dan Ploeg B, dan Ploeg C, enzovoort. Elke ploeg heeft een eigen teamtijd-veld, en je kunt er ook rondes bij zetten net als bij de andere loop-onderdelen. Een ploeg die je niet meer nodig hebt, verwijder je met het kruisje.
+
+**Nooit een PR.** Een estafette is een teamprestatie, geen individueel record. Deze tijden worden bij het afronden van de wedstrijd dan ook **nooit** als persoonlijk record voorgesteld of overgenomen — precies zoals dat in de competitiemodus al ging.
+
+**Snelinvoer-balk ongemoeid.** De snelinvoer-balk bovenaan (atleet + onderdeel) blijft voor individuele onderdelen; estafettes staan daar niet tussen, want die koppel je niet aan één atleet.
+
+**Geen databasewijziging.** De teamtijden worden opgeslagen in de bestaande tabel `resultaten` met de sleutel `ploeg-A/B/C` en zonder atleet — hetzelfde patroon dat de competitiemodus al gebruikt.
+
+#### Technisch
+
+- `wdIndivDisciplines()` filtert estafettes niet langer weg; `vulWdQuickAdd()` laat ze wél uit de snelinvoer-dropdown (die vereist een atleet).
+- `renderWdIndividueel()` rendert estafette-onderdelen via de nieuwe `wdIndivEstafetteKaartHtml()`: een rij per ploeg met `wdVeldenHtml(discipline, "ploeg-X", null, "estafette", false)`, plus een "＋ ploeg toevoegen"-knop; estafette-kaarten worden altijd getoond zodat je een eerste ploeg kunt aanmaken.
+- Nieuwe helpers: `wdIndivEstafettePloegen()` (verzamelt bestaande `ploeg-*`-sleutels uit `wdResultaten` + `wdPogingen`), `wdIndivEstafetteVoegPloegToe()` (eerstvolgende vrije letter → lege rij via `wdBewaarResultaat`), `wdIndivEstafetteVerwijder()` (met bevestiging → `wdVerwijderAlles`).
+- Opslaan/verwijderen/synchroniseren lopen via de bestaande offline-veilige functies (patch 62); `wdArgs`/`wdLosInvoer` ondersteunden `atleetId = null` al.
+- De afrond-flow (`openWdAfronden`) neemt alleen rijen mét een atleet mee als PR-kandidaat, dus estafette-teamtijden worden automatisch overgeslagen — geen wijziging nodig.
+
+---
+
 ## [september 2026 — patch 64] — 2026-09-04
 
 ### 💾 Eén-klik back-up van je categorie naar Excel
