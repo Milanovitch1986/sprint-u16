@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 september 2026 (patch 66)*
+*AV Sprint Breda · Laatste update: 4 september 2026 (patch 67)*
 
 ---
 
@@ -43,6 +43,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Estafette pas zichtbaar na toevoegen, niet meer standaard (patch 67, sep 2026)
+Bijstelling op patch 65: niet elke open wedstrijd heeft een estafette, dus de kaart moet niet standaard op het scherm staan. Type update, geen databasewijziging.
+- `vulWdQuickAdd()`: estafettes weer terug in de `#wd-qa-disc`-dropdown (patch 65 filterde ze er juist uit), gelabeld met `(estafette)`-suffix.
+- Nieuwe `wdQaDiscWissel()` (via `onchange` op de dropdown + na elke herbouw van de balk): schakelt atleet-select, zoekveld en resultaatveld uit zodra een estafette gekozen is; past placeholder aan.
+- `wdQuickAdd()`: checkt eerst het gekozen onderdeel; is het een estafette, dan wordt de atleet-eis overgeslagen en direct `wdIndivEstafetteVoegPloegToe()` aangeroepen (dezelfde functie als de ＋ ploeg toevoegen-knop op de kaart).
+- `renderWdIndividueel()`: estafette-kaart alleen opgebouwd als `wdIndivEstafettePloegen(naam).length > 0` — zelfde patroon als de andere onderdelen (die ook pas een kaart krijgen bij de eerste rij).
+- De helpers uit patch 65 (`wdIndivEstafettePloegen/VoegPloegToe/Verwijder`) zijn ongewijzigd; alleen wanneer/hoe de kaart verschijnt is aangepast.
+- **Niet getest in dit kanaal:** de echte browser-flow (dropdown → veld-toggle → eerste ploeg toevoegen). JS-syntax wel `node --check`.
+
 ### Regressiefix: View Transitions brak showTab-vervolgcode (patch 66, sep 2026)
 Bug (regressie uit patch 63): op de wedstrijddag opende een wedstrijd niet meer — klik op "live resultaten invoeren" bracht je meteen terug naar het overzicht. Trof álle wedstrijden (open + competitie), niet alleen open.
 - **Oorzaak:** `document.startViewTransition(callback)` roept zijn callback ASYNCHROON aan (volgende frame). Patch 63 zette de héle body van `showTab` in die callback, inclusief de `if (tab === …)`-laadaanroepen. Gevolg: in `openWedstrijddag()` draaide de synchrone `toonWdDetail()` (detail zichtbaar) vóór de async callback met `renderWedstrijddagLijst(); toonWdOverzicht();` — die het overzicht wéér zichtbaar maakte en het detail verborg. Overzicht won → wedstrijd opende niet.
@@ -54,7 +63,7 @@ Bug (regressie uit patch 63): op de wedstrijddag opende een wedstrijd niet meer 
 Open wedstrijden (individuele modus) ondersteunen nu ook estafettetijden. Type feature, geen databasewijziging. KEUZE Milanovitch: meerdere ploegen (A/B/C…) per estafette-onderdeel, niet één vaste teamtijd.
 - Sleutel per ploeg = `ploeg-A/B/C…`, atleet_id = null. Dit is exact hetzelfde patroon als de competitiemodus. De DB-unieke sleutel is `categorie_id,wedstrijd_id,discipline,sleutel,ronde,poging_nr` (géén geslacht); omdat elke wedstrijd een eigen `wedstrijd_id` heeft en open wedstrijden alleen in de individuele modus draaien, botsen deze `ploeg-*`-sleutels met niets.
 - `wdIndivDisciplines()`: estafette-filter verwijderd. `vulWdQuickAdd()`: estafettes juist wél uit de snelinvoer-dropdown gefilterd (die koppelt een atleet aan een onderdeel).
-- `renderWdIndividueel()`: estafette-onderdelen via `wdIndivEstafetteKaartHtml(discipline)` — altijd getoond (ook zonder ploeg) zodat je de eerste ploeg kunt aanmaken. Gevolg: in categorieën mét estafettes verschijnt de oude "nog geen resultaten"-empty-state niet meer in de individuele modus; je ziet i.p.v. dat de estafette-kaarten met een toevoegknop.
+- `renderWdIndividueel()`: estafette-onderdelen via `wdIndivEstafetteKaartHtml(discipline)`. **Bijgewerkt in patch 67:** kaart wordt alleen nog getoond zodra er al een ploeg is toegevoegd (net als de andere onderdelen), niet meer standaard bij elk estafette-onderdeel — zie patch 67 hieronder voor de reden en de nieuwe toevoegflow via de dropdown.
 - Nieuwe helpers: `wdIndivEstafettePloegen()` (verzamelt `ploeg-*`-sleutels uit `wdResultaten` + `wdPogingen`, atleetId leeg), `wdIndivEstafetteVoegPloegToe()` (eerstvolgende vrije letter A→Z, lege rij via `wdBewaarResultaat(disc,"ploeg-X",null,null,"ok")`), `wdIndivEstafetteVerwijder()` (bevestiging bij invoer → `wdVerwijderAlles`).
 - Invoer/opslag/sync lopen via de bestaande offline-veilige functies (patch 62). `wdArgs` gaf `atleetId=null` al correct door als letterlijke `null`.
 - **Nooit PR:** `openWdAfronden()` neemt alleen rijen mét atleet mee als PR-kandidaat (`onthou`-filter op `!r.atleetId`), dus estafette-teamtijden worden automatisch overgeslagen. Geen wijziging aan de afrond-flow nodig.

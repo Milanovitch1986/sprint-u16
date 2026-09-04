@@ -1656,7 +1656,7 @@
         <div class="qa-row">
           <input id="wd-qa-zoek" placeholder="🔍 zoek atleet…" oninput="filterWdQaAtleten()" title="Typ een (deel van een) naam om de lijst te filteren">
           <select id="wd-qa-atleet"><option value="">Atleet…</option></select>
-          <select id="wd-qa-disc"><option value="">Onderdeel…</option></select>
+          <select id="wd-qa-disc" onchange="wdQaDiscWissel()"><option value="">Onderdeel…</option></select>
           <input id="wd-qa-res" placeholder="resultaat (optioneel)" onkeydown="if(event.key==='Enter')wdQuickAdd()">
           <button class="btn btn-primary btn-sm" onclick="wdQuickAdd()">＋ Toevoegen</button>
         </div>
@@ -6966,12 +6966,31 @@ function vulWdQuickAdd() {
   const discSel = document.getElementById("wd-qa-disc");
   if (discSel) {
     const vorige = discSel.value;
-    // Estafettes horen niet in de snelinvoer-balk (die koppelt een atleet aan
-    // een onderdeel); ze krijgen een eigen kaart met teamtijden (patch 65).
+    // Estafettes staan gewoon tussen de andere onderdelen (patch 67): pas als
+    // je er één kiest, wisselt de balk naar "ploeg toevoegen" i.p.v. atleet.
     discSel.innerHTML = `<option value="">Onderdeel…</option>` +
-      wdIndivDisciplines().filter(d => d.type !== "estafette")
-        .map(d => `<option value="${esc(d.naam)}">${esc(d.naam)}</option>`).join("");
+      wdIndivDisciplines().map(d =>
+        `<option value="${esc(d.naam)}">${esc(d.naam)}${d.type === "estafette" ? " (estafette)" : ""}</option>`
+      ).join("");
     if (vorige) discSel.value = vorige;   // gekozen onderdeel niet verliezen bij een herrender
+  }
+  wdQaDiscWissel();   // balk meteen in de juiste stand zetten (patch 67)
+}
+
+// Wisselt de snelinvoer-balk tussen "atleet + onderdeel" en "ploeg toevoegen"
+// zodra een estafette gekozen wordt — een estafette heeft geen atleet (patch 67).
+function wdQaDiscWissel() {
+  const disc = document.getElementById("wd-qa-disc")?.value || "";
+  const info = wdIndivDisciplines().find(d => d.naam === disc);
+  const isEstafette = !!info && info.type === "estafette";
+  const zoekEl = document.getElementById("wd-qa-zoek");
+  const atlSel = document.getElementById("wd-qa-atleet");
+  const resInp = document.getElementById("wd-qa-res");
+  if (zoekEl) zoekEl.disabled = isEstafette;
+  if (atlSel) atlSel.disabled = isEstafette;
+  if (resInp) {
+    resInp.disabled = isEstafette;
+    resInp.placeholder = isEstafette ? "vul de teamtijd straks in de kaart in" : "resultaat (optioneel)";
   }
 }
 
@@ -6996,9 +7015,12 @@ function renderWdIndividueel() {
   const disciplines = wdIndivDisciplines();
   let kaarten = "";
   disciplines.forEach(d => {
-    // Estafette (patch 65): teamtijd(en) per ploeg, geen atleet — altijd tonen
-    // zodat je een eerste ploeg kunt toevoegen.
+    // Estafette: teamtijd(en) per ploeg, geen atleet. Alleen tonen als er al
+    // een ploeg is toegevoegd (patch 67) — niet elke open wedstrijd heeft een
+    // estafette, dus geen kaart tonen die verder leeg zou blijven. De eerste
+    // ploeg voeg je toe via de snelinvoer-dropdown hierboven.
     if (d.type === "estafette") {
+      if (!wdIndivEstafettePloegen(d.naam).length) return;
       kaarten += wdIndivEstafetteKaartHtml(d.naam);
       return;
     }
@@ -7129,13 +7151,24 @@ async function wdIndivEstafetteVerwijder(discipline, sleutel) {
 }
 
 // Snelinvoer-balk: atleet + onderdeel (+ optioneel resultaat) toevoegen.
+// Bij een estafette (patch 67) is er geen atleet — die voegt meteen de
+// eerstvolgende ploeg toe, precies zoals de ＋ ploeg toevoegen-knop op de kaart.
 async function wdQuickAdd() {
+  const disc = document.getElementById("wd-qa-disc").value;
+  if (!disc) { toast("Kies eerst een onderdeel", "err"); return; }
+
+  const info = wdIndivDisciplines().find(d => d.naam === disc);
+  if (info && info.type === "estafette") {
+    await wdIndivEstafetteVoegPloegToe(disc);
+    document.getElementById("wd-qa-disc").value = "";
+    vulWdQuickAdd();
+    return;
+  }
+
   const atleetId = document.getElementById("wd-qa-atleet").value;
-  const disc     = document.getElementById("wd-qa-disc").value;
   const resInp   = document.getElementById("wd-qa-res");
   const raw      = resInp.value.trim();
   if (!atleetId) { toast("Kies eerst een atleet", "err"); return; }
-  if (!disc)     { toast("Kies eerst een onderdeel", "err"); return; }
   const ok = await wdIndivVoegToe(disc, atleetId, raw || null);
   if (ok) {
     resInp.value = "";

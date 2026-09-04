@@ -6,6 +6,32 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 67] — 2026-09-04
+
+### 🏃 Estafette-kaart pas zichtbaar na toevoegen, niet meer standaard
+
+<!--RELEASENOTE
+versie: Patch 67
+titel: 🏃 Estafette pas zichtbaar na toevoegen
+type: update
+beschrijving: In de individuele modus stond een estafette-kaart eerder altijd op het scherm, ook bij open wedstrijden zonder estafette. Dat is aangepast: een estafette staat nu gewoon tussen de andere onderdelen in de snelinvoer-dropdown bovenaan (herkenbaar met "(estafette)"). Kies je hem, dan verandert de balk naar "ploeg toevoegen" — er is immers geen atleet nodig. Pas als je de eerste ploeg hebt toegevoegd, verschijnt de kaart.
+-->
+
+Bij patch 65 kreeg elk estafette-onderdeel automatisch een eigen kaart op de wedstrijddag, ook als er nog geen ploeg was ingevuld. Voor wedstrijden zonder estafette gaf dat onnodige, lege kaarten op het scherm. Dat is nu opgelost: een estafette-kaart verschijnt pas zodra je er zelf een ploeg aan toevoegt — precies zoals de andere onderdelen al werkten.
+
+**Toevoegen via de dropdown.** Een estafette staat gewoon tussen de andere onderdelen in de dropdown van de snelinvoer-balk bovenaan, herkenbaar met het label "(estafette)". Kies je hem, dan schakelt de balk automatisch om: het atleet-veld en het zoekveld worden uitgeschakeld (een estafette heeft geen individuele atleet) en de knop **＋ Toevoegen** voegt meteen de eerste ploeg toe. Vanaf dat moment staat de kaart op het scherm, met de gewone **＋ ploeg toevoegen**-knop erop voor een tweede of derde ploeg.
+
+**Geen databasewijziging.**
+
+#### Technisch
+
+- `vulWdQuickAdd()` laat estafettes weer meedoen in de `#wd-qa-disc`-dropdown (label met `(estafette)`-suffix); de eerdere uitsluiting uit patch 65 is teruggedraaid.
+- Nieuwe functie `wdQaDiscWissel()` (aangeroepen via `onchange` op de dropdown, en na elke herbouw van de balk): schakelt het atleet-veld, het zoekveld en het resultaatveld uit zodra een estafette gekozen is, en past de placeholder aan.
+- `wdQuickAdd()`: controleert eerst het gekozen onderdeel; is het een estafette, dan wordt de atleet-eis overgeslagen en `wdIndivEstafetteVoegPloegToe()` direct aangeroepen — dezelfde functie die de ＋ ploeg toevoegen-knop op de kaart gebruikt.
+- `renderWdIndividueel()`: de estafette-kaart wordt alleen nog opgebouwd als `wdIndivEstafettePloegen()` al minstens één ploeg teruggeeft, net als bij de andere onderdelen (die ook pas een kaart krijgen zodra er een rij is).
+
+---
+
 ## [september 2026 — patch 66] — 2026-09-04
 
 ### 🐛 Wedstrijddag opende niet meer na het klikken op "live resultaten invoeren"
