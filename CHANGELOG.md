@@ -6,6 +6,39 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 64] — 2026-09-04
+
+### 💾 Eén-klik back-up van je categorie naar Excel
+
+<!--RELEASENOTE
+versie: Patch 64
+titel: 💾 Back-up naar Excel met één klik
+type: feature
+beschrijving: In de Admin-tab staat nu een knop "Back-up naar Excel". Die downloadt in één klik alle gegevens van de actieve categorie als één Excel-bestand met drie tabbladen (Atleten, PR's en Wedstrijden). Handig als vangnet om lokaal te bewaren. Er wordt niets in de database gewijzigd — puur lezen en downloaden.
+-->
+
+Onderaan de **Admin**-tab staat een nieuw paneel **💾 Back-up & export** met de knop **📥 Back-up naar Excel**. Eén klik en je krijgt een Excel-bestand met alle gegevens van de op dat moment actieve categorie — een vangnet dat je lokaal kunt bewaren of doorsturen.
+
+**Drie tabbladen in het bestand:**
+- **Atleten** — naam, geslacht, geboortedatum en bondsnummer
+- **PR's** — per atleet de beste prestatie op elk onderdeel van de categorie (dezelfde onderdelen die de app ook elders gebruikt)
+- **Wedstrijden** — naam, datum, einddatum, locatie, of het een finale/open wedstrijd is, en de notities
+
+**Bestandsnaam** bevat de categorie en de datum, bijvoorbeeld `sprint-U16-backup-2026-09-04.xlsx`, zodat back-ups van verschillende dagen en categorieën niet door elkaar lopen.
+
+**Alleen lezen.** De knop leest uitsluitend de al ingeladen gegevens en downloadt die; er verandert niets in Supabase. Bij succes zie je een korte bevestiging.
+
+**Geen databasewijziging.**
+
+#### Technisch
+
+- Nieuwe functie `backupNaarExcel()` (naast de bestaande `exporteerPRsExcel()`), die hetzelfde SheetJS-patroon hergebruikt: SheetJS wordt bij een klik on-demand van de CDN geladen als `window.XLSX` nog niet bestaat, met een nette foutmelding als dat mislukt.
+- Bouwt een workbook met `XLSX.utils.book_new()` / `aoa_to_sheet` / `book_append_sheet` en schrijft weg met `XLSX.writeFile`.
+- Data uit de globale arrays `atleten`, `prestaties` (PR's via `bestePrestatie()` + `formateerResultaatWeergave()`) en `wedstrijden`; onderdelen categorie-afhankelijk via `getDisciplines()`; bestandsnaam en melding via `catNaam()`.
+- Knop toegevoegd als vijfde `detail-panel` in `#view-admin`, onder "Toegang per trainer".
+
+---
+
 ## [september 2026 — patch 63] — 2026-09-04
 
 ### ✨ Soepele schermovergangen bij het wisselen van tab

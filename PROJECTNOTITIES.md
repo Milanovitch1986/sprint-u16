@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 september 2026 (patch 63)*
+*AV Sprint Breda · Laatste update: 4 september 2026 (patch 64)*
 
 ---
 
@@ -42,6 +42,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Eén-klik back-up naar Excel (patch 64, sep 2026)
+Knop 📥 Back-up naar Excel in de Admin-tab (vijfde `detail-panel` in `#view-admin`, onder "Toegang per trainer"). Exporteert de actieve categorie naar één `.xlsx` met drie tabbladen. Type feature, alleen-lezen, geen databasewijziging.
+- Functie `backupNaarExcel()`, direct na `exporteerPRsExcel()`. Hergebruikt hetzelfde SheetJS-patroon: `if (!window.XLSX)` → script on-demand van CDN (cdnjs 0.18.5) laden, met try/catch en nette toast bij faalende load.
+- Tabbladen: **Atleten** (naam/geslacht/geboortedatum/bondsnr uit `atleten`), **PR's** (matrix atleet × `getDisciplines()`, beste via `bestePrestatie(a.id, disc)` + `formateerResultaatWeergave`), **Wedstrijden** (naam/datum/einddatum/locatie/finale/open/notities uit `wedstrijden`).
+- Bestandsnaam `sprint-<catNaam()>-backup-YYYY-MM-DD.xlsx` (niet-alfanumeriek in categorienaam → `-`). Melding via `toast`.
+- Keuze: tabblad 2 bevat **alleen de PR's** (beste per onderdeel), niet de volledige prestatiehistorie — bewust gekozen door Milanovitch.
+- Knoptekst bewust zónder categorienaam (statische DOM) zodat er nooit een verouderd label blijft hangen; categorie zit wel in bestandsnaam + toast.
+- **Niet getest in dit kanaal:** de echte Excel-download en CDN-load van SheetJS (browser). JS-syntax wel `node --check`.
+- Let op datamapping: `prestaties` krijgt bij het laden een extra veld `atleetId` (spiegel van `atleet_id`); `bestePrestatie` matcht op `p.atleetId`. `atleten` en `wedstrijden` blijven ruwe snake_case DB-velden.
 
 ### Soepele schermovergangen via View Transitions (patch 63, sep 2026)
 Bij een tabwissel vervaagt het oude scherm nu zacht in het nieuwe (cross-fade, 180 ms) in plaats van een harde sprong. Puur cosmetisch, geen databasewijziging.

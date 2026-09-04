@@ -1915,9 +1915,20 @@
     </div>
 
     <!-- Trainer–categorie koppelingen -->
-    <div class="detail-panel">
+    <div class="detail-panel" style="margin-bottom:24px;">
       <div class="section-label">🔗 Toegang per trainer</div>
       <div id="trainer-categorie-beheer" style="padding:16px;"></div>
+    </div>
+
+    <!-- Back-up & export (patch 64) -->
+    <div class="detail-panel">
+      <div class="section-label">💾 Back-up &amp; export</div>
+      <div style="padding:16px;">
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:var(--text);">
+          Download in één klik alle gegevens van de actieve categorie als Excel-bestand — een vangnet dat je lokaal kunt bewaren. Er wordt niets in de database gewijzigd.
+        </p>
+        <button class="btn btn-primary" onclick="backupNaarExcel()">📥 Back-up naar Excel</button>
+      </div>
     </div>
   </div>
 </main>
@@ -3520,6 +3531,75 @@ async function exporteerPRsExcel() {
   XLSX.utils.book_append_sheet(wb, ws, "PR Overzicht");
   XLSX.writeFile(wb, `PR_overzicht_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast("PR's geëxporteerd ✓");
+}
+
+// ── Eén-klik back-up van de actieve categorie naar Excel (patch 64) ──
+// Vangnet: exporteert de al ingeladen data van de actieve categorie naar één
+// Excel-bestand met drie tabbladen (Atleten, PR's, Wedstrijden). Alleen lezen —
+// er wordt niets in de database gewijzigd.
+async function backupNaarExcel() {
+  if (!actieveCategorie) { toast("Geen categorie beschikbaar", "err"); return; }
+
+  // SheetJS on-demand laden — zelfde patroon als exporteerPRsExcel()
+  if (!window.XLSX) {
+    toast("SheetJS laden…", "ok");
+    try {
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      toast("SheetJS kon niet geladen worden — controleer je verbinding", "err");
+      return;
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  const atletenGesorteerd = [...atleten].sort((a, b) => (a.naam || "").localeCompare(b.naam || ""));
+
+  // ── Tabblad 1: Atleten ──
+  const atlRijen = [["Naam", "Geslacht", "Geboortedatum", "Bondsnr"]];
+  for (const a of atletenGesorteerd) {
+    atlRijen.push([a.naam || "", a.geslacht || "", a.geboortedatum || "", a.bondsnr || ""]);
+  }
+  const wsAtl = XLSX.utils.aoa_to_sheet(atlRijen);
+  wsAtl["!cols"] = [{ wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, wsAtl, "Atleten");
+
+  // ── Tabblad 2: PR's (beste prestatie per onderdeel, categorie-afhankelijk) ──
+  const disciplines = getDisciplines().map(d => d.naam);
+  const prRijen = [["Naam", ...disciplines]];
+  for (const a of atletenGesorteerd) {
+    const rij = [a.naam || ""];
+    for (const disc of disciplines) {
+      const pr = bestePrestatie(a.id, disc);
+      rij.push(pr ? formateerResultaatWeergave(pr.resultaat, disc) : "");
+    }
+    prRijen.push(rij);
+  }
+  const wsPr = XLSX.utils.aoa_to_sheet(prRijen);
+  wsPr["!cols"] = [{ wch: 25 }, ...disciplines.map(() => ({ wch: 12 }))];
+  XLSX.utils.book_append_sheet(wb, wsPr, "PR's");
+
+  // ── Tabblad 3: Wedstrijden ──
+  const wedRijen = [["Naam", "Datum", "Einddatum", "Locatie", "Finale", "Open", "Notities"]];
+  for (const w of wedstrijden) {
+    wedRijen.push([
+      w.naam || "", w.datum || "", w.einddatum || "", w.locatie || "",
+      w.is_finale ? "ja" : "", w.is_open ? "ja" : "", w.notities || ""
+    ]);
+  }
+  const wsWed = XLSX.utils.aoa_to_sheet(wedRijen);
+  wsWed["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 22 }, { wch: 8 }, { wch: 8 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(wb, wsWed, "Wedstrijden");
+
+  // Bestandsnaam: sprint-<categorie>-backup-YYYY-MM-DD.xlsx
+  const veiligeNaam = catNaam().replace(/[^A-Za-z0-9]+/g, "-");
+  const datum = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `sprint-${veiligeNaam}-backup-${datum}.xlsx`);
+  toast(`Back-up van ${catNaam()} gedownload ✓`);
 }
 
 
