@@ -117,6 +117,14 @@
   .sync-btn.spinning svg { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Soepele schermovergangen bij tab-wissel (patch 63): subtiele cross-fade van 180ms */
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: 180ms; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) { animation: none; }
+  }
+
   /* ── Categorie switcher ── */
   .cat-btn {
     background: transparent;
@@ -2404,23 +2412,32 @@ async function syncAll() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
+// Wikkelt een DOM-wisseling in een zachte overgang wanneer de browser dat kan (patch 63).
+// Kent de browser de View Transitions API niet, dan wisselen we gewoon direct — geen verschil met vroeger.
+function wisselMetOvergang(doeHet){
+  if (!document.startViewTransition) { doeHet(); return; }
+  document.startViewTransition(doeHet);
+}
+
 function showTab(tab) {
-  ["home","atleten","prestaties","wedstrijden","opstelling","punten","profiel","admin","wedstrijddag"].forEach(t => {
-    const el = document.getElementById("view-" + t);
-    if (el) el.style.display = t === tab ? "" : "none";
-    const tb = document.getElementById("tab-" + t);
-    if (tb) tb.classList.toggle("active", t === tab);
-    // Ook de mobiele floating nav bijwerken
-    const mb = document.getElementById("mob-tab-" + t);
-    if (mb) mb.classList.toggle("active", t === tab);
+  wisselMetOvergang(() => {   // patch 63: zachte cross-fade rond de schermwissel
+    ["home","atleten","prestaties","wedstrijden","opstelling","punten","profiel","admin","wedstrijddag"].forEach(t => {
+      const el = document.getElementById("view-" + t);
+      if (el) el.style.display = t === tab ? "" : "none";
+      const tb = document.getElementById("tab-" + t);
+      if (tb) tb.classList.toggle("active", t === tab);
+      // Ook de mobiele floating nav bijwerken
+      const mb = document.getElementById("mob-tab-" + t);
+      if (mb) mb.classList.toggle("active", t === tab);
+    });
+    if (tab === "home")        laadReleasenotes();
+    if (tab === "atleten")     laadDoorstroming();
+    if (tab === "prestaties")  populateAtleetSelects();
+    if (tab === "wedstrijden") renderWedstrijden();
+    if (tab === "opstelling")  renderOpstellingWedstrijden();
+    if (tab === "wedstrijddag") { renderWedstrijddagLijst(); toonWdOverzicht(); }
+    if (tab === "admin")       laadAdmin();
   });
-  if (tab === "home")        laadReleasenotes();
-  if (tab === "atleten")     laadDoorstroming();
-  if (tab === "prestaties")  populateAtleetSelects();
-  if (tab === "wedstrijden") renderWedstrijden();
-  if (tab === "opstelling")  renderOpstellingWedstrijden();
-  if (tab === "wedstrijddag") { renderWedstrijddagLijst(); toonWdOverzicht(); }
-  if (tab === "admin")       laadAdmin();
 }
 
 // ── Selectiemodus ─────────────────────────────────────────────

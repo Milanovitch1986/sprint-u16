@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 63] — 2026-09-04
+
+### ✨ Soepele schermovergangen bij het wisselen van tab
+
+<!--RELEASENOTE
+versie: Patch 63
+titel: ✨ Soepele overgang bij het wisselen van tab
+type: update
+beschrijving: Wissel je tussen tabbladen (Home, Atleten, Wedstrijden…), dan vervaagt het oude scherm nu zacht in het nieuwe in plaats van er hard naartoe te springen. Puur cosmetisch — er verandert niets aan je gegevens. Op oudere browsers die dit niet ondersteunen werkt alles gewoon zoals voorheen.
+-->
+
+Tot nu toe sprong de app bij een tabwissel meteen naar het nieuwe scherm. Dat werkt prima, maar voelt wat schokkerig. Vanaf nu vervaagt het oude scherm in ongeveer een vijfde van een seconde zacht in het nieuwe — een subtiele **cross-fade**. Het effect is bewust kort (180 ms) gehouden zodat het nooit in de weg zit, ook niet als je snel achter elkaar tabt.
+
+**Terugval voor oudere browsers.** De overgang gebruikt de moderne View Transitions API. Kent de browser die niet, dan wordt gewoon direct gewisseld — precies zoals vroeger. Niemand krijgt een kapot scherm.
+
+**Respecteert systeeminstellingen.** Heb je in je besturingssysteem "verminderde beweging" aangezet (bijvoorbeeld vanwege bewegingsgevoeligheid), dan wordt de fade automatisch uitgeschakeld.
+
+**Geen databasewijziging.** Deze patch raakt alleen de weergave; er verandert niets in Supabase.
+
+#### Technisch
+
+- Nieuwe hulpfunctie `wisselMetOvergang(doeHet)` met feature-check op `document.startViewTransition`; bij afwezigheid valt hij terug op een directe aanroep.
+- `showTab()` draait zijn bestaande wissel-logica nu binnen die wrapper. De 25 aanroepplekken van `showTab` blijven ongewijzigd — alleen de body is aangepast, wat het risico klein houdt.
+- De async laadfuncties (`renderWedstrijden`, `laadReleasenotes`, …) worden net als voorheen niet afgewacht, dus de overgang animeert enkel de schermwissel en de data laadt daarna gewoon in.
+- CSS: `::view-transition-old(root)`/`::view-transition-new(root)` met `animation-duration: 180ms`, plus een `prefers-reduced-motion`-regel die de animatie uitzet.
+
+---
+
 ## [september 2026 — patch 62] — 2026-09-03
 
 ### 📴 Offline-first wedstrijddag — niets raakt meer kwijt bij slechte ontvangst

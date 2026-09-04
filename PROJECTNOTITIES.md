@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 31 augustus 2026 (patch 59)*
+*AV Sprint Breda · Laatste update: 4 september 2026 (patch 63)*
 
 ---
 
@@ -42,6 +42,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Soepele schermovergangen via View Transitions (patch 63, sep 2026)
+Bij een tabwissel vervaagt het oude scherm nu zacht in het nieuwe (cross-fade, 180 ms) in plaats van een harde sprong. Puur cosmetisch, geen databasewijziging.
+- Hulpfunctie `wisselMetOvergang(doeHet)` met feature-check op `document.startViewTransition`; ontbreekt de API (oudere browser), dan wordt `doeHet()` direct aangeroepen — identiek aan het oude gedrag.
+- `showTab()` draait zijn hele wissel-logica binnen die wrapper. Bewust **de body** van `showTab` aangepast en niet de ~25 aanroepplekken — kleiner risico.
+- De async laadfuncties in `showTab` (`renderWedstrijden`, `laadReleasenotes`, …) worden net als voorheen **niet** afgewacht; de transitie animeert dus alleen de schermwissel, data laadt daarna gewoon in. Geen "bevroren" scherm.
+- CSS in het hoofd-`<style>`-blok (bij `@keyframes spin`): `::view-transition-old(root)`/`::view-transition-new(root)` op 180 ms + een `prefers-reduced-motion: reduce`-regel die de animatie uitzet.
+- **Niet getest in dit kanaal:** het echte cross-fade-effect (vereist een browser). JS-syntax wel gevalideerd met `node --check`.
 
 ### Offline-first wedstrijddag via IndexedDB-outbox (patch 62, sep 2026)
 Het lek: op de baan viel de verbinding weg, de Supabase-call in de opslag-functies mislukte, `if (error) throw error` stopte de functie, en de lokale staat werd niet eens bijgewerkt → de ingevoerde tijd raakte kwijt. Opgelost met een **outbox** (uitgaande wachtrij) op **IndexedDB** — geen externe bibliotheek, de app blijft één bestand.
