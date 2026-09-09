@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 september 2026 (patch 67)*
+*AV Sprint Breda · Laatste update: 8 september 2026 (patch 68)*
 
 ---
 
@@ -35,6 +35,7 @@
 | `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
 | `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt, gebruikt) |
+| `releasenotes` | Releasenotes (versie, titel, type, beschrijving, `tags` text[] — patch 68, `gearchiveerd`, `gepubliceerd_op`) |
 
 **Belangrijk:** alle datatabellen gebruiken `categorie_id` als toegangssleutel — NIET `eigenaar_id`.
 Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieën.
@@ -42,6 +43,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Tags op releasenotes + filteren op thema (patch 68, sep 2026)
+Vaste tag-lijst (bewust géén vrije tekst, voor betrouwbaar filteren), meerdere tags per note toegestaan, filter met OR-logica.
+- Nieuwe kolom `releasenotes.tags` (`text[]`, default `'{}'`) — **migratie moet Milanovitch zelf draaien** in de Supabase SQL-editor: `ALTER TABLE public.releasenotes ADD COLUMN tags text[] DEFAULT '{}';`
+- 9 vaste tags in `RELEASE_TAGS`: Wedstrijddag, Atleten, Prestaties & PR's, Wedstrijden & Programma, Opstelling, Excel & Import, Techniek & PWA, Administratie, Overig (vangnet).
+- `suggereerReleaseTags()`: lokale trefwoorden-match (geen AI, geen externe call) — stelt tags voor terwijl de admin typt in het note-modal; vlag `noteTagsHandmatigGewijzigd` voorkomt dat suggesties een bewuste handmatige keuze overschrijven.
+- Filterchips boven de releasenotes-lijst op het beginscherm; `laatsteReleasenotes` cachet de laatst opgehaalde data zodat filteren geen extra Supabase-call kost.
+- `autoTagReleasenotes()`: eenmalige bulkactie (knop "🏷️ Automatisch taggen", alleen admin) om de 67 bestaande notes van vóór patch 68 te taggen; niets gevonden → vangnet "Overig".
+- `laadOverigTagHint()` in het Admin-tabblad: signaleert (niet automatisch) zodra "Overig" de laatste 2 maanden ≥5 keer is gebruikt — mogelijk tijd voor een nieuwe vaste tag. Query gebruikt `.contains("tags", ["overig"])`.
+- GitHub-import (`parseChangelogReleasenotes`) ondersteunt nu ook een optionele `tags:`-regel in de `<!--RELEASENOTE-->`-marker (komma-gescheiden tag-keys); onbekende namen worden genegeerd.
+- **Niet getest in dit kanaal:** de Supabase-migratie zelf, de `.contains()`-query, en de bulk-update-flow van `autoTagReleasenotes()` tegen de echte database.
 
 ### Estafette pas zichtbaar na toevoegen, niet meer standaard (patch 67, sep 2026)
 Bijstelling op patch 65: niet elke open wedstrijd heeft een estafette, dus de kaart moet niet standaard op het scherm staan. Type update, geen databasewijziging.

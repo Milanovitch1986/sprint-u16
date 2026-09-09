@@ -6,6 +6,51 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 68] — 2026-09-08
+
+### 🏷️ Tags op releasenotes + filteren op thema
+
+<!--RELEASENOTE
+versie: Patch 68
+titel: 🏷️ Tags op releasenotes
+type: feature
+beschrijving: Releasenotes kunnen nu getagd worden op thema (Wedstrijddag, Atleten, Prestaties & PR's, Wedstrijden & Programma, Opstelling, Excel & Import, Techniek & PWA, Administratie, Overig). Boven de lijst op het beginscherm staan klikbare filterchips waarmee je op één of meerdere tags kunt filteren. Bij het toevoegen of bewerken van een releasenote stelt de app zelf tags voor op basis van de tekst — je kunt die suggesties altijd aanpassen voor je opslaat. Alle bestaande releasenotes kun je in één keer laten voorzien van een gok via de nieuwe knop "🏷️ Automatisch taggen".
+-->
+
+Elke releasenote had al een type (Feature/Bugfix/Update/Verwijderd), maar geen manier om op onderwerp te filteren. Dat kan nu met tags.
+
+**Vaste tag-lijst.** Er is bewust gekozen voor een vaste set van 9 tags in plaats van vrije tekst, zodat filteren betrouwbaar blijft: 🏃 Wedstrijddag, 👤 Atleten, 🏆 Prestaties & PR's, 📅 Wedstrijden & Programma, 👥 Opstelling, 📥 Excel & Import, ⚙️ Techniek & PWA, 🔐 Administratie en 🐣 Overig als vangnet. Een releasenote mag meerdere tags tegelijk hebben.
+
+**Filteren met chips.** Boven de releasenotes-lijst op het beginscherm staat een rij klikbare chips, één per tag. Klik op een of meerdere tags om te filteren — een releasenote is zichtbaar zodra hij minstens één van de aangevinkte tags heeft (OR-logica). Klik nogmaals om een filter uit te zetten.
+
+**Automatische suggesties.** Zodra je in het toevoeg- of bewerkscherm een titel of beschrijving typt, scant de app de tekst op trefwoorden en vinkt de bijpassende tags alvast aan als suggestie. Je kunt elke suggestie zelf aan- of uitzetten voor je opslaat; zodra je zelf een vinkje aanraakt, past de app de suggesties niet meer automatisch aan.
+
+**Bestaande notes in één keer taggen.** Via de nieuwe knop "🏷️ Automatisch taggen" (alleen zichtbaar voor de admin) doorloopt de app alle releasenotes zonder tags en past hetzelfde trefwoorden-systeem toe. Notes waar niets bij past, krijgen de vangnet-tag "Overig" — corrigeer dat gerust achteraf via ✏️ Bewerken.
+
+**Signaal bij veel "Overig".** In het Admin-tabblad verschijnt automatisch een hintje zodra "Overig" de laatste 2 maanden 5 keer of vaker is gebruikt — een seintje dat een nieuwe vaste tag misschien handig is. De app kiest niet zelf een nieuwe tag; dat blijft aan de admin.
+
+**GitHub-import uitgebreid.** De onzichtbare `<!--RELEASENOTE-->`-marker in de changelog ondersteunt nu ook een `tags:`-regel (komma-gescheiden), zodat een geïmporteerde note meteen de juiste tags meekrijgt.
+
+#### Technisch
+
+- Nieuwe kolom `releasenotes.tags` (`text[]`, default `'{}'`) — migratie hieronder, geen bestaande data raakt kwijt.
+- Constante `RELEASE_TAGS` (key/label/keywords) + `RELEASE_TAG_MAP` als opzoektabel.
+- `suggereerReleaseTags(titel, beschrijving)`: eenvoudige trefwoorden-match, geeft een array van tag-keys terug. Geen AI, geen externe call — puur lokale tekstmatch.
+- `renderTagFilterChips()` / `toggleTagFilter()` / `renderReleasenotesLijst()`: filterlogica los van het ophalen van data (`laatsteReleasenotes` cachet de laatst opgehaalde set, zodat filteren geen nieuwe Supabase-call kost).
+- `renderNoteTagCheckboxes()` / `opNoteTagCheckboxGeklikt()` / `onNoteTekstGewijzigd()`: checkboxes in het note-modal, met een `noteTagsHandmatigGewijzigd`-vlag zodat automatische suggesties een bewuste keuze van de gebruiker niet overschrijven.
+- `autoTagReleasenotes()`: bulk-update voor bestaande notes zonder tags, met bevestigingsdialoog.
+- `laadOverigTagHint()`: query met `.contains("tags", ["overig"])` en `.gte("gepubliceerd_op", …)`, drempel 5 binnen 2 maanden.
+- `parseChangelogReleasenotes()` leest nu ook een optioneel `tags:`-veld uit de marker; onbekende tag-namen worden genegeerd.
+
+**Migratie (eenmalig zelf uitvoeren in Supabase SQL-editor):**
+```sql
+ALTER TABLE public.releasenotes ADD COLUMN tags text[] DEFAULT '{}';
+```
+
+**Niet getest (buiten mijn bereik):** de daadwerkelijke Supabase-query's (`.contains()`, de bulk-update in `autoTagReleasenotes`), en of de migratie zonder fouten draait op de bestaande 67 releasenotes.
+
+---
+
 ## [september 2026 — patch 67] — 2026-09-04
 
 ### 🏃 Estafette-kaart pas zichtbaar na toevoegen, niet meer standaard

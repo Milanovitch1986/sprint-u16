@@ -782,6 +782,28 @@
   .note-badge.update { background: var(--success)22; color: var(--success); border-color: var(--success)44; }
   .note-badge.removed { background: var(--muted)22; color: var(--muted); border-color: var(--muted)44; }
 
+  /* ── Releasenote-tags (patch 68) ── */
+  .tag-filter-rij { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .tag-filter-chip {
+    font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    user-select: none; transition: border-color .15s, color .15s, background .15s;
+  }
+  .tag-filter-chip.actief { background: var(--accent)22; border-color: var(--accent); color: var(--accent); }
+  .tag-pil {
+    font-size: 11px; padding: 3px 9px; border-radius: 20px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .tag-checkbox-rij { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-checkbox-chip {
+    display: flex; align-items: center; gap: 5px; font-size: 12px; padding: 5px 10px;
+    border-radius: 20px; cursor: pointer; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); user-select: none;
+  }
+  .tag-checkbox-chip input { margin: 0; cursor: pointer; }
+  .tag-checkbox-chip.aangevinkt { background: var(--accent)22; border-color: var(--accent); color: var(--accent); }
+  .tag-suggestie-hint { font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+
   /* ── Wedstrijd kaart ── */
   .wedstrijd-card {
     background: var(--surface);
@@ -1436,9 +1458,11 @@
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost btn-sm" id="btn-archief" style="display:none;" onclick="toggleArchief()">📦 Archief</button>
           <button class="btn btn-ghost btn-sm" id="btn-note-import" style="display:none;border-color:var(--accent);color:var(--accent);" onclick="openReleasenoteImport()">📥 Uit GitHub</button>
+          <button class="btn btn-ghost btn-sm" id="btn-note-autotag" style="display:none;" onclick="autoTagReleasenotes()">🏷️ Automatisch taggen</button>
           <button class="btn btn-primary btn-sm" id="btn-note-toevoegen" style="display:none;" onclick="openNoteModal()">+ Toevoegen</button>
         </div>
       </div>
+      <div class="tag-filter-rij" id="tag-filter-rij"></div>
       <div id="releasenotes-lijst">
         <div style="color:var(--muted);font-size:13px;">Laden…</div>
       </div>
@@ -1920,6 +1944,12 @@
       <div id="trainer-categorie-beheer" style="padding:16px;"></div>
     </div>
 
+    <!-- Releasenote-tags: hint bij veel "Overig" (patch 68) -->
+    <div class="detail-panel" id="tag-hint-panel" style="display:none;margin-bottom:24px;">
+      <div class="section-label">🏷️ Releasenote-tags</div>
+      <div id="tag-hint-inhoud" style="padding:16px;"></div>
+    </div>
+
     <!-- Back-up & export (patch 64) -->
     <div class="detail-panel">
       <div class="section-label">💾 Back-up &amp; export</div>
@@ -2189,7 +2219,7 @@
     <div class="modal-title" id="noteModalTitle">Releasenote toevoegen</div>
     <input type="hidden" id="note-id">
     <div class="field"><label>Versie</label><input type="text" id="note-versie" placeholder="bijv. april 2026 — patch 9"></div>
-    <div class="field"><label>Titel</label><input type="text" id="note-titel" placeholder="bijv. Startgroepen hersteld"></div>
+    <div class="field"><label>Titel</label><input type="text" id="note-titel" placeholder="bijv. Startgroepen hersteld" oninput="onNoteTekstGewijzigd()"></div>
     <div class="field">
       <label>Type</label>
       <select id="note-type" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;width:100%;font-size:13px;">
@@ -2199,7 +2229,12 @@
         <option value="removed">🗑️ Verwijderd</option>
       </select>
     </div>
-    <div class="field"><label>Beschrijving</label><textarea id="note-beschrijving" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:'Barlow',sans-serif;font-size:13px;resize:vertical;" placeholder="Wat is er veranderd?"></textarea></div>
+    <div class="field"><label>Beschrijving</label><textarea id="note-beschrijving" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:'Barlow',sans-serif;font-size:13px;resize:vertical;" placeholder="Wat is er veranderd?" oninput="onNoteTekstGewijzigd()"></textarea></div>
+    <div class="field">
+      <label>Tags</label>
+      <div id="note-tags-suggestie-hint" class="tag-suggestie-hint" style="display:none;"></div>
+      <div class="tag-checkbox-rij" id="note-tags-checkboxes"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('noteModal')">Annuleren</button>
       <button class="btn btn-primary" onclick="slaaNoteOp()">Opslaan</button>
@@ -8383,8 +8418,37 @@ async function laadAdmin() {
     laadAdminUitnodigingen(),
     laadAdminGebruikers(),
     laadCategorieBeheer(),
-    laadTrainerCategorieBeheer()
+    laadTrainerCategorieBeheer(),
+    laadOverigTagHint()
   ]);
+}
+
+// patch 68: laat een hintje zien zodra de vangnet-tag "overig" de laatste 2
+// maanden 5 keer of vaker is gebruikt — signaal dat een nieuwe vaste tag
+// misschien handig is. Geen automatische actie, puur een seintje voor de admin.
+async function laadOverigTagHint() {
+  const panel = document.getElementById("tag-hint-panel");
+  const inhoud = document.getElementById("tag-hint-inhoud");
+  if (!panel || !inhoud) return;
+  try {
+    const tweeMaandenGeleden = new Date();
+    tweeMaandenGeleden.setMonth(tweeMaandenGeleden.getMonth() - 2);
+    const { data, error } = await sb.from("releasenotes")
+      .select("id, titel, gepubliceerd_op, tags")
+      .contains("tags", ["overig"])
+      .gte("gepubliceerd_op", tweeMaandenGeleden.toISOString());
+    if (error) throw error;
+    const notes = data || [];
+    if (notes.length < 5) { panel.style.display = "none"; return; }
+    panel.style.display = "";
+    inhoud.innerHTML = `
+      <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--text);">
+        🐣 <strong>Overig</strong> is de laatste 2 maanden <strong>${notes.length}×</strong> gebruikt. Misschien is het tijd voor een nieuwe vaste tag?
+      </p>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${notes.map(n => `<div style="font-size:12px;color:var(--muted);">• ${esc(n.titel)}</div>`).join("")}
+      </div>`;
+  } catch(e) { panel.style.display = "none"; }
 }
 
 async function laadAdminUitnodigingen() {
@@ -9319,6 +9383,8 @@ document.addEventListener("click", function(e) {
 
 // ── Releasenotes ─────────────────────────────────────────────
 let toonArchief = false;
+let laatsteReleasenotes = [];       // laatst opgehaalde data, voor filteren zonder herladen
+let actieveTagFilters = new Set();  // aangevinkte filter-chips (patch 68)
 
 async function laadReleasenotes() {
   const lijst = document.getElementById("releasenotes-lijst");
@@ -9330,6 +9396,8 @@ async function laadReleasenotes() {
     document.getElementById("btn-archief").style.display = "";
     const imp = document.getElementById("btn-note-import");
     if (imp) imp.style.display = "";
+    const autotag = document.getElementById("btn-note-autotag");
+    if (autotag) autotag.style.display = "";
   }
 
   // Archiveer noten ouder dan 1 maand automatisch
@@ -9374,30 +9442,72 @@ async function laadReleasenotes() {
       return na === null ? -1 : 1;                    // ongenummerde note bovenaan binnen de dag
     });
 
-    const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
-
-    lijst.innerHTML = data.map(n => {
-      const isAdmin = huidigeProfiel?.rol === "admin";
-      // Veilig doorgeven aan onclick: via JSON in een data-attribuut i.p.v. inline args.
-      const payload = esc(JSON.stringify({ id: n.id, versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving || "" }));
-      return `
-      <div class="note-kaart">
-        <div class="note-kaart-header">
-          <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
-          <strong style="font-size:14px;">${esc(n.titel)}</strong>
-          <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
-        </div>
-        ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
-        ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" data-note='${payload}' onclick="bewerkNoteVanuitKnop(this)">✏️ Bewerken</button>
-          ${!toonArchief ? `<button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button>` : ""}
-          <button class="btn btn-ghost btn-sm" style="color:var(--accent2);" data-note='${payload}' onclick="verwijderNoteVanuitKnop(this)">🗑️ Verwijderen</button>
-        </div>` : ""}
-      </div>`;
-    }).join("");
+    laatsteReleasenotes = data;
+    renderTagFilterChips();
+    renderReleasenotesLijst();
   } catch(e) {
     lijst.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout bij laden: ${e.message}</div>`;
   }
+}
+
+// Bouwt de klikbare filter-chips boven de lijst (patch 68). Altijd alle vaste
+// tags tonen, ook als er nu geen notes mee getagd zijn — anders "verdwijnt"
+// een tag zodra er toevallig geen recente note mee getagd is.
+function renderTagFilterChips() {
+  const rij = document.getElementById("tag-filter-rij");
+  if (!rij) return;
+  rij.innerHTML = RELEASE_TAGS.map(t => `
+    <span class="tag-filter-chip ${actieveTagFilters.has(t.key) ? "actief" : ""}" onclick="toggleTagFilter('${t.key}')">${t.label}</span>
+  `).join("");
+}
+
+function toggleTagFilter(key) {
+  if (actieveTagFilters.has(key)) actieveTagFilters.delete(key);
+  else actieveTagFilters.add(key);
+  renderTagFilterChips();
+  renderReleasenotesLijst();
+}
+
+// Rendert de releasenotes-lijst op basis van laatsteReleasenotes + actieveTagFilters
+// (OR-logica: een note is zichtbaar zodra minstens één aangevinkte tag matcht).
+function renderReleasenotesLijst() {
+  const lijst = document.getElementById("releasenotes-lijst");
+  if (!lijst) return;
+
+  const data = actieveTagFilters.size
+    ? laatsteReleasenotes.filter(n => (n.tags || []).some(t => actieveTagFilters.has(t)))
+    : laatsteReleasenotes;
+
+  if (!data.length) {
+    lijst.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">${
+      actieveTagFilters.size ? "Geen releasenotes met deze tag(s)." : (toonArchief ? "Geen gearchiveerde notes." : "Nog geen releasenotes.")
+    }</div>`;
+    return;
+  }
+
+  const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
+
+  lijst.innerHTML = data.map(n => {
+    const isAdmin = huidigeProfiel?.rol === "admin";
+    const tags = n.tags || [];
+    // Veilig doorgeven aan onclick: via JSON in een data-attribuut i.p.v. inline args.
+    const payload = esc(JSON.stringify({ id: n.id, versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving || "", tags }));
+    return `
+    <div class="note-kaart">
+      <div class="note-kaart-header">
+        <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
+        <strong style="font-size:14px;">${esc(n.titel)}</strong>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
+      </div>
+      ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
+      ${tags.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${tags.map(tk => `<span class="tag-pil">${esc((RELEASE_TAG_MAP[tk] || {}).label || tk)}</span>`).join("")}</div>` : ""}
+      ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" data-note='${payload}' onclick="bewerkNoteVanuitKnop(this)">✏️ Bewerken</button>
+        ${!toonArchief ? `<button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button>` : ""}
+        <button class="btn btn-ghost btn-sm" style="color:var(--accent2);" data-note='${payload}' onclick="verwijderNoteVanuitKnop(this)">🗑️ Verwijderen</button>
+      </div>` : ""}
+    </div>`;
+  }).join("");
 }
 
 function toggleArchief() {
@@ -9412,6 +9522,33 @@ function toggleArchief() {
 // met één tik toevoegen.
 const RELEASENOTE_TYPES = ["feature", "bugfix", "update", "removed"];
 let releasenoteImportNieuw = [];
+
+// ── Releasenote-tags (patch 68) ─────────────────────────────────
+// Vaste tag-lijst met trefwoorden voor automatische suggesties. "overig" heeft
+// bewust geen trefwoorden: die wordt alleen gebruikt als vangnet wanneer niets
+// anders matcht (zie suggereerReleaseTags en het bulk-taggen hieronder).
+const RELEASE_TAGS = [
+  { key: "wedstrijddag",   label: "🏃 Wedstrijddag",             keywords: ["wedstrijddag", "live", "invoer", "scoring", "ronde", "seizoensbeste", "offline", "outbox", "sync"] },
+  { key: "atleten",        label: "👤 Atleten",                  keywords: ["atleet", "atleten", "blessure"] },
+  { key: "prestaties",     label: "🏆 Prestaties & PR's",        keywords: ["pr", "prs", "persoonlijk record", "prestatie", "prestaties"] },
+  { key: "wedstrijden",    label: "📅 Wedstrijden & Programma",  keywords: ["wedstrijd", "wedstrijden", "programma", "startgroep", "onderdeel", "onderdelen", "open wedstrijd", "finale"] },
+  { key: "opstelling",     label: "👥 Opstelling",               keywords: ["opstelling", "team", "ploeg", "ploegen", "estafette"] },
+  { key: "excel",          label: "📥 Excel & Import",           keywords: ["excel", "xlsx", "import", "backup", "back-up", "pdf"] },
+  { key: "techniek",       label: "⚙️ Techniek & PWA",           keywords: ["cache", "service worker", "pwa", "transition", "indexeddb", "keep-alive", "keepalive", "sync"] },
+  { key: "administratie",  label: "🔐 Administratie",            keywords: ["gebruiker", "gebruikers", "rol", "categorie", "categorieën", "uitnodiging", "uitnodigingen", "2fa", "auth", "profiel"] },
+  { key: "overig",         label: "🐣 Overig",                   keywords: [] },
+];
+const RELEASE_TAG_MAP = Object.fromEntries(RELEASE_TAGS.map(t => [t.key, t]));
+
+// Zoekt trefwoorden van titel + beschrijving en geeft de bijpassende tag-keys terug.
+// Geen automatische keuze — dit zijn suggesties die de gebruiker zelf bevestigt.
+function suggereerReleaseTags(titel, beschrijving) {
+  const tekst = `${titel || ""} ${beschrijving || ""}`.toLowerCase();
+  const gevonden = RELEASE_TAGS
+    .filter(t => t.keywords.some(kw => tekst.includes(kw)))
+    .map(t => t.key);
+  return gevonden;
+}
 
 function parseChangelogReleasenotes(text) {
   const out = [];
@@ -9428,7 +9565,13 @@ function parseChangelogReleasenotes(text) {
     let type     = (veld("type") || "feature").toLowerCase();
     if (!RELEASENOTE_TYPES.includes(type)) type = "feature";
     const beschrijving = veld("beschrijving");
-    if (versie && titel) out.push({ versie, titel, type, beschrijving });
+    // patch 68: "tags: wedstrijddag, excel" — komma-gescheiden keys uit RELEASE_TAGS.
+    // Onbekende of lege waardes worden genegeerd, geen tag is geen probleem.
+    const tagsRuw = veld("tags");
+    const tags = tagsRuw
+      ? tagsRuw.split(",").map(s => s.trim().toLowerCase()).filter(s => RELEASE_TAG_MAP[s])
+      : [];
+    if (versie && titel) out.push({ versie, titel, type, beschrijving, tags });
   }
   return out;
 }
@@ -9477,6 +9620,7 @@ function renderReleasenoteImport() {
           <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)}</span>
         </div>
         ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);margin:6px 0 8px;white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
+        ${n.tags && n.tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">${n.tags.map(tk => `<span class="tag-pil">${esc((RELEASE_TAG_MAP[tk] || {}).label || tk)}</span>`).join("")}</div>` : ""}
         <button class="btn btn-primary btn-sm" onclick="voegImportNoteToe(${i})">➕ Toevoegen</button>
       </div>`).join("");
 }
@@ -9485,7 +9629,7 @@ async function voegImportNoteToe(i) {
   const n = releasenoteImportNieuw[i];
   if (!n) return;
   try {
-    const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving });
+    const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving, tags: n.tags || [] });
     if (error) throw error;
     toast(`"${n.versie}" toegevoegd ✓`);
     releasenoteImportNieuw.splice(i, 1);
@@ -9499,7 +9643,7 @@ async function voegAlleImportNotesToe() {
   let gelukt = 0, mislukt = 0;
   for (const n of [...releasenoteImportNieuw]) {
     try {
-      const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving });
+      const { error } = await sb.from("releasenotes").insert({ versie: n.versie, titel: n.titel, type: n.type, beschrijving: n.beschrijving, tags: n.tags || [] });
       if (error) throw error;
       gelukt++;
     } catch(e) { console.warn("Import mislukt:", n.versie, e.message); mislukt++; }
@@ -9510,6 +9654,84 @@ async function voegAlleImportNotesToe() {
   laadReleasenotes();
 }
 
+// patch 68: houdt bij of de gebruiker zelf al aan de tag-checkboxes heeft gezeten
+// in het huidige modal-bezoek. Zolang dat niet zo is, mogen automatische
+// suggesties de aanvinkjes bijwerken; zodra de gebruiker zelf klikt, stoppen we
+// daarmee zodat we een bewuste keuze niet overschrijven.
+let noteTagsHandmatigGewijzigd = false;
+
+function renderNoteTagCheckboxes(aangevinkt) {
+  const rij = document.getElementById("note-tags-checkboxes");
+  if (!rij) return;
+  const set = new Set(aangevinkt || []);
+  rij.innerHTML = RELEASE_TAGS.map(t => `
+    <label class="tag-checkbox-chip ${set.has(t.key) ? "aangevinkt" : ""}" id="note-tag-chip-${t.key}">
+      <input type="checkbox" value="${t.key}" ${set.has(t.key) ? "checked" : ""} onchange="opNoteTagCheckboxGeklikt('${t.key}')">
+      ${t.label}
+    </label>
+  `).join("");
+}
+
+function opNoteTagCheckboxGeklikt(key) {
+  noteTagsHandmatigGewijzigd = true;
+  const chip = document.getElementById(`note-tag-chip-${key}`);
+  const vinkje = chip?.querySelector("input");
+  if (chip && vinkje) chip.classList.toggle("aangevinkt", vinkje.checked);
+}
+
+function opgehaaldeNoteTagCheckboxWaarden() {
+  return Array.from(document.querySelectorAll("#note-tags-checkboxes input:checked")).map(el => el.value);
+}
+
+// Wordt aangeroepen terwijl de gebruiker in titel/beschrijving typt: stelt tags
+// voor op basis van trefwoorden, maar alleen zolang de gebruiker de checkboxes
+// nog niet zelf heeft aangepast.
+function onNoteTekstGewijzigd() {
+  if (noteTagsHandmatigGewijzigd) return;
+  const titel = document.getElementById("note-titel").value;
+  const beschrijving = document.getElementById("note-beschrijving").value;
+  const suggesties = suggereerReleaseTags(titel, beschrijving);
+  renderNoteTagCheckboxes(suggesties);
+  const hint = document.getElementById("note-tags-suggestie-hint");
+  if (hint) {
+    if (suggesties.length) {
+      hint.style.display = "";
+      hint.textContent = `${suggesties.length} tag${suggesties.length === 1 ? "" : "s"} voorgesteld op basis van de tekst — pas gerust aan.`;
+    } else {
+      hint.style.display = "none";
+    }
+  }
+}
+
+// patch 68: eenmalig alle bestaande notes zonder tags voorzien van een gok op
+// basis van trefwoorden. Matcht niets, dan krijgt de note het vangnet "overig"
+// zodat er geen ongetagde notes overblijven. Admin corrigeert waar nodig via ✏️ Bewerken.
+async function autoTagReleasenotes() {
+  const ok = await bevestig(
+    "Automatisch taggen",
+    "Alle releasenotes zonder tags krijgen een gok op basis van hun titel en beschrijving. Je kunt elke note daarna nog aanpassen via ✏️ Bewerken. Doorgaan?"
+  );
+  if (!ok) return;
+  try {
+    const { data, error } = await sb.from("releasenotes").select("id, titel, beschrijving, tags");
+    if (error) throw error;
+    const zonderTags = (data || []).filter(n => !n.tags || !n.tags.length);
+    if (!zonderTags.length) { toast("Alle releasenotes hebben al tags ✓"); return; }
+    let gelukt = 0, mislukt = 0;
+    for (const n of zonderTags) {
+      const gok = suggereerReleaseTags(n.titel, n.beschrijving);
+      const tags = gok.length ? gok : ["overig"];
+      try {
+        const { error: upErr } = await sb.from("releasenotes").update({ tags }).eq("id", n.id);
+        if (upErr) throw upErr;
+        gelukt++;
+      } catch(e) { console.warn("Autotag mislukt:", n.id, e.message); mislukt++; }
+    }
+    toast(mislukt ? `${gelukt} getagd · ${mislukt} mislukt` : `${gelukt} releasenote(s) automatisch getagd ✓`, mislukt ? "err" : "ok");
+    laadReleasenotes();
+  } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
 function openNoteModal() {
   document.getElementById("note-id").value = "";
   document.getElementById("noteModalTitle").textContent = "Releasenote toevoegen";
@@ -9517,6 +9739,10 @@ function openNoteModal() {
   document.getElementById("note-titel").value = "";
   document.getElementById("note-type").value = "feature";
   document.getElementById("note-beschrijving").value = "";
+  noteTagsHandmatigGewijzigd = false;
+  renderNoteTagCheckboxes([]);
+  const hint = document.getElementById("note-tags-suggestie-hint");
+  if (hint) hint.style.display = "none";
   openModal("noteModal");
 }
 
@@ -9524,7 +9750,7 @@ function openNoteModal() {
 function bewerkNoteVanuitKnop(btn) {
   try {
     const n = JSON.parse(btn.getAttribute("data-note"));
-    openNoteBewerken(n.id, n.versie, n.titel, n.type, n.beschrijving);
+    openNoteBewerken(n.id, n.versie, n.titel, n.type, n.beschrijving, n.tags);
   } catch(e) { toast("Kon note niet openen", "err"); }
 }
 
@@ -9535,13 +9761,18 @@ function verwijderNoteVanuitKnop(btn) {
   } catch(e) { toast("Kon note niet verwijderen", "err"); }
 }
 
-function openNoteBewerken(id, versie, titel, type, beschrijving) {
+function openNoteBewerken(id, versie, titel, type, beschrijving, tags) {
   document.getElementById("note-id").value = id;
   document.getElementById("noteModalTitle").textContent = "Releasenote bewerken";
   document.getElementById("note-versie").value = versie || "";
   document.getElementById("note-titel").value = titel || "";
   document.getElementById("note-type").value = type || "feature";
   document.getElementById("note-beschrijving").value = beschrijving || "";
+  // Bestaande tags staan al vast — geen automatische suggesties overschrijven ze.
+  noteTagsHandmatigGewijzigd = true;
+  renderNoteTagCheckboxes(tags || []);
+  const hint = document.getElementById("note-tags-suggestie-hint");
+  if (hint) hint.style.display = "none";
   openModal("noteModal");
 }
 
@@ -9551,16 +9782,17 @@ async function slaaNoteOp() {
   const titel       = document.getElementById("note-titel").value.trim();
   const type        = document.getElementById("note-type").value;
   const beschrijving = document.getElementById("note-beschrijving").value.trim();
+  const tags        = opgehaaldeNoteTagCheckboxWaarden();
   if (!versie || !titel) { toast("Vul versie en titel in", "err"); return; }
   try {
     if (id) {
       // Bestaande note bijwerken
       const { error } = await sb.from("releasenotes")
-        .update({ versie, titel, type, beschrijving }).eq("id", id);
+        .update({ versie, titel, type, beschrijving, tags }).eq("id", id);
       if (error) throw error;
       toast("Releasenote bijgewerkt ✓");
     } else {
-      const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving });
+      const { error } = await sb.from("releasenotes").insert({ versie, titel, type, beschrijving, tags });
       if (error) throw error;
       toast("Releasenote opgeslagen ✓");
     }
