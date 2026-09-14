@@ -6,6 +6,55 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 69] — 2026-09-14
+
+### 🏆 Prestaties filteren op geslacht
+
+<!--RELEASENOTE
+versie: Patch 69
+titel: 🏆 Prestaties filteren op geslacht
+type: feature
+tags: prestaties
+beschrijving: In de Prestaties-tab staat naast "atleet" en "onderdeel" nu een derde filter: geslacht (Alle / Jongens / Meisjes). Zo krijg je bijvoorbeeld een ranglijst van alleen de jongens op de 1500m. De onderdeel-lijst past zich aan het gekozen geslacht aan, zodat je geen lege lijsten of niet-passende onderdelen meer ziet.
+-->
+
+Bij een ranglijst per onderdeel (geen atleet gekozen, wél een onderdeel) werden jongens en meisjes door elkaar getoond. Dat is nu op te splitsen.
+
+**Extra dropdown.** Naast de bestaande filters "atleet" en "onderdeel" staat nu een derde keuzemenu: Alle / Jongens / Meisjes. Het filter werkt overal: op de ranglijst per onderdeel én op de groepering per atleet.
+
+**Onderdeel-lijst wordt geslacht-bewust.** Kies je "Jongens", dan verschijnen in de onderdeel-dropdown alleen onderdelen waar jongens PR's op hebben (dus geen 80m bijvoorbeeld). Stond er een onderdeel gekozen dat niet bij het nieuwe geslacht past, dan valt de keuze netjes terug op "Alle onderdelen".
+
+#### Technisch
+
+- Nieuwe dropdown `#prestatie-geslacht-filter` in de filterbalk.
+- `renderPrestaties()` uitgebreid: hulpfunctie `geslachtVanAtleet(id)`, de onderdeel-dropdown wordt eerst herbouwd op basis van het geslacht en pas daarna wordt `disc` uitgelezen, en de lijst wordt gefilterd op atleet + geslacht + onderdeel.
+- Geen databasewijziging — filtert puur op het bestaande `geslacht`-veld van de atleet.
+
+### 👥 Opstelling delen via WhatsApp: kies zelf welke teams
+
+<!--RELEASENOTE
+versie: Patch 69
+titel: 👥 Kies welke teams je via WhatsApp deelt
+type: update
+tags: opstelling
+beschrijving: Bij "Delen via WhatsApp" verschijnt nu eerst een keuzescherm waarin je met vinkjes aangeeft welke teams je wilt delen (alle teams, of losse teams). Gevulde teams staan al aangevinkt, lege teams staan uitgevinkt met het label "(leeg)". Zo deel je niet langer per ongeluk lege teams mee.
+-->
+
+Voorheen deelde de knop altijd álle teams tegelijk — ook teams zonder ingedeelde atleten. Nu kies je zelf.
+
+**Keuzescherm met vinkjes.** De knop "📲 Delen via WhatsApp" opent eerst een klein venster met een vinkje per team plus een "Alle teams"-vinkje dat in één klik alles aan- of uitzet. Gevulde teams staan standaard aangevinkt, lege teams staan uitgevinkt met het label "(leeg)" erachter, zodat je meteen ziet welke teams nog leeg zijn. Vink je niks aan, dan krijg je de melding "Selecteer minstens één team".
+
+**Per-team knopjes blijven.** De losse 📲-knopjes naast elk team blijven gewoon werken zoals je gewend bent.
+
+#### Technisch
+
+- Nieuwe modal `#waTeamModal` met dynamisch gevulde checkboxes (`.wa-team-cb`) op basis van het actieve geslacht en het ingestelde aantal ploegen.
+- `deelViaWhatsApp()` opent nu de modal; de tekstopbouw is verplaatst naar `deelGekozenTeamsViaWhatsApp()`, die alleen de aangevinkte teams verwerkt.
+- Hulpfuncties `wdIsPloegGevuld(ploeg)`, `waTeamToggleAlle()` en `waTeamSyncAlle()`.
+- Geen databasewijziging.
+
+---
+
 ## [september 2026 — patch 68] — 2026-09-08
 
 ### 🏷️ Tags op releasenotes + filteren op thema

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 8 september 2026 (patch 68)*
+*AV Sprint Breda · Laatste update: 14 september 2026 (patch 69)*
 
 ---
 
@@ -43,6 +43,23 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Prestaties filteren op geslacht (patch 69, sep 2026)
+Derde filter in de Prestaties-tab naast atleet en onderdeel: geslacht (Alle / Jongens / Meisjes).
+- Nieuwe dropdown `#prestatie-geslacht-filter`; geen databasewijziging, filtert op het bestaande `geslacht`-veld van de atleet ("M"/"V").
+- `renderPrestaties()` herzien: hulpfunctie `geslachtVanAtleet(id)`; de onderdeel-dropdown wordt eerst geslacht-bewust herbouwd (alleen onderdelen waar dat geslacht PR's op heeft, plus categorie-brede eigen onderdelen), pas dáárna wordt `disc` opnieuw uit de dropdown gelezen. Volgorde is bewust omgedraaid t.o.v. de oude functie, anders filtert de code op een onderdeel dat net uit de lijst is verdwenen.
+- Staat er een onderdeel gekozen dat niet bij het nieuwe geslacht past, dan valt de keuze terug op "Alle onderdelen" (`allDiscs.includes(curDisc) ? curDisc : ""`).
+- Filter werkt op alle weergaves: ranglijst per onderdeel én groepering per atleet.
+- **Niet getest in dit kanaal:** gedrag tegen echte Supabase-PR-data; atleten met een leeg/afwijkend `geslacht` vallen buiten het filter.
+
+### Opstelling delen via WhatsApp: teamkeuze met checkboxes (patch 69, sep 2026)
+`deelViaWhatsApp()` deelt niet meer meteen alle teams, maar opent een keuzescherm.
+- Nieuwe modal `#waTeamModal`; checkboxes (`.wa-team-cb`) worden dynamisch gevuld op basis van `actiefGeslacht` en `aantalPloegenPerGeslacht`. Gevulde teams voorgevinkt, lege teams uitgevinkt met label "(leeg)".
+- Tekstopbouw verhuisd van `deelViaWhatsApp()` naar `deelGekozenTeamsViaWhatsApp()` — verwerkt alleen de aangevinkte teams; geen keuze → toast "Selecteer minstens één team".
+- Hulpfuncties: `wdIsPloegGevuld(ploeg)` (checkt of er ≥1 atleet is ingedeeld), `waTeamToggleAlle()` ("Alle teams" → alles aan/uit), `waTeamSyncAlle()` (losse checkbox → "Alle teams" bijwerken).
+- De losse per-team 📲-knoppen (`deelPloegViaWhatsApp`) zijn ongewijzigd gelaten.
+- Geen databasewijziging.
+- **Niet getest in dit kanaal:** de WhatsApp deep-link op mobiel, en de checkbox-weergave bij 1/2/3 ingestelde ploegen.
 
 ### Tags op releasenotes + filteren op thema (patch 68, sep 2026)
 Vaste tag-lijst (bewust géén vrije tekst, voor betrouwbaar filteren), meerdere tags per note toegestaan, filter met OR-logica.

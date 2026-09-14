@@ -1532,6 +1532,11 @@
       <select id="prestatie-disc-filter" onchange="renderPrestaties()">
         <option value="">Alle onderdelen</option>
       </select>
+      <select id="prestatie-geslacht-filter" onchange="renderPrestaties()">
+        <option value="">Alle</option>
+        <option value="M">Jongens</option>
+        <option value="V">Meisjes</option>
+      </select>
     </div>
 
     <div id="prestaties-content"></div>
@@ -1587,6 +1592,19 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('prestatieModal')">Annuleren</button>
       <button class="btn btn-primary" onclick="saveBulkPR()">💾 Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── WHATSAPP TEAM-KEUZE MODAL ── -->
+<div class="modal-overlay" id="waTeamModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title">Welke teams delen?</div>
+    <div id="wa-team-geslacht" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+    <div id="wa-team-checkboxes"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('waTeamModal')">Annuleren</button>
+      <button class="btn btn-primary" onclick="deelGekozenTeamsViaWhatsApp()">📲 Delen</button>
     </div>
   </div>
 </div>
@@ -2761,21 +2779,38 @@ function renderAtleten() {
 // ── Prestaties render ─────────────────────────────────────────
 function renderPrestaties() {
   const atleetId = document.getElementById("prestatie-atleet-filter").value;
-  const disc     = document.getElementById("prestatie-disc-filter").value;
+  const geslacht = document.getElementById("prestatie-geslacht-filter").value; // "", "M" of "V"
 
-  let list = prestaties;
-  if (atleetId) list = list.filter(p => String(p.atleetId) === atleetId);
-  if (disc)     list = list.filter(p => p.discipline === disc);
+  // Hulpfunctie: geslacht van een atleet ophalen via zijn id.
+  const geslachtVanAtleet = (aid) => {
+    const a = atleten.find(x => String(x.id) === String(aid));
+    return a ? a.geslacht : null;
+  };
 
-  // Update disc dropdown: onderdelen met prestaties + categorie-brede eigen onderdelen.
-  // Atleet-eigen onderdelen (atleet_id gevuld) komen alleen in beeld via hun eigen PR-data.
-  const discsUitData = prestaties.map(p => p.discipline).filter(Boolean);
+  // Update disc dropdown: onderdelen met prestaties (evt. beperkt tot het gekozen
+  // geslacht) + categorie-brede eigen onderdelen. Atleet-eigen onderdelen
+  // (atleet_id gevuld) komen alleen in beeld via hun eigen PR-data.
+  const prestatiesVoorDisc = geslacht
+    ? prestaties.filter(p => geslachtVanAtleet(p.atleetId) === geslacht)
+    : prestaties;
+  const discsUitData = prestatiesVoorDisc.map(p => p.discipline).filter(Boolean);
   const discsCustom  = customOnderdelen.filter(o => o.atleet_id == null).map(o => o.naam).filter(Boolean);
   const allDiscs = [...new Set([...discsUitData, ...discsCustom])].sort((a,b)=>a.localeCompare(b,"nl"));
   const discSel  = document.getElementById("prestatie-disc-filter");
   const curDisc  = discSel.value;
+  // Huidige keuze alleen behouden als die nog in de (mogelijk gefilterde) lijst staat,
+  // anders terug naar "Alle onderdelen". Zo geen ranglijst voor een onderdeel dat niet
+  // bij het gekozen geslacht hoort.
+  const behoudDisc = allDiscs.includes(curDisc) ? curDisc : "";
   discSel.innerHTML = `<option value="">Alle onderdelen</option>` +
-    allDiscs.map(d => `<option value="${esc(d)}" ${d===curDisc?"selected":""}>${esc(d)}</option>`).join("");
+    allDiscs.map(d => `<option value="${esc(d)}" ${d===behoudDisc?"selected":""}>${esc(d)}</option>`).join("");
+  const disc = discSel.value; // opnieuw uitlezen na herbouw dropdown
+
+  // Filter de prestaties op atleet, geslacht en onderdeel.
+  let list = prestaties;
+  if (atleetId) list = list.filter(p => String(p.atleetId) === atleetId);
+  if (geslacht) list = list.filter(p => geslachtVanAtleet(p.atleetId) === geslacht);
+  if (disc)     list = list.filter(p => p.discipline === disc);
 
   const cont = document.getElementById("prestaties-content");
   if (!list.length) {
@@ -8185,14 +8220,68 @@ async function printOpstelling() {
 }
 
 // ── WhatsApp delen ────────────────────────────────────────────
+// Bepaalt of er in een ploeg minstens één atleet is ingedeeld.
+function wdIsPloegGevuld(ploeg) {
+  const opst = opstellingData[ploeg] || {};
+  return Object.values(opst).some(aid => aid != null && String(aid) !== "");
+}
+
+// Stap 1: keuzescherm openen met een checkbox per beschikbaar team.
+// Gevulde teams staan standaard aangevinkt, lege teams uitgevinkt met "(leeg)".
 function deelViaWhatsApp() {
   const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
   if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
   if (!programma.length) { toast("Geen programma geladen.", "err"); return; }
 
   const geslachtLabel = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
-  const gCode         = actiefGeslacht === "V" ? "V" : "M";
   const ploegNamen    = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
+  const optieCss      = "display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;";
+
+  const gevuldeCount = ploegNamen.filter(wdIsPloegGevuld).length;
+  let html = `
+    <label style="${optieCss}font-weight:600;border-bottom:1px solid var(--border);">
+      <input type="checkbox" id="wa-team-alle" onchange="waTeamToggleAlle()" ${gevuldeCount === ploegNamen.length && ploegNamen.length > 0 ? "checked" : ""}>
+      <span>Alle teams</span>
+    </label>`;
+  ploegNamen.forEach(ploeg => {
+    const ploegNr = { A: 1, B: 2, C: 3 }[ploeg] || 1;
+    const gevuld  = wdIsPloegGevuld(ploeg);
+    html += `
+      <label style="${optieCss}${gevuld ? "" : "opacity:0.7;"}">
+        <input type="checkbox" class="wa-team-cb" value="${ploeg}" onchange="waTeamSyncAlle()" ${gevuld ? "checked" : ""}>
+        <span>Team ${ploegNr}${gevuld ? "" : ` <span style="color:var(--muted);font-size:13px;">(leeg)</span>`}</span>
+      </label>`;
+  });
+  document.getElementById("wa-team-checkboxes").innerHTML = html;
+  document.getElementById("wa-team-geslacht").textContent = "👟 " + geslachtLabel;
+  openModal("waTeamModal");
+}
+
+// "Alle teams" aangeklikt → alle losse team-checkboxes mee aan/uit zetten.
+function waTeamToggleAlle() {
+  const alle = document.getElementById("wa-team-alle").checked;
+  document.querySelectorAll(".wa-team-cb").forEach(cb => { cb.checked = alle; });
+}
+
+// Losse team-checkbox gewijzigd → "Alle teams" bijwerken (alleen aan als alle teams aan staan).
+function waTeamSyncAlle() {
+  const cbs = [...document.querySelectorAll(".wa-team-cb")];
+  const alleAan = cbs.length > 0 && cbs.every(cb => cb.checked);
+  document.getElementById("wa-team-alle").checked = alleAan;
+}
+
+// Stap 2: WhatsApp-tekst bouwen voor de aangevinkte teams en de deep link openen.
+function deelGekozenTeamsViaWhatsApp() {
+  const gekozen = [...document.querySelectorAll(".wa-team-cb")]
+    .filter(cb => cb.checked)
+    .map(cb => cb.value);
+  if (!gekozen.length) { toast("Selecteer minstens één team.", "err"); return; }
+
+  const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
+  if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
+
+  const geslachtLabel = actiefGeslacht === "V" ? "Meisjes" : "Jongens";
+  const gCode         = actiefGeslacht === "V" ? "V" : "M";
 
   // Header
   let tekst = "";
@@ -8203,8 +8292,8 @@ function deelViaWhatsApp() {
   tekst += `👟 ${geslachtLabel}\n`;
   tekst += "\n";
 
-  // Per ploeg een blok
-  ploegNamen.forEach(ploeg => {
+  // Per gekozen ploeg een blok (lege onderdelen binnen een team worden overgeslagen)
+  gekozen.forEach(ploeg => {
     const ploegNr  = { A: 1, B: 2, C: 3 }[ploeg] || 1;
     const opst     = opstellingData[ploeg] || {};
     const teamNaam = `🏃 Team ${ploegNr} (AV Sprint ${catNaam()}-${gCode})`;
@@ -8236,6 +8325,8 @@ function deelViaWhatsApp() {
   // Footer
   const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
   tekst += `_Gedeeld via Sprint ${catNaam()} op ${nu}_`;
+
+  closeModal("waTeamModal");
 
   // Open WhatsApp deep link — werkt op iOS, Android en desktop
   const url = "https://wa.me/?text=" + encodeURIComponent(tekst);
