@@ -1805,7 +1805,8 @@
         <button class="btn btn-ghost btn-sm" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
       </div>
 
-      <div id="ploegen-container" style="padding-bottom: 32px;"></div>
+      <div id="ploegen-container"></div>
+      <div id="reserves-container" style="padding-bottom: 32px;"></div>
     </div>
   </div>
 
@@ -4628,6 +4629,7 @@ let actiefWedstrijdId = null;
 let actiefGeslacht    = "M";
 let opstellingAlleenLezen = false; // true = afgelopen wedstrijd raadplegen (read-only)
 let aantalPloegenPerGeslacht = { M: 3, V: 3 };
+const MAX_RESERVES    = 3; // patch 70: max reserves per geslacht
 let opstellingData    = {};
 let beschikbaarData   = {}; // atleetId → true/false voor actieve wedstrijd
 
@@ -5057,6 +5059,17 @@ async function laadProgrammaEnOpstelling() {
     opstellingData = {};
     (oRes.data || []).forEach(o => {
       const data = o.data || {};
+      // Reserves (patch 70): aparte rij met ploeg "RES", los van het programma.
+      // Niet door de programma-opschoonlus halen; alleen RES_0..RES_2 behouden.
+      if (o.ploeg === "RES") {
+        const schoonRes = {};
+        for (let s = 0; s < MAX_RESERVES; s++) {
+          const v = data[`RES_${s}`];
+          if (v) schoonRes[`RES_${s}`] = v;
+        }
+        opstellingData["RES"] = schoonRes;
+        return;
+      }
       // Opschonen: technische onderdelen mogen maar 1 atleet per rij hebben.
       // Oude opgeslagen data (patch 4) kon 2 slots bevatten — die verwijderen we hier.
       const schoon = {};
@@ -5303,10 +5316,12 @@ function setAantalPloegen(n) {
 
 function renderPloegen() {
   const cont = document.getElementById("ploegen-container");
+  const resCont = document.getElementById("reserves-container");
   if (!programma.length) {
     cont.innerHTML = opstellingAlleenLezen
       ? `<div class="empty-state"><div class="icon">📋</div>Geen opstelling opgeslagen voor deze wedstrijd.</div>`
       : `<div class="empty-state"><div class="icon">⚡</div>Voer eerst het wedstrijdprogramma in.</div>`;
+    if (resCont) resCont.innerHTML = ""; // patch 70: geen reserves zonder programma
     return;
   }
 
@@ -5317,6 +5332,7 @@ function renderPloegen() {
     ploegNamen = ["A","B","C"].filter(p => opstellingData[p] && Object.keys(opstellingData[p]).length > 0);
     if (!ploegNamen.length) {
       cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div>Geen opstelling opgeslagen voor ${actiefGeslacht === "V" ? "de meisjes" : "de jongens"} bij deze wedstrijd.</div>`;
+      renderReserves(); // patch 70: reserves kunnen los bestaan
       return;
     }
   } else {
@@ -5332,6 +5348,7 @@ function renderPloegen() {
   });
 
   cont.innerHTML = ploegNamen.map(ploeg => renderPloeg(ploeg, wasOpen[ploeg])).join("");
+  renderReserves(); // patch 70: reservebank onder de teams
 }
 
 function renderPloeg(ploeg, isOpen = false) {
@@ -5665,8 +5682,12 @@ function kiesAtleet(ploeg, idx, slotNr, atleetId) {
   }
   const slotKey = `${ploeg}_${idx}_${slotNr}`;
   opstellingData[ploeg][slotKey] = atleetId;
+  // patch 70: een reserve die in een onderdeel wordt gezet, is "ingezet" → van de bank af
+  let vanBank = false;
+  if (atleetId) vanBank = verwijderVanReservebank(atleetId);
   document.querySelectorAll(".slot-select").forEach(d => d.remove());
   renderPloegen();
+  if (vanBank) toast("Reserve ingezet en van de reservebank gehaald ✓");
 }
 
 // Kies atleet ondanks tijdconflict — vraagt eerst bevestiging
@@ -5680,13 +5701,171 @@ async function kiesAtleetMetConflict(ploeg, idx, slotNr, atleetId, atleetNaam) {
   if (!bevestigd) return;
   if (!opstellingData[ploeg]) opstellingData[ploeg] = {};
   opstellingData[ploeg][`${ploeg}_${idx}_${slotNr}`] = atleetId;
+  // patch 70: ook hier de reserve van de bank halen bij inzetten
+  let vanBank = false;
+  if (atleetId) vanBank = verwijderVanReservebank(atleetId);
   renderPloegen();
+  if (vanBank) toast("Reserve ingezet en van de reservebank gehaald ✓");
 }
 
 function clearSlot(ploeg, idx, slotNr) {
   if (!opstellingData[ploeg]) return;
   delete opstellingData[ploeg][`${ploeg}_${idx}_${slotNr}`];
   renderPloegen();
+}
+
+// ── Reserves (patch 70) ───────────────────────────────────────
+// Reserves worden bewaard in opstellingData["RES"] als { RES_0, RES_1, RES_2 }.
+// Ze horen bij geen enkel onderdeel en hebben dus geen starttijd. Pas als een
+// reserve in een echt onderdeel wordt gezet (kiesAtleet), telt de starttijd van
+// dat onderdeel en verdwijnt hij automatisch van de bank.
+
+// Staat de atleet al in een van de teams A/B/C van dit geslacht?
+function zitInEenTeam(atleetId) {
+  const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
+  return ploegNamen.some(ploeg => {
+    const opst = opstellingData[ploeg] || {};
+    return Object.values(opst).some(id => String(id) === String(atleetId));
+  });
+}
+
+// Lijst met ingevulde reserve-atleetobjecten (op volgorde van slot).
+function reservesLijst() {
+  const res = opstellingData["RES"] || {};
+  const uit = [];
+  for (let s = 0; s < MAX_RESERVES; s++) {
+    const aid = res[`RES_${s}`];
+    if (!aid) continue;
+    const atleet = atleten.find(a => String(a.id) === String(aid));
+    if (atleet) uit.push(atleet);
+  }
+  return uit;
+}
+
+// Is er minstens één reserve ingevuld?
+function reservesGevuld() {
+  const res = opstellingData["RES"] || {};
+  return Object.values(res).some(aid => aid != null && String(aid) !== "");
+}
+
+// Haal een atleet van de reservebank (gebruikt bij "inzetten" in een onderdeel).
+function verwijderVanReservebank(atleetId) {
+  const res = opstellingData["RES"];
+  if (!res) return false;
+  let verwijderd = false;
+  for (let s = 0; s < MAX_RESERVES; s++) {
+    if (String(res[`RES_${s}`]) === String(atleetId)) {
+      delete res[`RES_${s}`];
+      verwijderd = true;
+    }
+  }
+  return verwijderd;
+}
+
+function renderReserves() {
+  const cont = document.getElementById("reserves-container");
+  if (!cont) return;
+
+  // In alleen-lezen-modus tonen we de kaart alleen als er reserves waren.
+  if (opstellingAlleenLezen && !reservesGevuld()) { cont.innerHTML = ""; return; }
+
+  const res = opstellingData["RES"] || {};
+  let slotsHtml = "";
+  for (let s = 0; s < MAX_RESERVES; s++) {
+    const aid    = res[`RES_${s}`] || null;
+    const atleet = aid ? atleten.find(a => String(a.id) === String(aid)) : null;
+    slotsHtml += `
+      <div class="atleet-slot ${atleet ? "bezet" : ""}${opstellingAlleenLezen ? " readonly" : ""}"
+           ${opstellingAlleenLezen ? "" : `onclick="openReserveKeuze(${s}, this)"`} id="slot_RES_${s}">
+        <span class="slot-naam">${atleet ? esc(atleet.naam) : `<span style="color:var(--muted)">${opstellingAlleenLezen ? "—" : "+ Reserve kiezen"}</span>`}</span>
+        ${atleet && !opstellingAlleenLezen ? `<span class="slot-remove" onclick="clearReserve(${s});event.stopPropagation()">✕</span>` : ""}
+      </div>`;
+  }
+
+  cont.innerHTML = `
+    <div class="ploeg-container" id="ploeg-container-RES" style="margin-top:16px;">
+      <div class="ploeg-header open" style="cursor:default;">
+        <div class="ploeg-naam">🔁 Reserves</div>
+        <div class="ploeg-punten print-hide" style="color:var(--muted);">max ${MAX_RESERVES} · geen starttijd</div>
+        <span></span>
+      </div>
+      <div class="ploeg-body open" id="ploeg-body-RES">
+        <div class="onderdeel-rij" style="grid-template-columns:1fr;">
+          <div style="display:flex;flex-direction:column;gap:6px;">${slotsHtml}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openReserveKeuze(slotNr, el) {
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+
+  const div = document.createElement("div");
+  div.className = "slot-select";
+
+  // Kandidaten: juist geslacht, beschikbaar, niet al in een team, niet al reserve.
+  const alReserve = new Set(reservesLijst().map(a => String(a.id)));
+  const kandidaten = atleten
+    .filter(a => (!actiefGeslacht || a.geslacht === actiefGeslacht)
+              && isBeschikbaar(a.id)
+              && !zitInEenTeam(a.id)
+              && !alReserve.has(String(a.id)))
+    .sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
+
+  div.innerHTML = `<input class="slot-select-search" placeholder="Zoek atleet…" oninput="filterSlotKeuze(this)">` +
+    (kandidaten.length
+      ? kandidaten.map(a => `
+        <div class="slot-select-item" data-naam="${esc(a.naam).toLowerCase()}"
+             onclick="kiesReserve(${slotNr},'${a.id}')">
+          <span>${esc(a.naam)}</span>
+        </div>`).join("")
+      : `<div class="slot-select-item dimmed"><span style="color:var(--muted)">Geen beschikbare atleten (staan al in een team of reserve)</span></div>`) +
+    `<div class="slot-select-item" onclick="kiesReserve(${slotNr},null)">
+      <span style="color:var(--muted)">— Leeg maken —</span>
+    </div>`;
+
+  el.style.position = "relative";
+  el.appendChild(div);
+  const zoek = div.querySelector(".slot-select-search");
+  if (zoek) zoek.focus();
+
+  // Flip omhoog als de dropdown buiten het venster valt
+  const dropRect = div.getBoundingClientRect();
+  const margin = 24;
+  if (dropRect.bottom + margin > window.innerHeight) {
+    div.style.top = "auto";
+    div.style.bottom = "100%";
+    div.style.marginTop = "0";
+    div.style.marginBottom = "4px";
+  }
+
+  // Sluit bij klik buiten
+  setTimeout(() => {
+    document.addEventListener("click", function sluiter(e) {
+      if (!div.contains(e.target) && e.target !== el) {
+        div.remove();
+        document.removeEventListener("click", sluiter);
+      }
+    });
+  }, 100);
+}
+
+function kiesReserve(slotNr, atleetId) {
+  if (!opstellingData["RES"]) opstellingData["RES"] = {};
+  const key = `RES_${slotNr}`;
+  if (atleetId == null || atleetId === "null" || atleetId === "") {
+    delete opstellingData["RES"][key];
+  } else {
+    opstellingData["RES"][key] = atleetId;
+  }
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  renderReserves();
+}
+
+function clearReserve(slotNr) {
+  if (!opstellingData["RES"]) return;
+  delete opstellingData["RES"][`RES_${slotNr}`];
+  renderReserves();
 }
 
 // ── Beschikbaarheid ───────────────────────────────────────────
@@ -5786,8 +5965,12 @@ async function genereerOpstelling() {
     : new Set();
 
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
+  // patch 70: reservebank behouden bij opnieuw genereren en reserves niet in een team trekken
+  const bewaardeReserves = opstellingData["RES"] || {};
+  reservesLijst().forEach(a => geblokkeerdeAtleten.add(String(a.id)));
   opstellingData = {};
   ploegNamen.forEach(p => opstellingData[p] = {});
+  opstellingData["RES"] = bewaardeReserves;
 
   // atleetId → ploeg: eenmaal toegewezen, nooit meer beschikbaar voor andere ploeg
   const atleetInPloeg        = {};
@@ -5943,6 +6126,8 @@ async function aanvullenOpstelling() {
   const geblokkeerdeAtleten = isFinale
     ? await laadAndereFinaleAtleten(actiefWedstrijdId, wedstrijd?.datum, actiefGeslacht)
     : new Set();
+  // patch 70: reserves niet automatisch in een team plaatsen — die blijven op de bank
+  reservesLijst().forEach(a => geblokkeerdeAtleten.add(String(a.id)));
 
   const ploegNamen = ["A","B","C"].slice(0, aantalPloegenPerGeslacht[actiefGeslacht] || 3);
 
@@ -6123,6 +6308,14 @@ async function opslaanOpstelling() {
       ploeg,
       data: opstellingData[ploeg] || {}
     }));
+    // patch 70: reserves als aparte rij met ploeg "RES" (los van team A/B/C)
+    rows.push({
+      categorie_id: cid,
+      wedstrijd_id: actiefWedstrijdId,
+      geslacht:     actiefGeslacht,
+      ploeg:        "RES",
+      data:         opstellingData["RES"] || {}
+    });
     const { error } = await sb.from("opstelling").upsert(rows, {
       onConflict: "categorie_id,wedstrijd_id,geslacht,ploeg"
     });
@@ -8252,6 +8445,13 @@ function deelViaWhatsApp() {
         <span>Team ${ploegNr}${gevuld ? "" : ` <span style="color:var(--muted);font-size:13px;">(leeg)</span>`}</span>
       </label>`;
   });
+  // patch 70: apart vinkje voor reserves (los van de teams). Alleen tonen als er reserves zijn.
+  const heeftReserves = reservesGevuld();
+  html += `
+    <label style="${optieCss}${heeftReserves ? "" : "opacity:0.7;"}border-top:1px solid var(--border);margin-top:4px;">
+      <input type="checkbox" id="wa-res-cb" ${heeftReserves ? "checked" : "disabled"}>
+      <span style="color:var(--accent);">🔁 Reserves${heeftReserves ? "" : ` <span style="color:var(--muted);font-size:13px;">(geen)</span>`}</span>
+    </label>`;
   document.getElementById("wa-team-checkboxes").innerHTML = html;
   document.getElementById("wa-team-geslacht").textContent = "👟 " + geslachtLabel;
   openModal("waTeamModal");
@@ -8275,7 +8475,10 @@ function deelGekozenTeamsViaWhatsApp() {
   const gekozen = [...document.querySelectorAll(".wa-team-cb")]
     .filter(cb => cb.checked)
     .map(cb => cb.value);
-  if (!gekozen.length) { toast("Selecteer minstens één team.", "err"); return; }
+  // patch 70: reserves als los blok, apart aan/uit te zetten
+  const resCb      = document.getElementById("wa-res-cb");
+  const resGekozen = !!(resCb && resCb.checked && !resCb.disabled);
+  if (!gekozen.length && !resGekozen) { toast("Selecteer minstens één team of de reserves.", "err"); return; }
 
   const wedstrijd = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
   if (!wedstrijd) { toast("Geen wedstrijd geselecteerd.", "err"); return; }
@@ -8321,6 +8524,18 @@ function deelGekozenTeamsViaWhatsApp() {
 
     tekst += "\n";
   });
+
+  // patch 70: reserve-blok onderaan (geen starttijd, want reserves horen bij geen onderdeel)
+  if (resGekozen) {
+    const reserves = reservesLijst();
+    if (reserves.length) {
+      tekst += "─────────────────────\n";
+      tekst += "🔁 Reserves\n";
+      tekst += "─────────────────────\n";
+      reserves.forEach(a => { tekst += `  • ${a.naam}\n`; });
+      tekst += "\n";
+    }
+  }
 
   // Footer
   const nu = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });

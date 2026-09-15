@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 14 september 2026 (patch 69)*
+*AV Sprint Breda · Laatste update: 15 september 2026 (patch 70)*
 
 ---
 
@@ -32,7 +32,7 @@
 | `onderdelen` | Zelf toegevoegde onderdelen (naam, type, geslacht) — categorie-breed (`atleet_id` leeg) of per atleet (`atleet_id` gevuld, patch 41) — patch 40 |
 | `wedstrijden` | Wedstrijden (naam, datum, `einddatum`, locatie, notities, `is_finale`, `is_open`) |
 | `programma` | Onderdelen per wedstrijd per geslacht |
-| `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON) |
+| `opstelling` | Teamopstelling per wedstrijd per geslacht per ploeg (JSON). Ploeg `A`/`B`/`C` = teams; ploeg `RES` = reservebank met `{ RES_0, RES_1, RES_2 }` — patch 70 |
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
 | `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt, gebruikt) |
 | `releasenotes` | Releasenotes (versie, titel, type, beschrijving, `tags` text[] — patch 68, `gearchiveerd`, `gepubliceerd_op`) |
@@ -43,6 +43,21 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Reserves opstellen en delen (patch 70, sep 2026)
+Max 3 reserves per geslacht in een aparte reservebank onder de teams in de opstellingstab.
+- **Geen databasewijziging.** Reserves worden opgeslagen als een extra rij in de bestaande `opstelling`-tabel met `ploeg = "RES"` en `data = { RES_0, RES_1, RES_2 }`. Past binnen de unieke sleutel `(categorie_id, wedstrijd_id, geslacht, ploeg)`; jongens- en meisjesreserves zijn aparte RES-rijen (verschillend `geslacht`).
+- State: reserves leven in `opstellingData["RES"]`. Constante `MAX_RESERVES = 3`.
+- Nieuwe functies: `renderReserves()` (kaart met 3 slots, respecteert `opstellingAlleenLezen`), `openReserveKeuze()` / `kiesReserve()` / `clearReserve()` (eigen keuzelijst, géén PR/conflict-logica want reserves horen bij geen onderdeel), `reservesLijst()`, `reservesGevuld()`, `verwijderVanReservebank()`, `zitInEenTeam()`.
+- **Reserve-keuzelijst** toont alleen atleten van `actiefGeslacht` die beschikbaar zijn, nog niet in team A/B/C staan (`zitInEenTeam`) en nog niet reserve zijn.
+- **Inzetten (bewust simpel gehouden):** een reserve zet je in door hem in een gewoon onderdeel-vakje te kiezen. `kiesAtleet()` en `kiesAtleetMetConflict()` roepen dan `verwijderVanReservebank()` aan → de reserve verdwijnt automatisch van de bank en erft de starttijd van het onderdeel (die zit aan het `programma`, niet aan de atleet).
+- **Laden:** in `laadProgrammaEnOpstelling()` wordt de `RES`-rij apart afgehandeld (`if (o.ploeg === "RES")`), buiten de programma-opschoonlus, anders zou die de reservedata wissen.
+- **Opslaan:** `opslaanOpstelling()` pusht een extra `RES`-rij in de upsert.
+- **Rendering:** `renderPloegen()` roept aan het eind `renderReserves()` aan; bij leeg programma wordt de reserves-container geleegd. Alle bestaande `opstellingData[ploeg]`-toegang gebruikt expliciete sleutels (A/B/C uit `["A","B","C"].slice(...)` of "RES"), dus geen enkele bestaande functie behandelt "RES" per ongeluk als team.
+- **Automatisch opstellen:** `genereerOpstelling()` bewaart de reservebank bij het wissen (`opstellingData = {}`) en voegt reserve-ids toe aan `geblokkeerdeAtleten`; `aanvullenOpstelling()` blokkeert reserves ook. Reserves worden dus nooit ongevraagd in een team getrokken.
+- **WhatsApp delen:** apart vinkje `#wa-res-cb` in `deelViaWhatsApp()` (alleen ingeschakeld als er reserves zijn); `deelGekozenTeamsViaWhatsApp()` voegt een los reserve-blok onderaan toe (zonder starttijd) en accepteert nu ook "alleen reserves" (validatie verruimd). De per-team knop `deelPloegViaWhatsApp()` is ongewijzigd (reserves zijn geslacht-breed, niet teamgebonden).
+- **Buiten scope (bewust):** reserves staan niet in de Excel-export (`exporteerOpstelling`) of afdruk (`printOpstelling`); die gebruiken hardcoded A/B/C.
+- **Niet getest in dit kanaal:** echte Supabase opslag/lees van de `RES`-rij, WhatsApp deep-link op mobiel, gedrag met echte atleetdata.
 
 ### Prestaties filteren op geslacht (patch 69, sep 2026)
 Derde filter in de Prestaties-tab naast atleet en onderdeel: geslacht (Alle / Jongens / Meisjes).

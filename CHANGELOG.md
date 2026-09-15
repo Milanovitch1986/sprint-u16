@@ -6,6 +6,38 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [september 2026 — patch 70] — 2026-09-15
+
+### 🔁 Reserves opstellen en delen
+
+<!--RELEASENOTE
+versie: Patch 70
+titel: 🔁 Reserves opstellen en delen
+type: feature
+tags: opstelling
+beschrijving: In de opstellingstab kun je nu per geslacht maximaal 3 reserves opstellen, in een aparte reservebank onder de teams. Reserves horen bij geen onderdeel en hebben dus geen starttijd. Zet je een reserve later in een echt onderdeel, dan verdwijnt hij automatisch van de bank en krijgt hij de starttijd van dat onderdeel. Bij "Delen via WhatsApp" staat een apart vinkje "🔁 Reserves" waarmee je de reserves als los blok meestuurt.
+-->
+
+Naast de teams A/B/C kun je nu ook reserves klaarzetten die nog geen vast onderdeel hebben.
+
+**Reservebank onder de teams.** Onderaan de opstelling staat een kaart "🔁 Reserves" met plek voor maximaal 3 atleten per geslacht (dus 3 bij de jongens en 3 bij de meisjes). Je kiest een reserve net als bij een team: klik op "+ Reserve kiezen". In de lijst verschijnen alleen beschikbare atleten van het juiste geslacht die nog niet in een team staan en nog niet reserve zijn.
+
+**Geen starttijd — tot je ze inzet.** Reserves horen bij geen enkel onderdeel, dus ze hebben geen starttijd. Wil je een reserve inzetten? Zet hem gewoon in een onderdeel-vakje bij een team. Hij verdwijnt dan automatisch van de reservebank en krijgt vanzelf de starttijd van dat onderdeel.
+
+**Delen via WhatsApp.** In het keuzescherm van "📲 Delen via WhatsApp" staat onder de teams een apart vinkje "🔁 Reserves". Staat het aan (standaard als er reserves zijn), dan komt onderaan het bericht een los blok met de reserves — zonder starttijd. Je kunt het vinkje uitzetten als je de reserves een keer niet wilt meesturen.
+
+**Automatisch opstellen laat reserves met rust.** "⚡ Automatisch opstellen" en "🧩 Aanvullen" plaatsen reserves niet ongevraagd in een team; ze blijven op de bank staan.
+
+#### Technisch
+
+- Geen databasewijziging. Reserves worden opgeslagen als een extra rij in de bestaande `opstelling`-tabel met `ploeg = "RES"` en `data = { RES_0, RES_1, RES_2 }`. Dit past binnen de bestaande unieke sleutel `(categorie_id, wedstrijd_id, geslacht, ploeg)`.
+- Nieuwe constante `MAX_RESERVES` (3) en nieuwe functies: `renderReserves()`, `openReserveKeuze()`, `kiesReserve()`, `clearReserve()`, `reservesLijst()`, `reservesGevuld()`, `verwijderVanReservebank()`, `zitInEenTeam()`.
+- `laadProgrammaEnOpstelling()` leest de `RES`-rij apart uit (buiten de programma-opschoonlus). `opslaanOpstelling()` stuurt een extra `RES`-rij mee. `renderPloegen()` roept `renderReserves()` aan.
+- `kiesAtleet()` en `kiesAtleetMetConflict()` halen een ingezette reserve automatisch van de bank (`verwijderVanReservebank`).
+- `genereerOpstelling()` behoudt de reservebank bij het opnieuw genereren en blokkeert reserves; `aanvullenOpstelling()` blokkeert reserves eveneens.
+- WhatsApp: `deelViaWhatsApp()` toont een extra vinkje `#wa-res-cb`; `deelGekozenTeamsViaWhatsApp()` voegt een los reserve-blok toe. De losse per-team knopjes (`deelPloegViaWhatsApp`) zijn ongewijzigd — reserves zijn geslacht-breed, niet teamgebonden. Reserves staan (bewust) niet in de Excel-export of afdruk.
+- Niet getest: de echte Supabase opslag/lees van de `RES`-rij, de WhatsApp deep-link op mobiel, en het gedrag met echte atleetdata.
+
 ## [september 2026 — patch 69] — 2026-09-14
 
 ### 🏆 Prestaties filteren op geslacht
