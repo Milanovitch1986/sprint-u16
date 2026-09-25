@@ -3,16 +3,19 @@
 # Doel: voorkomt dat het gratis Supabase-project wordt gepauzeerd wegens
 # inactiviteit (dat gebeurt na 7 dagen zonder database-activiteit).
 #
-# Hoe: twee keer per week (maandag en donderdag om 06:00 UTC) roept deze
-# workflow de databasefunctie ping() aan. Die functie werkt een tijdstempel
-# bij in het tabelletje keepalive -> een ECHTE schrijfactie in de database,
-# en dat telt gegarandeerd als activiteit (een leesverzoek bleek onvoldoende).
+# Hoe: elke dag om 06:00 UTC roept deze workflow de databasefunctie ping()
+# aan. Die functie werkt een tijdstempel bij in het tabelletje keepalive ->
+# een ECHTE schrijfactie in de database, en dat telt gegarandeerd als
+# activiteit (een leesverzoek bleek onvoldoende). Supabase's documentatie
+# geeft aan dat een paar verzoeken per dag verspreid over de week nodig
+# zijn om als "voldoende actief" te gelden, dus is de frequentie verhoogd
+# van 2x per week naar dagelijks.
 
 name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: "0 6 * * 1,4"   # elke maandag en donderdag om 06:00 UTC
+    - cron: "0 6 * * *"   # elke dag om 06:00 UTC
   workflow_dispatch:          # maakt handmatig starten mogelijk
 
 jobs:
