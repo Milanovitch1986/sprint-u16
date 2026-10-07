@@ -6,6 +6,39 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 73] — 2026-10-07
+
+### 🏃 Atleten als lijst
+
+<!--RELEASENOTE
+versie: Patch 73
+titel: 🏃 Atleten als lijst
+type: update
+tags: atleten
+beschrijving: Het scherm Atleten toont de atleten nu als nette lijst in plaats van losse kaarten: avatar met initialen, naam, club, licentienummer en aantal prestaties, met rechts de categorie. Het filter Alle / Jongens / Meisjes bestaat nu uit pillen. De doorstroommelding heeft een oranje rand. Op mobiel staat "+ Atleet toevoegen" als ronde plusknop rechtsonder en passen de knoppen bovenaan op één rij. Alleen het uiterlijk is veranderd, alle functies werken als eerst.
+-->
+
+Derde stap van het UI-herontwerp (patch C, deel 1: Atleten). Alleen uiterlijk; geen functie, berekening of database is aangepast.
+
+**Lijst.** Elke atleet is een rij met avatar, naam, "AV Sprint · licentienummer · N prestaties" en rechts de categorie-badge (inclusief de ⚠️ als het geboortejaar niet meer past). Klikken opent het bewerkvenster zoals voorheen. De selectiemodus werkt als voorheen: vinkjes verschijnen in de rijen en geselecteerde rijen krijgen een oranje markering. Op mobiel staat er een pijltje achter elke rij en mag de regel met club en aantal prestaties over twee regels lopen.
+
+**Filter.** Alle / Jongens / Meisjes zijn nu pillen. Het zoekveld werkt zoals voorheen en is te combineren met het filter.
+
+**Doorstroming.** Het paneel heeft een oranje rand en een lichte oranje achtergrond; de inhoud en knoppen zijn ongewijzigd.
+
+**Mobiel.** "+ Atleet toevoegen" is een ronde plusknop rechtsonder, boven de onderbalk (dezelfde knop met dezelfde actie). "Selecteren" en "Excel importeren" delen één rij.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Contract-check: 0 id's, handlers of functies verdwenen; één nieuwe functie.
+- Nieuwe functie `kiesSegment(knop, selectId, waarde)` in een eigen `<script>`-blok onderaan: zet de waarde van het bestaande (nu verborgen) `<select id="atleten-filter-geslacht">`, markeert de actieve pil en vuurt een `change`-event af, waarna de bestaande `onchange="renderAtleten()"` het filter uitvoert. Het `<select>` met id en opties blijft dus de enige bron van waarheid; `renderAtleten()` leest het nog steeds uit. Geen enkele andere code zet die waarde (gecontroleerd).
+- `renderAtleten()`: alleen het HTML-sjabloon is aangepast. De rijen houden class `card`, `data-id`, de `onclick`-handlers en `.card-checkbox`, zodat `toggleSelectie()` en de selectiemodus ongewijzigd werken. Nieuwe klassen: `atleet-rij`, `atleet-avatar`, `atleet-info`, `atleet-aantal`, `atleet-chevron`.
+- CSS is gescoped op `#atleten-grid`/`#view-atleten`: `.card` en `.grid` worden ook door Wedstrijden en Opstelling gebruikt en zijn dus niet aangepast.
+- De ronde plusknop is een CSS-vorm van de bestaande knop (`class="fab-mobiel"`, `aria-label` toegevoegd); z-index 150, onder de modals (200+) en de Meer-menu (305+).
+- De generieke `.segment`/`.segment-knop`-stijl is bedoeld om ook bij Prestaties te gebruiken (patch 74).
+- Gecontroleerd: `node --check`, contract-check en een headless render (Chromium) op 1280, 390 en 360 px met 12 atleten (incl. een zeer lange naam en een doorstroomkandidaat): filters (Jongens 9, Meisjes 3, Alle 12), zoeken, combinatie zoek + filter, lege uitkomst, klik op rij opent het bewerkvenster, selectiemodus (vinkjes, teller), ronde plusknop opent "Atleet toevoegen", licht thema. Geen console-errors, geen horizontale overflow.
+- Niet getest: inloggen/2FA, echte Supabase-data (de render-test gebruikt een nep-Supabase met voorbeeldatleten), echte telefoon (iOS safe-area), het echt opslaan, bewerken of verwijderen van een atleet, Excel-import en het uitvoeren van een doorstroming.
+
 ## [oktober 2026 — patch 72] — 2026-10-07
 
 ### 🏠 Nieuwe Home: releasenotes in kaarten

@@ -1515,6 +1515,75 @@
     header:has(#categorie-switcher:not(:empty)) .sync-btn { width: 34px; height: 34px; }
   }
 
+  /* ══ Patch 73: Atleten als lijst (UI-herontwerp patch C1) ══ */
+  /* Segment-knoppen (pillen) — ook bruikbaar op andere schermen; het echte filter blijft het verborgen <select> */
+  .segment {
+    display: inline-flex; gap: 2px; padding: 3px; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  }
+  .segment-knop {
+    background: transparent; border: none; color: var(--muted);
+    font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+    padding: 7px 16px; border-radius: 999px; cursor: pointer;
+    transition: background .15s, color .15s; -webkit-tap-highlight-color: transparent;
+  }
+  .segment-knop:hover { color: var(--text); }
+  .segment-knop.active { background: var(--accent); color: #000; }
+  .segment-select { display: none !important; }
+  #view-atleten .search-bar { align-items: center; }
+
+  /* Lijst i.p.v. kaartenraster. De rijen houden class "card" + data-id (selectiemodus). */
+  #atleten-grid {
+    display: flex; flex-direction: column; gap: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  #atleten-grid .atleet-rij {
+    display: flex; align-items: center; gap: 12px; position: relative;
+    padding: 12px 16px; background: transparent; transform: none;
+    border: none; border-bottom: 1px solid var(--border); border-radius: 0;
+  }
+  #atleten-grid .atleet-rij:last-child { border-bottom: none; }
+  #atleten-grid .atleet-rij:hover { background: var(--surface2); transform: none; }
+  #atleten-grid .atleet-rij.selecteerbaar { padding-left: 16px; }
+  #atleten-grid .atleet-rij.geselecteerd {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  #atleten-grid .atleet-rij .card-checkbox { position: static; flex-shrink: 0; }
+  #atleten-grid .atleet-rij .card-badge { position: static; flex-shrink: 0; }
+  .atleet-avatar { width: 40px; height: 40px; font-size: 16px; }
+  .atleet-info { flex: 1; min-width: 0; }
+  .atleet-info .card-name { font-size: 17px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .atleet-info .card-meta { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .atleet-aantal { white-space: nowrap; }
+  .atleet-chevron { display: none; color: var(--muted); font-size: 22px; line-height: 1; flex-shrink: 0; }
+  #doorstroom-paneel {
+    border-color: var(--accent); border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  #view-atleten .selectie-toolbar { border-radius: var(--radius-lg); }
+
+  @media (max-width: 768px) {
+    .search-bar .segment { display: flex; width: 100%; }
+    .search-bar .segment-knop { flex: 1; padding: 9px 8px; }
+    #atleten-grid .atleet-rij { padding: 12px 14px; }
+    .atleet-chevron { display: block; }
+    /* Kopknoppen (Selecteren / Excel importeren) delen één rij */
+    #view-atleten .page-header .ml-auto { flex: 1 1 100%; }
+    #view-atleten .page-header .ml-auto .btn:not(.fab-mobiel) { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 9px 10px; font-size: 13px; }
+    /* Metaregel mag op mobiel over twee regels lopen i.p.v. afgekapt te worden naast de categorie-badge */
+    .atleet-info .card-meta { white-space: normal; overflow: visible; text-overflow: clip; }
+    /* Ronde "+"-knop rechtsonder (dezelfde knop en handler, alleen andere vorm) */
+    #view-atleten .fab-mobiel {
+      position: fixed; right: 16px; z-index: 150;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+      width: 52px; height: 52px; padding: 0; gap: 0; border-radius: 50%;
+      justify-content: center; font-size: 0; box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    }
+    #view-atleten .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -1639,7 +1708,7 @@
           📥 Excel importeren
           <input type="file" id="xlsxImportInput" accept=".xlsx" style="display:none;" onchange="importExcel(this)">
         </label>
-        <button class="btn btn-primary" onclick="openAtleetModal()">+ Atleet toevoegen</button>
+        <button class="btn btn-primary fab-mobiel" aria-label="Atleet toevoegen" onclick="openAtleetModal()">+ Atleet toevoegen</button>
       </div>
     </div>
 
@@ -1659,7 +1728,12 @@
 
     <div class="search-bar">
       <input type="text" id="atleten-search" placeholder="Zoek op naam of club…" oninput="renderAtleten()">
-      <select id="atleten-filter-geslacht" onchange="renderAtleten()">
+      <div class="segment" role="group" aria-label="Filter op geslacht">
+        <button type="button" class="segment-knop active" onclick="kiesSegment(this,'atleten-filter-geslacht','')">Alle</button>
+        <button type="button" class="segment-knop" onclick="kiesSegment(this,'atleten-filter-geslacht','M')">Jongens</button>
+        <button type="button" class="segment-knop" onclick="kiesSegment(this,'atleten-filter-geslacht','V')">Meisjes</button>
+      </div>
+      <select id="atleten-filter-geslacht" class="segment-select" onchange="renderAtleten()">
         <option value="">Alle</option>
         <option value="M">Jongens</option>
         <option value="V">Meisjes</option>
@@ -2917,21 +2991,18 @@ function renderAtleten() {
     const cbHtml   = selecteerModus
       ? `<input type="checkbox" class="card-checkbox" ${isSel ? "checked" : ""} onclick="toggleSelectie('${a.id}', event)">`
       : "";
+    // patch 73: rij-opmaak via klassen (alleen opmaak; data-id, onclick-handlers en card-checkbox ongewijzigd)
     return `
-      <div class="card ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""}" data-id="${a.id}"
+      <div class="card atleet-rij ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""}" data-id="${a.id}"
            onclick="${selecteerModus ? `toggleSelectie('${a.id}', event)` : `openAtleetModal('${a.id}')`}">
         ${cbHtml}
+        <div class="detail-avatar atleet-avatar">${initials}</div>
+        <div class="atleet-info">
+          <div class="card-name">${esc(a.naam || "")}</div>
+          <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr} · <span class="atleet-aantal">${cnt} prestatie${cnt !== 1 ? "s" : ""}</span></div>
+        </div>
         <div class="card-badge ${gBadge}">${gLabel}</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-          <div class="detail-avatar" style="width:40px;height:40px;font-size:16px;">${initials}</div>
-          <div>
-            <div class="card-name">${esc(a.naam || "")}</div>
-            <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr}</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="card-meta">${cnt} prestatie${cnt !== 1 ? "s" : ""}</div>
-        </div>
+        <span class="atleet-chevron" aria-hidden="true">›</span>
       </div>`;
   }).join("");
 }
@@ -11322,6 +11393,18 @@ function sluitMobMeer() {
   if (bd) bd.classList.remove("open");
   const knop = document.getElementById("mob-tab-meer");
   if (knop) knop.setAttribute("aria-expanded", "false");
+}
+</script>
+<script>
+// patch 73: segment-knoppen (pillen) voor een filter. Zet de waarde van het bestaande <select> en laat de
+// bestaande onchange-handler het filter uitvoeren. Geen bestaande functie gewijzigd.
+function kiesSegment(knop, selectId, waarde) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.value = waarde;
+  const groep = knop && knop.parentElement;
+  if (groep) groep.querySelectorAll(".segment-knop").forEach(b => b.classList.toggle("active", b === knop));
+  sel.dispatchEvent(new Event("change"));
 }
 </script>
 </body>

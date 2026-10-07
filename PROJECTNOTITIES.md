@@ -44,6 +44,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch C1: Atleten (patch 73, okt 2026)
+Atleten als lijst i.p.v. kaartenraster. Alleen uiterlijk, geen databasewijziging; contract-check 0 verdwenen, 1 nieuwe functie (`kiesSegment`). Gecommit direct op `main`; tag `ui-B` staat op de commit vóór deze patch (patch 72, `13969ab`).
+- **Wat is aangepast:** CSS (gescoped op `#atleten-grid`, `#view-atleten`, `#doorstroom-paneel`), de zoekbalk-HTML, de ene knop `+ Atleet toevoegen` (class `fab-mobiel` + `aria-label`) en alleen het sjabloon in `renderAtleten()`.
+- **Segment-pillen:** `kiesSegment(knop, selectId, waarde)` (eigen `<script>`-blok onderaan, na het Meer-menu-script) zet de waarde van het verborgen `<select id="atleten-filter-geslacht" class="segment-select">`, markeert de actieve pil en vuurt `change` af; de bestaande `onchange="renderAtleten()"` doet de rest. Het select blijft de bron van waarheid. Hergebruiken voor Prestaties (patch 74) met `#prestatie-geslacht-filter`.
+- **Gedeelde klassen niet aangeraakt:** `.card` en `.grid` worden ook gebruikt door Wedstrijden/Opstelling; alleen via `#atleten-grid .atleet-rij` herstijld. De rijen houden `card`, `data-id`, `onclick` en `.card-checkbox`, want `toggleSelectie()` zoekt `.card[data-id]`.
+- **Ronde plusknop (mobiel):** CSS-vorm van de bestaande knop (`font-size:0` + `::before "+"`), `position: fixed`, z-index 150 (onder modals 200+ en het Meer-menu 305+), boven de onderbalk. Alleen zichtbaar op het Atleten-scherm omdat de knop in `#view-atleten` staat.
+- **Mockup vs. app:** de mockup toont onderdelen en geboortejaar per atleet (voorbeelddata); de app toont de categorie-badge (met ⚠️-waarschuwing) en het aantal prestaties. De app wint qua inhoud, de mockup qua uitstraling. Het `⋯`-menu uit de mockup bestaat niet in de app en is niet gebouwd.
+- **Test-aanpak:** zoals bij patch 71/72 (headless Chromium + nep-Supabase met ~60 ms vertraagde `getSession`), nu met 12 voorbeeldatleten en een `atleten`-/`prestaties`-tabel in de stub. Modals openen via class `open` (niet via `display`): zo toetsen.
+- **Niet getest in dit kanaal:** inloggen/2FA, echte data, echte telefoon (iOS), opslaan/bewerken/verwijderen van een atleet, Excel-import, het uitvoeren van een doorstroming.
+- **Volgende:** patch 74 (Prestaties): PR-tabel als tegels, segment-pillen voor het geslachtsfilter, kaartstijl voor accordeon en ranglijst. De grafiek en de "▲ −0,2"-verbetering uit de mockup vragen data die niet bestaat (geen datum per prestatie) en blijven buiten de patch.
+
 ### UI-herontwerp, patch B: Home (patch 72, okt 2026)
 Home volgens voorstel 2 (logo + releasenotes). Alleen uiterlijk, geen databasewijziging, geen nieuwe JavaScript; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-A` staat op de commit vóór deze patch (patch 71, `0d3576f`).
 - **Wat is aangepast:** CSS van `.home-*`, `.notes-*`, `.note-*`, `.tag-filter-*`; HTML van de releasenotes-kop en de ondertitel; alleen het sjabloon in `renderReleasenotesLijst()` (inline stijlen → klassen). `data-note`, handlers, id's en de filter-/archief-/importlogica zijn ongewijzigd.
