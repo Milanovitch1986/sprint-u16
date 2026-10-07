@@ -1578,14 +1578,16 @@
     .atleet-info .card-meta { white-space: normal; overflow: visible; text-overflow: clip; }
     /* Ronde "+"-knop rechtsonder (dezelfde knop en handler, alleen andere vorm) */
     #view-atleten .fab-mobiel,
-    #view-prestaties .fab-mobiel {
+    #view-prestaties .fab-mobiel,
+    #view-wedstrijden .fab-mobiel {
       position: fixed; right: 16px; z-index: 150;
       bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
       width: 52px; height: 52px; padding: 0; gap: 0; border-radius: 50%;
       justify-content: center; font-size: 0; box-shadow: 0 6px 20px rgba(0,0,0,.4);
     }
     #view-atleten .fab-mobiel::before,
-    #view-prestaties .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
+    #view-prestaties .fab-mobiel::before,
+    #view-wedstrijden .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
   }
 
   /* ══ Patch 74: Prestaties (UI-herontwerp patch C2) ══ */
@@ -1630,6 +1632,32 @@
     #view-prestaties .page-header .ml-auto { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
     #view-prestaties .page-header .ml-auto .btn:not(.fab-mobiel) { white-space: normal; text-align: center; line-height: 1.15; }
     #view-prestaties .page-header .ml-auto > :nth-child(3) { grid-column: 1 / -1; }
+  }
+
+  /* ══ Patch 75: Wedstrijden (UI-herontwerp patch D1) ══ */
+  #wedstrijden-grid .grid { gap: 14px; }
+  #wedstrijden-grid .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; display: flex; flex-direction: column; }
+  #wedstrijden-grid .wedstrijd-card.is-finale { border-color: var(--accent); }
+  #wedstrijden-grid .wedstrijd-naam { font-size: 22px; }
+  #wedstrijden-grid .wedstrijd-datum { font-size: 13px; }
+  /* Het oude patroon var(--accent)22/44 was ongeldige CSS; vandaar color-mix */
+  #wedstrijden-grid .finale-badge {
+    font-size: 11px; padding: 3px 10px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .wedstrijd-kop { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .wedstrijd-kop .wedstrijd-datum { margin-bottom: 0; }
+  .wedstrijd-notitie { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .wedstrijd-acties { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .wedstrijd-acties .btn { padding: 6px 12px; font-size: 12px; }
+  .wedstrijd-acties .wedstrijd-live-knop { border-color: var(--accent); color: var(--accent); }
+  .wedstrijd-bekijk { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 14px; }
+
+  @media (max-width: 768px) {
+    .wedstrijd-acties { display: grid; grid-template-columns: 1fr 1fr; }
+    .wedstrijd-acties .btn { justify-content: center; text-align: center; white-space: normal; line-height: 1.15; padding: 9px 8px; }
+    .wedstrijd-acties .wedstrijd-live-knop { grid-column: 1 / -1; }
   }
 
   @media print {
@@ -1942,7 +1970,7 @@
       <div class="page-title">Wedstrijden</div>
       <span class="count-badge" id="wedstrijden-count">0</span>
       <div class="ml-auto">
-        <button class="btn btn-primary" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
+        <button class="btn btn-primary fab-mobiel" aria-label="Wedstrijd toevoegen" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
       </div>
     </div>
     <div id="wedstrijden-grid"></div>
@@ -5081,28 +5109,29 @@ function isWedstrijdAfgelopen(w) {
 }
 
 function wedstrijdKaartHtml(w, afgelopen) {
+  // patch 75: inline stijlen → klassen (alleen opmaak; onclick-handlers, ids en tekst ongewijzigd)
   const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
   // Afgelopen kaarten hebben geen knoppen: de hele kaart opent de opstelling
   // in alleen-lezen-modus.
   const kaartKlik = afgelopen ? ` onclick="bekijkOpstelling('${w.id}')" style="cursor:pointer;" title="Klik om de opstelling te bekijken"` : "";
   const onderkant = afgelopen
-    ? `<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:14px;">👁️ Bekijk opstelling</div>`
-    : `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+    ? `<div class="wedstrijd-bekijk">👁️ Bekijk opstelling</div>`
+    : `<div class="wedstrijd-acties">
         <button class="btn btn-ghost btn-sm" onclick="openWedstrijdModal('${w.id}')">✏️ Bewerken</button>
         <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
         <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="openFinaleImportModal('${w.id}')" title="Importeer een vast finale-tijdschema uit Excel">📊 Importeer finale (Excel)</button>
-        <button class="btn btn-ghost btn-sm" style="border-color:var(--accent);color:var(--accent);" onclick="openWedstrijddag('${w.id}')" title="Live resultaten invoeren op de wedstrijddag">🏟️ Wedstrijddag</button>
+        <button class="btn btn-ghost btn-sm wedstrijd-live-knop" onclick="openWedstrijddag('${w.id}')" title="Live resultaten invoeren op de wedstrijddag">🏟️ Wedstrijddag</button>
       </div>`;
   return `
     <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}"${kaartKlik}>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span class="wedstrijd-datum" style="margin-bottom:0;">${formatDate(w.datum)}</span>
+      <div class="wedstrijd-kop">
+        <span class="wedstrijd-datum">${formatDate(w.datum)}</span>
         ${finaleBadge}
       </div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
       <div class="wedstrijd-locatie">📍 ${esc(w.locatie||"")}</div>
-      ${w.notities ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${esc(w.notities)}</div>` : ""}
+      ${w.notities ? `<div class="wedstrijd-notitie">${esc(w.notities)}</div>` : ""}
       ${onderkant}
     </div>`;
 }

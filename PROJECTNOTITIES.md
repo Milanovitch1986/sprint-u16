@@ -44,6 +44,18 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch D1: Wedstrijden (patch 75, okt 2026)
+Wedstrijden in de nieuwe stijl. Alleen uiterlijk, geen databasewijziging, geen nieuwe functie; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D1` staat op de commit vóór deze patch (patch 74, `b7b0d66`).
+- **Wat is aangepast:** CSS (alles gescoped op `#wedstrijden-grid`), de knop `+ Wedstrijd toevoegen` (class `fab-mobiel` + `aria-label`) en alleen inline stijlen → klassen in `wedstrijdKaartHtml()`. `renderWedstrijden()` en alle handlers ongewijzigd.
+- **Gedeelde klassen niet aangeraakt:** `.wedstrijd-card` wordt ook gebruikt in de Opstelling-lijst en de Wedstrijddag-lijsten (`openOpstelling`, `openWedstrijddag`), `.finale-badge` ook daar. Daarom alles via `#wedstrijden-grid …`; kaarten elders blijven 10 px / badge zonder achtergrond tot hun eigen patch.
+- **Ongeldige CSS:** `.wedstrijd-card.is-finale { border-color: var(--accent)66 }` en de `.finale-badge`-kleuren waren ongeldig; binnen `#wedstrijden-grid` hersteld met `color-mix`. De globale regels staan er nog (voor Opstelling/Wedstrijddag, patch 76+).
+- **Mobiel:** knoppen in een grid van 2 kolommen, `Wedstrijddag` over de volle breedte (`.wedstrijd-live-knop { grid-column: 1 / -1 }`); `+`-knop via de gedeelde `.fab-mobiel`-CSS.
+- **Bewust niet gebouwd:** tabs Aankomend/Afgelopen (JS), badge "Over 12 d" (nieuwe berekening), knop "Opstelling" op de kaart (bestaat niet in de app).
+- **Bekende eigenaardigheid (nog open):** de views na de eerste `</main>` krijgen de onderruimte van `<main>` (mobiel ±88 px, desktop 24 px) plus de bovenruimte van `<main>` (24 px) erbij, waardoor hun titel lager staat dan bij Home/Atleten/Prestaties (+48 px desktop, +100 px mobiel). Oplossing zou zijn: `main` zelf geen onderruimte geven en die aan `#view-home`, `#view-atleten` en `#view-prestaties` meegeven. Raakt 6 schermen; alleen met akkoord.
+- **Test-aanpak:** zoals bij 71–74 (headless Chromium + nep-Supabase met ~60 ms vertraagde `getSession`; `wedstrijden`-tabel in de stub). Handlers toetsen door de globale functies te vervangen door spies en op elke knop te klikken; isolatie toetsen door op de Opstelling- en Wedstrijddag-tab de computed stijl van `.wedstrijd-card` te lezen.
+- **Niet getest in dit kanaal:** inloggen/2FA, echte data, echte telefoon (iOS), opslaan van een wedstrijd, programma, PDF-/Excel-imports.
+- **Volgende:** patch 76 (Wedstrijddag, alleen de buitenkant). Hoogste risico: geen enkele `wd*`-functie of sjabloon van resultaatregels aanpassen; alleen CSS en de vaste HTML-schil. Pas live op een moment dat er geen wedstrijddag loopt, na een eigen akkoord.
+
 ### UI-herontwerp, patch C2: Prestaties (patch 74, okt 2026)
 Prestaties met tegels. Alleen uiterlijk, geen databasewijziging, geen nieuwe functie; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-C1` staat op de commit vóór deze patch (patch 73, `d06fb34`).
 - **Wat is aangepast:** CSS (scoped op `#view-prestaties` en `#prestaties-content`), de ene knop `+ Prestatie invoeren` (class `fab-mobiel` + `aria-label`), de filterbalk-HTML (geslachtsfilter → pillen via de bestaande `kiesSegment()`, het `<select id="prestatie-geslacht-filter" class="segment-select">` blijft de bron) en alleen het sjabloon in `renderPrestatieTable()`.

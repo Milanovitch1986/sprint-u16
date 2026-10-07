@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 75] — 2026-10-07
+
+### 🏆 Wedstrijden in de nieuwe stijl
+
+<!--RELEASENOTE
+versie: Patch 75
+titel: 🏆 Wedstrijden in de nieuwe stijl
+type: update
+tags: wedstrijden
+beschrijving: Het scherm Wedstrijden heeft een nieuwe opmaak: rondere kaarten met een duidelijke datum en naam, een finale-badge als oranje pil en een oranje rand om finale-wedstrijden. De knoppen op de kaart staan op mobiel in twee kolommen, met "Wedstrijddag" als brede hoofdknop. "+ Wedstrijd toevoegen" is op mobiel een ronde plusknop rechtsonder. Alleen het uiterlijk is veranderd, alle functies werken als eerst.
+-->
+
+Vijfde stap van het UI-herontwerp (patch D, deel 1: Wedstrijden). Alleen uiterlijk; geen functie, berekening of database is aangepast.
+
+**Kaarten.** Rondere kaarten (16 px) met datum, naam en locatie. Bij finale-wedstrijden staat de finale-badge als oranje pil en heeft de kaart een oranje rand (die rand werkte voorheen niet door een ongeldige kleurwaarde). De secties "Aankomende wedstrijden" en "Afgelopen wedstrijden" blijven zoals ze zijn, inclusief het in- en uitklappen van de afgelopen wedstrijden.
+
+**Knoppen.** Kleiner en rustiger op desktop. Op mobiel staan Bewerken, Programma, Importeer PDF en Importeer finale in een raster van twee kolommen, met "Wedstrijddag" als brede oranje hoofdknop eronder. "+ Wedstrijd toevoegen" is op mobiel een ronde plusknop rechtsonder, boven de onderbalk.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen nieuwe functie. Contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336).
+- `wedstrijdKaartHtml()`: alleen inline stijlen zijn vervangen door klassen (`wedstrijd-kop`, `wedstrijd-notitie`, `wedstrijd-acties`, `wedstrijd-live-knop`, `wedstrijd-bekijk`). Alle `onclick`-handlers (`openWedstrijdModal`, `openProgrammaVanWedstrijd`, `openPdfImportModal`, `openFinaleImportModal`, `openWedstrijddag`, `bekijkOpstelling`) staan er letterlijk nog in. `renderWedstrijden()` is niet aangeraakt.
+- `.wedstrijd-card` en `.finale-badge` worden ook gebruikt door de Opstelling- en Wedstrijddag-schermen. Alle nieuwe opmaak is daarom gescoped op `#wedstrijden-grid`; de kaarten op die andere schermen zijn gecontroleerd en onveranderd (nog 10 px hoeken, finale-badge nog zonder achtergrond).
+- De ronde plusknop hergebruikt de CSS van patch 73/74 (`.fab-mobiel`), nu ook voor `#view-wedstrijden`.
+- Gecontroleerd: `node --check`, contract-check en een headless render (Chromium) op 1280, 390 en 360 px met 5 wedstrijden (3 aankomend waarvan 1 finale, 2 afgelopen, plus 1 open wedstrijd die niet getoond hoort te worden, en een zeer lange naam). Elke van de vijf knoppen roept de juiste functie aan met het juiste wedstrijd-id; een klik op een afgelopen kaart roept `bekijkOpstelling` aan; het echte bewerkvenster opent met de juiste gegevens; de afgelopen wedstrijden klappen in en uit; de ronde plusknop opent het venster "Wedstrijd toevoegen". Geen console-errors, geen horizontale overflow.
+- Niet getest: inloggen/2FA, echte Supabase-data (de render-test gebruikt een nep-Supabase), echte telefoon (iOS), het echt opslaan van een wedstrijd, het programma en de PDF-/Excel-imports.
+- Bewust niet gebouwd: de tabs "Aankomend / Afgelopen", de badge "Over 12 d" en de knop "Opstelling" op de kaart uit de mockup (vragen JavaScript of nieuwe logica).
+- Bekend, al aanwezig vóór deze patch: schermen die na de eerste `</main>` staan (Wedstrijden, Wedstrijddag, Opstelling, Punten, Profiel, Admin) hebben boven de titel extra lege ruimte (±48 px op desktop, ±100 px op mobiel), omdat de onderruimte van `<main>` ervoor komt te staan. Nog niet aangepast.
+
 ## [oktober 2026 — patch 74] — 2026-10-07
 
 ### 📈 Prestaties met tegels
