@@ -44,6 +44,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch E: Opstelling (patch 78, okt 2026)
+Alleen CSS + twee kleine dingen in de vaste HTML-schil; **inline scripts byte-voor-byte identiek aan patch 77**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-E` staat op de commit vóór deze patch (patch 77, `f251c67`).
+- **Wat is aangepast:** Jongens/Meisjes-balk (klasse `opstelling-geslacht`; `setOpstellingGeslacht()` wisselt `btn-primary`/`btn-ghost` op `#opstelling-tab-M/V`, de pilstijl hangt daaraan), de knoppenrij (klasse `opstelling-acties`; mobiel grid van 2 kolommen), rondere panelen/ploegen/reserves, wedstrijdlijst (stap 1) met oranje finale-rand.
+- **Print-veiligheid:** alle nieuwe opmaak staat in `@media screen`. De twee basisklassen buiten `@media screen` hebben exact de waarden van de vervangen inline stijlen. `printOpstelling()` en `printPloeg()` bouwen een compleet eigen HTML-document (met eigen `<style>`) in `window.open(...)`; ze zijn dus onafhankelijk van de app-CSS. `#print-view` (met `printProgramma`) is een ander mechanisme.
+- **Ongeldige CSS binnen dit scherm hersteld:** `.ploeg-punten` (pil), `.atleet-slot.conflict` (tint) en `.slot-remove:hover`; en de witte finale-rand in de wedstrijdlijst. De globale regels zelf (`var(--accent)22` enz.) staan er nog; ze worden alleen binnen `#view-opstelling` overschreven.
+- **Test-aanpak:** zoals bij 71–77. Voor de print: `window.open` vervangen door een stub die het geschreven document opvangt, en oud tegen nieuw vergelijken. Knoppen in een test selecteren op hun `onclick` (bijv. `button[onclick="opslaanOpstelling()"]`), niet op tekst: "Opslaan" komt ook in verborgen modals voor.
+- **Niet getest in dit kanaal:** echt opslaan naar Supabase, de Excel-export (SheetJS komt van een CDN), de WhatsApp-deeplink op een telefoon, een echte printdialoog, inloggen/2FA.
+- **Bewust niet gebouwd:** slepen van atleten, drie kolommen met zijpaneel, stappenbalk/driestaps-flow op mobiel (nieuwe interacties met JS; het werkdocument noemt de stappenbalk "puur visueel").
+- **Volgende:** patch F (Punten, Profiel, Admin; laag risico) en tot slot de globale modals (`.modal`, `.modal-overlay`, gedeeld door alle schermen). Eigen bouwbrief en akkoord per patch.
+
 ### UI-herontwerp, patch D2: Wedstrijddag, alleen de buitenkant (patch 77, okt 2026)
 Alleen CSS + twee kleine dingen in de vaste HTML-schil; **inline scripts byte-voor-byte identiek aan patch 76**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D3` staat op de commit vóór deze patch (patch 76, `49f15bc`). Live gezet op een moment dat Milanovitch bevestigde dat er geen wedstrijddag liep.
 - **Regel voor dit scherm:** geen enkele `wd*`-functie en geen enkel sjabloon van resultaatregels aanpassen (live gebruik, offline-outbox). Alleen CSS gescoped op `#view-wedstrijddag` / `#wd-wedstrijd-lijst` en de vaste HTML-schil.

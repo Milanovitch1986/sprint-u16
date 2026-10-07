@@ -6,6 +6,36 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 78] — 2026-10-07
+
+### 📋 Opstelling in de nieuwe stijl
+
+<!--RELEASENOTE
+versie: Patch 78
+titel: 📋 Opstelling in de nieuwe stijl
+type: update
+tags: opstelling
+beschrijving: Het scherm Opstelling heeft een nieuwe opmaak: de keuze Jongens/Meisjes is een pil, de wedstrijdkaarten, de beschikbaarheid, de ploegen en de reserves zijn ronder en de finale-wedstrijd heeft weer een oranje rand (die was wit). De puntenpil per ploeg en de rode markering van een conflict bij een atleet hebben weer hun kleurvlak. Op mobiel staan de knoppen (Automatisch opstellen, Aanvullen, Opslaan, Exporteren, Afdrukken, Delen via WhatsApp) netjes in twee kolommen. Afdrukken, Excel-export en delen via WhatsApp zijn niet aangeraakt: alleen het uiterlijk is veranderd.
+-->
+
+Achtste stap van het UI-herontwerp (patch E: Opstelling). Alleen uiterlijk; **geen enkele regel JavaScript is gewijzigd**.
+
+**Wedstrijdkeuze.** Rondere kaarten; een finale-wedstrijd heeft een oranje rand en een oranje finale-pil (de rand werd wit door een ongeldige kleurwaarde).
+
+**Opstelling zelf.** Jongens/Meisjes als pil. De panelen (beschikbare atleten, ploegen, reserves) hebben ronde hoeken (16 px). De puntenpil per ploeg (bijv. "~728 pts") heeft weer een oranje kleurvlak, en een atleet-slot met een conflict heeft weer een rode tint (die tint werkte niet door een ongeldige kleurwaarde).
+
+**Mobiel.** De zes knoppen staan in een raster van twee kolommen: "Ploegen" met het aantal ploegen bovenaan, "Automatisch opstellen" over de volle breedte, daaronder Aanvullen/Opslaan, Exporteren/Afdrukken en "Delen via WhatsApp" over de volle breedte.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen JavaScript. **Alle inline scripts zijn byte-voor-byte identiek aan patch 77**; contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336).
+- Aangepast: een CSS-blok en twee kleine dingen in de vaste HTML-schil: de Jongens/Meisjes-balk en de knoppenrij kregen een klasse (`opstelling-geslacht`, `opstelling-acties`) in plaats van een inline stijl. Beide basisklassen hebben exact dezelfde waarden als de inline stijlen die ze vervangen.
+- Alle nieuwe opmaak staat in `@media screen`, zodat een afdruk niet kan veranderen. De printfuncties `printOpstelling()` en `printPloeg()` schrijven bovendien een volledig eigen document met eigen `<style>` in een apart venster en zijn dus onafhankelijk van de CSS van de app.
+- Gecontroleerd (oud tegen nieuw, nep-backend): de door `printOpstelling()` (9850 tekens) en `printPloeg('A')` (4108 tekens) gegenereerde printdocumenten zijn identiek; het printbeeld van het Opstelling-scherm is pixel-identiek; opslaan geeft dezelfde melding; het WhatsApp-keuzevenster opent met dezelfde 3 teamvinkjes.
+- Gecontroleerd op 1280, 390 en 360 px: de tabs Jongens/Meisjes wisselen en de beschikbaarheid past zich aan; een atleet (de)selecteren en "Alles aan"; een ploeg openklappen; een slot-keuzelijst openen en een atleet kiezen; "Automatisch opstellen" en "Aanvullen"; de reserve-keuzelijst; alleen-lezen modus van een afgelopen wedstrijd (de bewerkknoppen blijven verborgen); licht thema. Geen console-errors, geen horizontale overflow.
+- Niet getest: echt opslaan naar Supabase, de Excel-export (bibliotheek wordt van internet geladen), de WhatsApp-deeplink op een telefoon, een echte printdialoog, inloggen/2FA.
+- Bewust niet gebouwd (nieuwe interacties met JavaScript): slepen van atleten, de drie kolommen naast elkaar met een zijpaneel, en de stappenbalk of driestaps-flow op mobiel uit de mockup.
+
 ## [oktober 2026 — patch 77] — 2026-10-07
 
 ### 🏟️ Wedstrijddag: opfrisbeurt van de buitenkant

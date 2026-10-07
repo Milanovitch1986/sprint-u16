@@ -1707,6 +1707,50 @@
     padding: 3px 10px; font-size: 11px;
   }
 
+  /* ══ Patch 78: Opstelling (UI-herontwerp patch E) ══ */
+  /* Basisklassen: exact dezelfde waarden als de inline stijlen die ze vervangen (dus ook in print gelijk) */
+  .opstelling-geslacht { display: flex; gap: 8px; margin-bottom: 20px; }
+  .opstelling-acties { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  /* Alles hieronder alleen op scherm: de printweergave blijft ongewijzigd */
+  @media screen {
+    #opstelling-wedstrijd-lijst .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; }
+    /* Het oude patroon var(--accent)66 was ongeldige CSS (de rand werd wit) */
+    #opstelling-wedstrijd-lijst .wedstrijd-card.is-finale { border-color: var(--accent); }
+    #opstelling-wedstrijd-lijst .finale-badge {
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      padding: 3px 10px; font-size: 11px;
+    }
+    .opstelling-geslacht {
+      width: fit-content; max-width: 100%; gap: 2px; padding: 3px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    }
+    .opstelling-geslacht .btn { border-radius: 999px; border-color: transparent; padding: 8px 18px; font-size: 13px; }
+    .opstelling-geslacht .btn.btn-ghost { background: transparent; color: var(--muted); }
+    .opstelling-geslacht .btn.btn-ghost:hover { color: var(--text); border-color: transparent; }
+    .opstelling-geslacht .btn.btn-primary { background: var(--accent); color: #000; }
+    #view-opstelling .detail-panel,
+    #view-opstelling .ploeg-container { border-radius: var(--radius-lg); }
+    #view-opstelling .ploeg-header { border-radius: var(--radius-lg); }
+    #view-opstelling .ploeg-header.open { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    /* Ongeldige var(--kleur)22/11-patronen binnen dit scherm hersteld */
+    #view-opstelling .ploeg-punten {
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    #view-opstelling .atleet-slot.conflict { background: color-mix(in srgb, var(--accent2) 8%, transparent); }
+    #view-opstelling .atleet-slot .slot-remove:hover { background: color-mix(in srgb, var(--accent2) 15%, transparent); }
+  }
+  @media screen and (max-width: 768px) {
+    /* Knoppenrij: nette 2-koloms indeling i.p.v. wild omslaan */
+    .opstelling-acties { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; gap: 8px; }
+    .opstelling-acties > .btn-primary { grid-column: 1 / -1; }
+    .opstelling-acties > .btn:last-child { grid-column: 1 / -1; }
+    .opstelling-acties > .btn { justify-content: center; text-align: center; white-space: normal; line-height: 1.15; }
+    .opstelling-acties > select { width: 100%; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2133,7 +2177,7 @@
       </div>
 
       <!-- Geslacht tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <div class="opstelling-geslacht">
         <button id="opstelling-tab-M" class="btn btn-primary" onclick="setOpstellingGeslacht('M')">👦 Jongens</button>
         <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
       </div>
@@ -2151,7 +2195,7 @@
       </div>
 
       <!-- Ploegen sectie -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="opstelling-acties">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
         <select id="aantal-ploegen-select" class="bewerk-actie" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
           <option value="1">1 ploeg</option>
