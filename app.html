@@ -1579,7 +1579,8 @@
     /* Ronde "+"-knop rechtsonder (dezelfde knop en handler, alleen andere vorm) */
     #view-atleten .fab-mobiel,
     #view-prestaties .fab-mobiel,
-    #view-wedstrijden .fab-mobiel {
+    #view-wedstrijden .fab-mobiel,
+    #view-wedstrijddag .fab-mobiel {
       position: fixed; right: 16px; z-index: 150;
       bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
       width: 52px; height: 52px; padding: 0; gap: 0; border-radius: 50%;
@@ -1587,7 +1588,8 @@
     }
     #view-atleten .fab-mobiel::before,
     #view-prestaties .fab-mobiel::before,
-    #view-wedstrijden .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
+    #view-wedstrijden .fab-mobiel::before,
+    #view-wedstrijddag .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
   }
 
   /* ══ Patch 74: Prestaties (UI-herontwerp patch C2) ══ */
@@ -1672,6 +1674,37 @@
     #view-home, #view-atleten, #view-prestaties {
       padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px);
     }
+  }
+
+  /* ══ Patch 77: Wedstrijddag, alleen de buitenkant (UI-herontwerp patch D2) ══ */
+  /* Bewust NIET aangeraakt: .wd-rij, .wd-veld, .wd-ronde-*, .wd-poging*, .wd-dns-btn, kleuren van .wd-sync-badge.* */
+  #view-wedstrijddag .wd-tabs {
+    width: fit-content; max-width: 100%; gap: 2px; padding: 3px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  }
+  #view-wedstrijddag .wd-tabs:empty { display: none; }
+  #view-wedstrijddag .wd-tab { padding: 7px 16px; border-radius: 999px; background: transparent; border-color: transparent; }
+  #view-wedstrijddag .wd-tab:hover { color: var(--text); }
+  #view-wedstrijddag .wd-tab.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  #view-wedstrijddag .wd-live-badge,
+  #view-wedstrijddag .wd-modus-badge,
+  #view-wedstrijddag .wd-open-badge,
+  #view-wedstrijddag .wd-telregel { border-radius: 999px; padding-left: 10px; padding-right: 10px; }
+  #view-wedstrijddag .wd-kaart,
+  #view-wedstrijddag .wd-scorebalk,
+  #view-wedstrijddag .wd-quickadd { border-radius: var(--radius-lg); }
+  #view-wedstrijddag .wd-kaart { padding: 14px 18px; }
+  .wd-titelrij { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .wd-titelrij #wd-titel { min-width: 0; max-width: calc(100% - 44px); }
+
+  /* Overzicht met de wedstrijdkeuze */
+  #wd-wedstrijd-lijst .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; }
+  /* Het oude patroon var(--accent)66 was ongeldige CSS (de rand werd wit) */
+  #wd-wedstrijd-lijst .wedstrijd-card.is-finale { border-color: var(--accent); }
+  #wd-wedstrijd-lijst .finale-badge {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    padding: 3px 10px; font-size: 11px;
   }
 
   @media print {
@@ -1997,7 +2030,7 @@
     <div id="wd-overzicht">
       <div class="page-header" style="flex-wrap:wrap;gap:10px;">
         <div class="page-title">🏟️ Wedstrijddag</div>
-        <button class="btn btn-primary btn-sm ml-auto" onclick="openNieuweOpenWedstrijd()" title="Voeg een losse wedstrijd toe die niet in de Wedstrijden-tab staat">➕ Open wedstrijd</button>
+        <button class="btn btn-primary btn-sm ml-auto fab-mobiel" aria-label="Open wedstrijd toevoegen" onclick="openNieuweOpenWedstrijd()" title="Voeg een losse wedstrijd toe die niet in de Wedstrijden-tab staat">➕ Open wedstrijd</button>
       </div>
       <div style="margin-bottom:16px;font-size:14px;color:var(--muted);">Kies een wedstrijd om live resultaten in te voeren:</div>
       <div id="wd-wedstrijd-lijst"></div>
@@ -2007,7 +2040,7 @@
     <div id="wd-detail" style="display:none;">
       <div class="page-header" style="flex-wrap:wrap;gap:10px;">
         <button class="btn btn-ghost btn-sm" onclick="sluitWedstrijddag()">← Wedstrijddag</button>
-        <div class="page-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="page-title wd-titelrij">
           🏟️ <span id="wd-titel">Wedstrijddag</span>
           <span class="wd-live-badge">● LIVE</span>
           <span class="wd-modus-badge" id="wd-modus-badge" style="display:none;"></span>

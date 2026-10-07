@@ -44,6 +44,18 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch D2: Wedstrijddag, alleen de buitenkant (patch 77, okt 2026)
+Alleen CSS + twee kleine dingen in de vaste HTML-schil; **inline scripts byte-voor-byte identiek aan patch 76**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D3` staat op de commit vóór deze patch (patch 76, `49f15bc`). Live gezet op een moment dat Milanovitch bevestigde dat er geen wedstrijddag liep.
+- **Regel voor dit scherm:** geen enkele `wd*`-functie en geen enkel sjabloon van resultaatregels aanpassen (live gebruik, offline-outbox). Alleen CSS gescoped op `#view-wedstrijddag` / `#wd-wedstrijd-lijst` en de vaste HTML-schil.
+- **Wat is aangepast:** tabs (`.wd-tabs`/`.wd-tab`) als pillen, badges (`.wd-live-badge`, `.wd-modus-badge`, `.wd-open-badge`, `.wd-telregel`) pilvorm, `.wd-kaart`/`.wd-scorebalk`/`.wd-quickadd` 16 px, overzichtskaarten 16 px met oranje finale-rand en -pil, titelrij `wd-titelrij` (emoji niet meer los op mobiel), `+ Open wedstrijd` als `fab-mobiel`.
+- **Valkuil:** `toonWdModusUI()` zet `style.display` inline op `#wd-geslacht-tabs`, `#wd-ploeg-tabs`, `#wd-scorebalk` en `#wd-quickadd`. Geef die elementen in CSS dus nooit `display` met `!important`. Een lege tab-balk is verborgen via `.wd-tabs:empty`.
+- **Ongeldige CSS:** `.wedstrijd-card.is-finale { border-color: var(--accent)66 }` gaf een witte rand (ongeldige waarde → `currentcolor`); binnen `#wd-wedstrijd-lijst` hersteld. In de Opstelling-lijst staat dezelfde fout nog (patch E).
+- **Bewust niet aangeraakt:** `.wd-rij`, `.wd-veld`, `.wd-ronde-*`, `.wd-poging*`, `.wd-dns-btn`, kleuren van `.wd-sync-badge.ok/.offline/.bezig`, `.wd-wacht-label`, de modals (globaal; later).
+- **Test-aanpak:** zoals bij 71–76, plus een invoerflow-test: nep-backend met een schakelaar `window.__failWrites` waarmee `upsert/insert/update/delete` een fout teruggeven. De outbox queue't pas bij een *netwerkfout* (`wdIsNetwerkFout`: `navigator.onLine === false`, `TypeError`, of een melding met "fetch", "network" of "timeout"); gebruik dus een melding als `Failed to fetch`. Stap voor stap vergeleken met de oude versie: identiek. `window.dispatchEvent(new Event('online'))` + `wdInitOutbox()` laat de wachtrij verzenden.
+- **Niet getest in dit kanaal:** echt opslaan naar Supabase, echte vliegtuigmodus + synchroniseren, inloggen/2FA, echte telefoon (iOS), afronden van een wedstrijd, de modals.
+- **Bewust niet gebouwd:** avatars, voortgangsbalk, "Nu bezig", zwevende "Afronden"-knop uit de mockup (nieuwe data/logica).
+- **Volgende:** patch E (Opstelling) — hoog risico (veel logica, afdrukken, delen); eigen bouwbrief en akkoord. Daarna patch F (Punten, Profiel, Admin; laag risico) en tot slot de globale modals.
+
 ### UI-herontwerp, patch 76: gelijke ruimte boven de titels (okt 2026)
 Alleen CSS (14 regels, één blok vóór het print-blok), geen wijziging in HTML of JS; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D2` staat op de commit vóór deze patch (patch 75, `9461434`).
 - **Oorzaak (de "main-eigenaardigheid" uit het werkdocument):** `app.html` heeft één `<main>`-open en twee `</main>`-sluittags; de views Wedstrijden, Wedstrijddag, Opstelling, Punten, Profiel en Admin staan na de eerste `</main>`. Zij begonnen onder de onderruimte van `<main>` (mobiel 88 px, desktop 24 px) en hadden zelf nog een bovenrand (24 / 14 px).

@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 77] — 2026-10-07
+
+### 🏟️ Wedstrijddag: opfrisbeurt van de buitenkant
+
+<!--RELEASENOTE
+versie: Patch 77
+titel: 🏟️ Wedstrijddag: opfrisbeurt van de buitenkant
+type: update
+tags: wedstrijddag
+beschrijving: De buitenkant van de Wedstrijddag is opgefrist: de keuzes Jongens/Meisjes en Ploeg A/B/C zijn nu pillen, de kaarten en het overzicht zijn ronder, de badges LIVE en "Individuele modus" hebben dezelfde pilvorm en de finale-wedstrijd heeft in het overzicht weer een oranje rand (die was wit). Op mobiel staat het stadion-icoontje niet meer los boven de titel en is "Open wedstrijd toevoegen" een ronde plusknop. Het invullen van resultaten, de rondes en pogingen, de estafettes en het opslaan met de wachtrij zijn niet aangeraakt: alleen het uiterlijk is veranderd.
+-->
+
+Zevende stap van het UI-herontwerp (patch D, deel 2: Wedstrijddag, alleen de buitenkant). Alleen uiterlijk; **geen enkele regel JavaScript is gewijzigd**.
+
+**Overzicht.** Rondere kaarten (16 px). De finale-wedstrijd heeft een oranje rand en een oranje finale-pil (de rand was wit door een ongeldige kleurwaarde). Op mobiel is "➕ Open wedstrijd" een ronde plusknop rechtsonder.
+
+**Invoerscherm.** Jongens/Meisjes en Ploeg A/B/C zijn pillen. De badges LIVE, "Individuele modus" en de tellabels hebben een pilvorm; kaarten, scorebalk en de snel-toevoegen-balk hebben rondere hoeken. De kleuren van de sync-badge per toestand (opgeslagen, bezig, offline) zijn ongewijzigd. Op mobiel staat het stadion-icoontje op dezelfde regel als de titel.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen JavaScript. **Alle inline scripts zijn byte-voor-byte identiek aan patch 76** (gecontroleerd); contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336).
+- Aangepast: een CSS-blok (gescoped op `#view-wedstrijddag` en `#wd-wedstrijd-lijst`) en twee dingen in de vaste HTML-schil: de titelrij van het invoerscherm (inline stijl → klasse `wd-titelrij`) en de knop "Open wedstrijd" (class `fab-mobiel` + `aria-label`, dezelfde `onclick`).
+- Bewust niet aangeraakt: alle `wd*`-functies en -sjablonen, `.wd-rij`, `.wd-veld`, `.wd-ronde-*`, `.wd-poging*`, `.wd-dns-btn`, de kleuren van `.wd-sync-badge.*`, de modals.
+- `toonWdModusUI()` verbergt de tabs met een inline `display:none`; daarom staat er in de nieuwe CSS bewust geen `!important` op `display`, en is een lege tab-balk verborgen via `:empty`.
+- Gecontroleerd: `node --check`, contract-check en een headless render (Chromium) op 1280 en 390 px: overzicht, individuele modus (tabs, scorebalk verborgen; snel-toevoegen zichtbaar), competitiemodus (tabs, scorebalk, kaarten, 5 invoervelden), tabs bedienen (Ploeg B, Meisjes), de ronde plusknop opent "Open wedstrijd", licht thema. Invoerflow met een nep-backend, oude tegen nieuwe versie: een resultaat invullen wordt opgeslagen, een mislukte schrijfactie ("Failed to fetch") komt in de wachtrij (badge "⏳ Synchroniseren…" + wacht-label) en na herstel meldt de app "Wachtrij verstuurd ✓"; **elke stap is identiek aan de oude versie**. Geen console-errors, geen horizontale overflow.
+- Niet getest: echt opslaan naar Supabase, echte vliegtuigmodus en synchroniseren, inloggen/2FA, een echte telefoon (iOS), het afronden van een wedstrijd en de modals.
+- Bewust niet gebouwd (vraagt nieuwe gegevens of logica): avatars, voortgangsbalk, het blokje "Nu bezig" en de zwevende knop "Afronden" uit de mockup.
+
 ## [oktober 2026 — patch 76] — 2026-10-07
 
 ### 📐 Gelijke ruimte boven de titels
