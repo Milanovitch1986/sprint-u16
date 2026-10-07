@@ -6,6 +6,40 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 71] — 2026-10-07
+
+### 🧭 Nieuwe navigatie: zijbalk en onderbalk
+
+<!--RELEASENOTE
+versie: Patch 71
+titel: 🧭 Nieuwe navigatie: zijbalk en onderbalk
+type: update
+tags: techniek
+beschrijving: De app heeft een nieuwe navigatie. Op de computer staat nu een vaste zijbalk links in plaats van de balk bovenin. Op mobiel heeft de onderbalk vijf knoppen (Home, Atleten, Wedstr., Dag en Meer); onder Meer vind je Prestaties, Opstelling, Punten, Profiel en Admin. De kleuren zijn iets bijgewerkt en de Donker/Licht-knop is weer netjes opgemaakt. Alleen het uiterlijk is veranderd, alle functies werken als eerst.
+-->
+
+Eerste stap van het UI-herontwerp (patch A: design tokens en navigatie). Alleen uiterlijk; geen functie, berekening of database is aangepast.
+
+**Computer.** De bovenbalk met tabs is vervangen door een vaste zijbalk links (176 px) met alle schermen onder elkaar. Onderaan staan Vernieuwen, het thema (Donker/Licht/Systeem) en Uitloggen. De categorie-wissel staat onder het logo. De inhoud schuift mee op, ook in de schermen die buiten `<main>` vallen (Punten, Profiel, Admin, Wedstrijddag).
+
+**Mobiel.** De onderbalk heeft nu vijf gelijke knoppen: Home, Atleten, Wedstr., Dag en Meer. De actieve knop is een oranje pil. "Meer" opent een menu met Prestaties, Opstelling, Punten, Profiel en Admin (Admin en Profiel alleen zichtbaar zoals voorheen). "Meer" licht oranje op zolang je in een van die schermen zit.
+
+**Kleuren.** De donkere kleuren zijn iets bijgewerkt naar de nieuwe waarden uit het ontwerp (o.a. accent `#f9a825`). Het lichte thema is ongewijzigd.
+
+**Bugfix: Donker/Licht-knop.** In de CSS ontbrak de selector `.theme-btn {`, waardoor de knop als standaard grijze browserknop werd getoond. Die selector is hersteld.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Geen bestaande functie gewijzigd; alle bestaande id's, handlers en functienamen zijn behouden (contract-check: 0 verdwenen; 268 → 271 id's, 333 → 335 functies).
+- Nieuwe design-tokens in `:root`: `--info`, `--radius-sm`, `--radius-lg`, `--sidebar-w`. Dark-waarden aangepast (`--bg #0a0b0f`, `--surface #12141a`, `--surface2 #1a1d26`, `--border #262a36`, `--accent #f9a825`, `--text #f2f4f8`, `--muted #8a91a3`).
+- De bestaande `<header>` blijft één element en wordt boven 768 px met CSS een zijbalk (`position: fixed`, `body { padding-left: var(--sidebar-w) }`). Printweergave zet de padding terug op 0. Op mobiel blijft de slanke bovenbalk (logo, categorie-wissel, vernieuwen, thema, uitloggen).
+- Nieuwe elementen: `#mob-tab-meer`, `#mob-meer`, `#mob-meer-backdrop` en twee kleine functies `toggleMobMeer()` / `sluitMobMeer()` (alleen openen/sluiten). De knoppen `mob-tab-prestaties/-opstelling/-punten/-profiel/-admin` staan nu in `#mob-meer` met dezelfde id's en roepen `showTab(...)` aan, gevolgd door `sluitMobMeer()`. `showTab()` zelf is ongewijzigd.
+- "Meer" oranje bij actief scherm via CSS `body:has(#mob-meer button.active)`; in een oude browser zonder `:has()` is Meer dan alleen niet gemarkeerd.
+- Het thema-menu klapt op desktop omhoog (CSS-override met `!important` op het inline-stijl van `#theme-menu`).
+- Gecontroleerd: `node --check` op alle inline scripts, contract-check, en een headless render (Chromium) op 1280, 800 en 390 px met een nep-Supabase: alle 9 tabs schakelen, geen console-errors, geen horizontale overflow op desktop/tablet.
+- Niet getest: inloggen/2FA, echte Supabase-data, echte telefoon (iOS safe-area), offline-outbox, afdrukken van de opstelling in een echte printdialoog.
+- Bekend, al aanwezig vóór deze patch: op mobiel is de rij admin-knoppen op Home breder dan het scherm en de categorie-wissel past niet bij 2+ categorieën. Wordt meegenomen in patch B (Home).
+
 ## [september 2026 — patch 70] — 2026-09-15
 
 ### 🔁 Reserves opstellen en delen

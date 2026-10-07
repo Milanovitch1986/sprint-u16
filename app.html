@@ -8,16 +8,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
-    --bg:        #0a0c10;
-    --surface:   #111318;
-    --surface2:  #181c24;
-    --border:    #242830;
-    --accent:    #f5a623;
+    --bg:        #0a0b0f;
+    --surface:   #12141a;
+    --surface2:  #1a1d26;
+    --border:    #262a36;
+    --accent:    #f9a825;
     --accent2:   #e8383d;
-    --text:      #edf0f5;
-    --muted:     #6b7280;
+    --text:      #f2f4f8;
+    --muted:     #8a91a3;
     --success:   #22c55e;
     --radius:    10px;
+    /* Patch 71: extra tokens uit het UI-herontwerp */
+    --info:      #38bdf8;
+    --radius-sm: 9px;
+    --radius-lg: 16px;
+    --sidebar-w: 176px;
   }
 
   /* ── Light mode ── */
@@ -35,6 +40,8 @@
 
   /* Floating bottom nav — standaard verborgen (alleen op mobiel zichtbaar) */
   #mob-nav { display: none; }
+  /* patch 71: de ontbrekende selector van .theme-btn is hersteld (losse regels werden genegeerd) */
+  .theme-btn {
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
@@ -1360,6 +1367,94 @@
     .wd-scorebalk { gap:14px; }
     .wd-score-item { min-width:80px; }
   }
+
+  /* ══ Patch 71: navigatie-herontwerp (zijbalk desktop, onderbalk + Meer-menu mobiel) ══ */
+  .side-label { display: none; }
+  #mob-meer, #mob-meer-backdrop { display: none; }
+
+  @media (min-width: 769px) {
+    body { padding-left: var(--sidebar-w); }
+    header {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w); height: auto;
+      flex-direction: column; align-items: stretch; gap: 0;
+      padding: 18px 12px 14px;
+      border-bottom: none; border-right: 1px solid var(--border);
+      overflow-x: hidden; overflow-y: auto;
+    }
+    header .logo { font-size: 18px; letter-spacing: .5px; padding: 4px 6px 14px; white-space: normal; line-height: 1.1; }
+    #categorie-switcher { margin: 0 4px 10px; flex-wrap: wrap; }
+    header nav { flex-direction: column; margin-left: 0; gap: 4px; flex: 1 1 auto; }
+    header nav button {
+      text-align: left; font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600;
+      letter-spacing: 0; text-transform: none; padding: 10px 12px; border-radius: var(--radius-sm);
+    }
+    header nav button:hover { background: var(--surface2); color: var(--text); }
+    header nav button.active,
+    header nav button.active:hover { background: var(--accent); color: #000; }
+    header .sync-btn {
+      margin: 0 0 4px; width: 100%; height: auto; padding: 10px 12px;
+      justify-content: flex-start; gap: 8px; font-size: 14px; border-radius: var(--radius-sm);
+    }
+    .side-label { display: inline; font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600; }
+    .side-theme { display: block !important; width: 100%; margin-bottom: 4px; }
+    header .theme-btn {
+      width: 100%; border-radius: var(--radius-sm); padding: 10px 12px;
+      font-size: 14px; font-weight: 600; justify-content: flex-start;
+    }
+    #theme-menu { top: auto !important; bottom: calc(100% + 6px) !important; left: 0 !important; right: auto !important; }
+  }
+
+  @media (max-width: 768px) {
+    /* Onderbalk: 5 gelijke items, actief = oranje pil. Hoogte blijft 60px. */
+    #mob-nav { padding: 0 6px; gap: 2px; overflow-x: hidden; }
+    #mob-nav button {
+      flex: 1 1 0; width: auto; min-width: 0; height: 48px; margin-top: 6px;
+      padding: 4px 2px; gap: 2px; border-radius: 12px;
+    }
+    #mob-nav button .mob-icon { font-size: 18px; }
+    #mob-nav button .mob-label { font-size: 10.5px; letter-spacing: 0; text-transform: none; }
+    #mob-nav button.active,
+    body:has(#mob-meer button.active) #mob-nav #mob-tab-meer { background: var(--accent); color: #000; }
+    /* Meer alleen open (nog geen scherm gekozen): rustige markering i.p.v. oranje pil */
+    #mob-nav button#mob-tab-meer[aria-expanded="true"] { background: var(--surface2); color: var(--text); }
+    body:has(#mob-meer button.active) #mob-nav button#mob-tab-meer[aria-expanded="true"] { background: var(--accent); color: #000; }
+    #mob-nav button.active .mob-icon { transform: none; }
+
+    /* Meer-menu */
+    #mob-meer-backdrop {
+      display: block; position: fixed; inset: 0; z-index: 305; background: rgba(0,0,0,.45);
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    #mob-meer-backdrop.open { opacity: 1; pointer-events: auto; }
+    #mob-meer {
+      display: block; position: fixed; left: 12px; right: 12px; z-index: 310;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 10px);
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 8px; box-shadow: 0 -8px 32px rgba(0,0,0,.5);
+      opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(16px);
+      transition: transform .2s, opacity .2s, visibility .2s;
+    }
+    #mob-meer.open { opacity: 1; visibility: visible; pointer-events: auto; transform: none; }
+    #mob-meer .mob-meer-titel {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); padding: 8px 14px 6px;
+    }
+    #mob-meer button {
+      display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px;
+      background: transparent; border: none; border-radius: 12px; color: var(--text);
+      font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 600; text-align: left;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    #mob-meer button .mob-icon { font-size: 18px; width: 24px; text-align: center; }
+    #mob-meer button:active { background: var(--surface2); }
+    #mob-meer button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  }
+
+  @media print {
+    body { padding-left: 0 !important; }
+    #mob-meer, #mob-meer-backdrop { display: none !important; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1370,22 +1465,22 @@
   <div id="categorie-switcher" style="display:flex;gap:6px;align-items:center;"></div>
   <nav>
     <button id="tab-home" onclick="showTab('home')">🏠 Home</button>
-    <button id="tab-atleten" onclick="showTab('atleten')">Atleten</button>
-    <button id="tab-prestaties" onclick="showTab('prestaties')">Prestaties</button>
-    <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">Wedstrijden</button>
+    <button id="tab-atleten" onclick="showTab('atleten')">🏃 Atleten</button>
+    <button id="tab-prestaties" onclick="showTab('prestaties')">📈 Prestaties</button>
+    <button id="tab-wedstrijden" onclick="showTab('wedstrijden')">🏆 Wedstrijden</button>
     <button id="tab-wedstrijddag" onclick="showTab('wedstrijddag')">🏟️ Wedstrijddag</button>
-    <button id="tab-opstelling" onclick="showTab('opstelling')">Opstelling</button>
+    <button id="tab-opstelling" onclick="showTab('opstelling')">📋 Opstelling</button>
     <button id="tab-punten" onclick="showTab('punten')">🧮 Punten</button>
     <button id="tab-profiel" onclick="showTab('profiel')" style="display:none;">👤 Profiel</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none;">⚙️ Admin</button>
   </nav>
-  <button class="sync-btn" id="syncBtn" onclick="syncAll()" title="Vernieuwen">
+  <button class="sync-btn side-sync" id="syncBtn" onclick="syncAll()" title="Vernieuwen">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
       <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-    </svg>
+    </svg><span class="side-label">Vernieuwen</span>
   </button>
-  <div style="position:relative;display:inline-block;">
+  <div class="side-theme" style="position:relative;display:inline-block;">
     <button class="theme-btn" onclick="toggleThemeMenu()" id="theme-btn" title="Kleurschema wisselen">🌙 Donker ▾</button>
     <div id="theme-menu" style="display:none;position:absolute;right:0;top:36px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);min-width:140px;z-index:200;box-shadow:0 4px 16px #0006;overflow:hidden;">
       <div onclick="kiesTheme('dark')"  style="padding:10px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">🌙 Donker</div>
@@ -1393,7 +1488,7 @@
       <div onclick="kiesTheme('system')" style="padding:10px 16px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">💻 Systeem</div>
     </div>
   </div>
-  <button class="sync-btn" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪</button>
+  <button class="sync-btn side-logout" onclick="uitloggen()" title="Uitloggen" style="font-size:16px;">🚪<span class="side-label">Uitloggen</span></button>
 </header>
 
 <!-- Doorstroming-melding (patch 49): alleen zichtbaar voor admins zodra er
@@ -11096,43 +11191,73 @@ init();
 </script>
 
 <!-- ── Floating bottom navigation (alleen zichtbaar op mobiel) ── -->
+<!-- Patch 71: 5 items; Prestaties, Opstelling, Punten, Profiel en Admin staan in het Meer-menu (#mob-meer) met dezelfde mob-tab-* id's. -->
 <nav id="mob-nav">
   <button id="mob-tab-home" onclick="showTab('home')">
     <span class="mob-icon">🏠</span>
     <span class="mob-label">Home</span>
   </button>
   <button id="mob-tab-atleten" onclick="showTab('atleten')">
-    <span class="mob-icon">👟</span>
+    <span class="mob-icon">🏃</span>
     <span class="mob-label">Atleten</span>
   </button>
-  <button id="mob-tab-prestaties" onclick="showTab('prestaties')">
-    <span class="mob-icon">📊</span>
-    <span class="mob-label">Prestaties</span>
-  </button>
   <button id="mob-tab-wedstrijden" onclick="showTab('wedstrijden')">
-    <span class="mob-icon">🏟️</span>
-    <span class="mob-label">Wedstrijden</span>
+    <span class="mob-icon">🏆</span>
+    <span class="mob-label">Wedstr.</span>
   </button>
   <button id="mob-tab-wedstrijddag" onclick="showTab('wedstrijddag')">
-    <span class="mob-icon">⏱️</span>
-    <span class="mob-label">Wedstrijddag</span>
+    <span class="mob-icon">🏟️</span>
+    <span class="mob-label">Dag</span>
   </button>
-  <button id="mob-tab-opstelling" onclick="showTab('opstelling')">
+  <button id="mob-tab-meer" onclick="toggleMobMeer()" aria-expanded="false" aria-controls="mob-meer">
+    <span class="mob-icon">☰</span>
+    <span class="mob-label">Meer</span>
+  </button>
+</nav>
+<div id="mob-meer-backdrop" onclick="sluitMobMeer()"></div>
+<div id="mob-meer" role="menu" aria-label="Meer">
+  <div class="mob-meer-titel">Meer</div>
+  <button id="mob-tab-prestaties" onclick="showTab('prestaties');sluitMobMeer()">
+    <span class="mob-icon">📈</span>
+    <span class="mob-label">Prestaties</span>
+  </button>
+  <button id="mob-tab-opstelling" onclick="showTab('opstelling');sluitMobMeer()">
     <span class="mob-icon">📋</span>
     <span class="mob-label">Opstelling</span>
   </button>
-  <button id="mob-tab-punten" onclick="showTab('punten')">
+  <button id="mob-tab-punten" onclick="showTab('punten');sluitMobMeer()">
     <span class="mob-icon">🧮</span>
     <span class="mob-label">Punten</span>
   </button>
-  <button id="mob-tab-profiel" onclick="showTab('profiel')" style="display:none;">
+  <button id="mob-tab-profiel" onclick="showTab('profiel');sluitMobMeer()" style="display:none;">
     <span class="mob-icon">👤</span>
     <span class="mob-label">Profiel</span>
   </button>
-  <button id="mob-tab-admin" onclick="showTab('admin')" style="display:none;">
+  <button id="mob-tab-admin" onclick="showTab('admin');sluitMobMeer()" style="display:none;">
     <span class="mob-icon">⚙️</span>
     <span class="mob-label">Admin</span>
   </button>
-</nav>
+</div>
+<script>
+// patch 71: Meer-menu van de mobiele onderbalk. Alleen tonen/verbergen; bestaande functies zijn niet gewijzigd.
+function toggleMobMeer() {
+  const menu = document.getElementById("mob-meer");
+  if (!menu) return;
+  const open = !menu.classList.contains("open");
+  menu.classList.toggle("open", open);
+  const bd = document.getElementById("mob-meer-backdrop");
+  if (bd) bd.classList.toggle("open", open);
+  const knop = document.getElementById("mob-tab-meer");
+  if (knop) knop.setAttribute("aria-expanded", open ? "true" : "false");
+}
+function sluitMobMeer() {
+  const menu = document.getElementById("mob-meer");
+  if (menu) menu.classList.remove("open");
+  const bd = document.getElementById("mob-meer-backdrop");
+  if (bd) bd.classList.remove("open");
+  const knop = document.getElementById("mob-tab-meer");
+  if (knop) knop.setAttribute("aria-expanded", "false");
+}
+</script>
 </body>
 </html>

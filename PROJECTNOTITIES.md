@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 15 september 2026 (patch 70)*
+*AV Sprint Breda · Laatste update: 7 oktober 2026 (patch 71)*
 
 ---
 
@@ -43,6 +43,18 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### UI-herontwerp, patch A: navigatie en design tokens (patch 71, okt 2026)
+Eerste stap van het UI-herontwerp (zie werkdocument UI/UX-herontwerp). Alleen uiterlijk, geen databasewijziging, geen bestaande functie gewijzigd. Gecommit direct op `main`; terugdraaien kan via de tag `voor-ui-herontwerp-p70` (commit `2213781` = patch 70 + keepalive-workflow van 25 sep; `app.html` is daar identiek aan patch 70, commit `aed5cef`).
+- **Fasering:** A navigatie + tokens (klaar, patch 71) → B Home → C Atleten/Prestaties → D Wedstrijden/Wedstrijddag → E Opstelling → F Punten/Profiel/Admin. Eén patch = één commit, alleen UI.
+- **Desktop:** de bestaande `<header>` is boven 768 px met CSS een vaste zijbalk (`--sidebar-w: 176px`); `body { padding-left }` schuift alle views op (ook die buiten `<main>`). Print zet `padding-left` op 0.
+- **Mobiel:** onderbalk `#mob-nav` met 5 items (Home, Atleten, Wedstr., Dag, Meer), hoogte blijft 60px (+ safe-area) omdat de onderruimte van de views daarop rekent. `#mob-meer` (menu) en `#mob-meer-backdrop` staan bewust BUITEN `#mob-nav` omdat `backdrop-filter` daar een eigen containing block voor `position: fixed` maakt.
+- **Ids/handlers:** `mob-tab-prestaties/-opstelling/-punten/-profiel/-admin` zijn verhuisd naar `#mob-meer` met dezelfde id's, zodat `showTab()` (class `active`) en de admin/profiel-zichtbaarheid in `checkAuth()`/`init()` ongewijzigd blijven werken. Nieuw: `toggleMobMeer()`, `sluitMobMeer()`.
+- **Valkuil:** de nav-HTML staat NA het hoofdscript; `checkAuth()` zoekt `mob-tab-admin`/`mob-tab-profiel` pas na een `await`. Bij een onrealistisch snelle (nep-)backend wordt het element dan niet gevonden. Volgorde in het bestand dus niet veranderen.
+- **Bugfix meegenomen:** de selector `.theme-btn {` ontbrak in de CSS (losse regels werden genegeerd, `.theme-btn:hover` ging mee verloren); hersteld.
+- **Test-aanpak:** headless Chromium (Playwright, Python) met een nep-Supabase-stub die `window.supabase.createClient` vervangt; `getSession` moet ~60 ms vertraagd zijn. Tijdelijke lokale server via `python3 -m http.server`.
+- **Niet getest in dit kanaal:** inloggen/2FA, echte data, echte telefoon (safe-area), offline-outbox, echte printdialoog.
+- **Bekend vóór patch 71:** op mobiel is de admin-knoppenrij op Home te breed en past de categorie-wissel niet bij 2+ categorieën (te regelen in patch B).
 
 ### Reserves opstellen en delen (patch 70, sep 2026)
 Max 3 reserves per geslacht in een aparte reservebank onder de teams in de opstellingstab.
