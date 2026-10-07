@@ -44,6 +44,18 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch C2: Prestaties (patch 74, okt 2026)
+Prestaties met tegels. Alleen uiterlijk, geen databasewijziging, geen nieuwe functie; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-C1` staat op de commit vóór deze patch (patch 73, `d06fb34`).
+- **Wat is aangepast:** CSS (scoped op `#view-prestaties` en `#prestaties-content`), de ene knop `+ Prestatie invoeren` (class `fab-mobiel` + `aria-label`), de filterbalk-HTML (geslachtsfilter → pillen via de bestaande `kiesSegment()`, het `<select id="prestatie-geslacht-filter" class="segment-select">` blijft de bron) en alleen het sjabloon in `renderPrestatieTable()`.
+- **Tegels:** `renderPrestatieTable()` wordt zowel in de accordeon (alle atleten) als in de atleetweergave gebruikt, dus één sjabloonwijziging dekt beide. Klassen: `pr-tegels`, `pr-tegel`, `pr-tegel-kop/-naam/-del/-waarde/-eenheid`, `pr-bewerk`. Handlers (`deletePrestatie`, `openPrestatieModal`) en PR-logica (`prMap`) ongewijzigd.
+- **Ranglijst:** `renderOnderdeelRanglijst()` ongemoeid; nu alleen CSS. Rangnummer als rondje via CSS-teller (`tbody {counter-reset}`, `tr {counter-increment}`, `td:first-child {font-size:0}` + `::before {content: counter(rang)}`); de eerste cel van elke tabelrij op dit scherm is een rangcel omdat de PR-tabel niet meer bestaat. Voeg je ooit een andere tabel toe aan `#prestaties-content`, scope die dan apart.
+- **Ongeldige CSS:** `.pr-badge` (alleen op dit scherm gebruikt) en de lijntjes tussen tabelrijen gebruikten `var(--kleur)22/44`. Badge globaal hersteld, tabellijntjes alleen binnen `#prestaties-content` (`tbody td` is globaal en wordt elders gebruikt). Nog 22 plekken in de CSS met hetzelfde patroon (telling: regex `var\(--[a-z0-9]+\)[0-9a-f]{2}`; inclusief de globale `tbody td`-regel die hier alleen gescoped is overschreven).
+- **Kopknoppen mobiel:** `display:grid !important` omdat het kopblok een inline `display:flex` heeft; 2 kolommen, derde knop over de volle breedte; de ronde plusknop is `position:fixed` en dus geen grid-item.
+- **Bewust niet gebouwd:** verbeteringstegels (`▲ −0,2`), "Seizoen", de grafiek en de datumlijst uit de mockup; de tabel `prestaties` bewaart geen datum. Een grafiek zou data uit `resultaten` (wedstrijddag) moeten halen en is dus een functie, geen opmaak.
+- **Test-aanpak:** zoals bij 71–73 (headless Chromium + nep-Supabase met ~60 ms vertraagde `getSession`). Keuzelijsten in de test aanpassen via `select.value = …` + `dispatchEvent(new Event('change'))`; modals toetsen via class `open`; `deletePrestatie` met een spy vervangen i.p.v. de `bevestig()`-dialoog te doorlopen.
+- **Niet getest in dit kanaal:** inloggen/2FA, echte data, echte telefoon (iOS), echt opslaan/verwijderen van een PR, PR-export en PR-overzicht importeren.
+- **Volgende:** patch D (Wedstrijden, Wedstrijddag) — hoogste risico (live gebruik, offline-outbox); aparte bouwbrief met extra voorzichtigheid.
+
 ### UI-herontwerp, patch C1: Atleten (patch 73, okt 2026)
 Atleten als lijst i.p.v. kaartenraster. Alleen uiterlijk, geen databasewijziging; contract-check 0 verdwenen, 1 nieuwe functie (`kiesSegment`). Gecommit direct op `main`; tag `ui-B` staat op de commit vóór deze patch (patch 72, `13969ab`).
 - **Wat is aangepast:** CSS (gescoped op `#atleten-grid`, `#view-atleten`, `#doorstroom-paneel`), de zoekbalk-HTML, de ene knop `+ Atleet toevoegen` (class `fab-mobiel` + `aria-label`) en alleen het sjabloon in `renderAtleten()`.

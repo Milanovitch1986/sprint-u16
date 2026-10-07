@@ -415,9 +415,9 @@
     vertical-align: middle;
   }
   .pr-badge {
-    background: var(--accent)22;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
     color: var(--accent);
-    border: 1px solid var(--accent)44;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     font-size: 10px;
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
@@ -1570,18 +1570,66 @@
     #atleten-grid .atleet-rij { padding: 12px 14px; }
     .atleet-chevron { display: block; }
     /* Kopknoppen (Selecteren / Excel importeren) delen één rij */
-    #view-atleten .page-header .ml-auto { flex: 1 1 100%; }
-    #view-atleten .page-header .ml-auto .btn:not(.fab-mobiel) { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 9px 10px; font-size: 13px; }
+    #view-atleten .page-header .ml-auto,
+    #view-prestaties .page-header .ml-auto { flex: 1 1 100%; }
+    #view-atleten .page-header .ml-auto .btn:not(.fab-mobiel),
+    #view-prestaties .page-header .ml-auto .btn:not(.fab-mobiel) { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 9px 10px; font-size: 13px; }
     /* Metaregel mag op mobiel over twee regels lopen i.p.v. afgekapt te worden naast de categorie-badge */
     .atleet-info .card-meta { white-space: normal; overflow: visible; text-overflow: clip; }
     /* Ronde "+"-knop rechtsonder (dezelfde knop en handler, alleen andere vorm) */
-    #view-atleten .fab-mobiel {
+    #view-atleten .fab-mobiel,
+    #view-prestaties .fab-mobiel {
       position: fixed; right: 16px; z-index: 150;
       bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
       width: 52px; height: 52px; padding: 0; gap: 0; border-radius: 50%;
       justify-content: center; font-size: 0; box-shadow: 0 6px 20px rgba(0,0,0,.4);
     }
-    #view-atleten .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
+    #view-atleten .fab-mobiel::before,
+    #view-prestaties .fab-mobiel::before { content: "+"; font-size: 28px; line-height: 1; font-weight: 700; }
+  }
+
+  /* ══ Patch 74: Prestaties (UI-herontwerp patch C2) ══ */
+  #view-prestaties .search-bar { align-items: center; }
+  #prestaties-content .detail-panel { border-radius: var(--radius-lg); }
+  #prestaties-content .accordeon-header { padding: 14px 18px; }
+
+  /* PR's als tegels */
+  .pr-tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding: 16px; }
+  .pr-tegel {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .pr-tegel-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .pr-tegel-naam { font-size: 13px; font-weight: 600; color: var(--muted); padding-top: 3px; overflow-wrap: anywhere; }
+  .pr-tegel .pr-tegel-del { padding: 2px 6px; font-size: 12px; border-color: transparent; opacity: .55; flex-shrink: 0; }
+  .pr-tegel .pr-tegel-del:hover { opacity: 1; }
+  .pr-tegel-waarde { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .pr-tegel .result-val { font-size: 28px; line-height: 1.1; }
+  .pr-tegel-eenheid { font-size: 12px; color: var(--muted); }
+  .pr-tegel .pr-badge { align-self: flex-start; margin-left: 0; font-size: 11px; padding: 2px 9px; }
+  .pr-bewerk { padding: 0 16px 16px; text-align: right; }
+
+  /* Ranglijst (tabel): lijntjes tussen rijen (het oude var(--kleur)44 was ongeldig), rangnummer als rondje */
+  #prestaties-content tbody td { border-bottom: 1px solid var(--border); }
+  #prestaties-content tbody tr:last-child td { border-bottom: none; }
+  #prestaties-content tbody { counter-reset: rang; }
+  #prestaties-content tbody tr { counter-increment: rang; }
+  #prestaties-content tbody td:first-child { font-size: 0; }
+  #prestaties-content tbody td:first-child::before {
+    content: counter(rang); display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%; font-size: 14px; font-weight: 700;
+    border: 1px solid currentColor;
+  }
+  #prestaties-content tbody tr:first-child td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+
+  @media (max-width: 768px) {
+    .pr-tegels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+    .pr-tegel .result-val { font-size: 24px; }
+    .pr-bewerk { padding: 0 12px 12px; }
+    /* Kopknoppen: 2 kolommen i.p.v. drie volle rijen (inline display:flex vraagt om !important) */
+    #view-prestaties .page-header .ml-auto { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #view-prestaties .page-header .ml-auto .btn:not(.fab-mobiel) { white-space: normal; text-align: center; line-height: 1.15; }
+    #view-prestaties .page-header .ml-auto > :nth-child(3) { grid-column: 1 / -1; }
   }
 
   @media print {
@@ -1753,7 +1801,7 @@
           <input type="file" id="prOverzichtInput" accept=".xlsx" style="display:none;" onchange="openPROverzichtImport(this)">
         </label>
         <button class="btn btn-ghost" onclick="openOnderdeelModal()">➕ Nieuw onderdeel</button>
-        <button class="btn btn-primary" onclick="openPrestatieModal(null, document.getElementById('prestatie-atleet-filter').value || null)">+ Prestatie invoeren</button>
+        <button class="btn btn-primary fab-mobiel" aria-label="Prestatie invoeren" onclick="openPrestatieModal(null, document.getElementById('prestatie-atleet-filter').value || null)">+ Prestatie invoeren</button>
       </div>
     </div>
 
@@ -1765,7 +1813,12 @@
       <select id="prestatie-disc-filter" onchange="renderPrestaties()">
         <option value="">Alle onderdelen</option>
       </select>
-      <select id="prestatie-geslacht-filter" onchange="renderPrestaties()">
+      <div class="segment" role="group" aria-label="Filter op geslacht">
+        <button type="button" class="segment-knop active" onclick="kiesSegment(this,'prestatie-geslacht-filter','')">Alle</button>
+        <button type="button" class="segment-knop" onclick="kiesSegment(this,'prestatie-geslacht-filter','M')">Jongens</button>
+        <button type="button" class="segment-knop" onclick="kiesSegment(this,'prestatie-geslacht-filter','V')">Meisjes</button>
+      </div>
+      <select id="prestatie-geslacht-filter" class="segment-select" onchange="renderPrestaties()">
         <option value="">Alle</option>
         <option value="M">Jongens</option>
         <option value="V">Meisjes</option>
@@ -3193,25 +3246,24 @@ function renderPrestatieTable(rows, showPR = false) {
   // Bepaal atleetId uit de eerste rij (voor de bulk-edit knop)
   const atleetId = rows.length ? rows[0].atleetId : null;
 
-  return `<div class="table-wrap"><table>
-    <thead><tr>
-      <th>Discipline</th><th>Resultaat</th><th></th>
-    </tr></thead>
-    <tbody>
+  // patch 74: PR's als tegels i.p.v. tabel (alleen opmaak; sortering, PR-logica en de handlers deletePrestatie/openPrestatieModal ongewijzigd)
+  return `<div class="pr-tegels">
       ${sorted.map(p => {
         const isPR = prMap[p.discipline]?.id === p.id;
         const weergave = formateerResultaatWeergave(p.resultaat, p.discipline);
         const eenheidLabel = getPREenheid(p.discipline);
-        return `<tr>
-          <td><strong>${esc(p.discipline||"")}</strong></td>
-          <td><span class="result-val">${esc(weergave)} <span style="font-size:12px;color:var(--muted);">${eenheidLabel}</span></span>${isPR ? '<span class="pr-badge">PR</span>' : ""}</td>
-          <td><button class="btn btn-ghost btn-sm" onclick="deletePrestatie('${p.id}')" title="Verwijderen">🗑️</button></td>
-        </tr>`;
+        return `<div class="pr-tegel">
+          <div class="pr-tegel-kop">
+            <span class="pr-tegel-naam">${esc(p.discipline||"")}</span>
+            <button class="btn btn-ghost btn-sm pr-tegel-del" onclick="deletePrestatie('${p.id}')" title="Verwijderen" aria-label="Verwijderen">🗑️</button>
+          </div>
+          <div class="pr-tegel-waarde"><span class="result-val">${esc(weergave)}</span><span class="pr-tegel-eenheid">${eenheidLabel}</span></div>
+          ${isPR ? '<span class="pr-badge">PR</span>' : ""}
+        </div>`;
       }).join("")}
-    </tbody>
-  </table>
-  ${atleetId ? `<div style="margin-top:10px;text-align:right;"><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal(null,'${atleetId}')">✏️ PR's bewerken</button></div>` : ""}
-  </div>`;
+    </div>
+  ${atleetId ? `<div class="pr-bewerk"><button class="btn btn-ghost btn-sm" onclick="openPrestatieModal(null,'${atleetId}')">✏️ PR's bewerken</button></div>` : ""}
+`;
 }
 
 // ── Atleet Modal ──────────────────────────────────────────────

@@ -6,6 +6,40 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 74] — 2026-10-07
+
+### 📈 Prestaties met tegels
+
+<!--RELEASENOTE
+versie: Patch 74
+titel: 📈 Prestaties met tegels
+type: update
+tags: prestaties
+beschrijving: Het scherm Prestaties heeft een nieuwe opmaak. De PR's van een atleet staan nu als tegels (onderdeel, groot resultaat, PR-badge) in plaats van in een tabel, ook in de lijst met alle atleten. De ranglijst per onderdeel heeft ronde rangnummers en lijntjes tussen de rijen, en het geslachtsfilter bestaat uit pillen (Alle / Jongens / Meisjes). Op mobiel staat "+ Prestatie invoeren" als ronde plusknop rechtsonder en passen de knoppen bovenaan netjes onder elkaar. De PR-badge heeft weer zijn oranje kleur. Alleen het uiterlijk is veranderd, alle functies werken als eerst.
+-->
+
+Vierde stap van het UI-herontwerp (patch C, deel 2: Prestaties). Alleen uiterlijk; geen functie, berekening of database is aangepast.
+
+**PR's als tegels.** Per onderdeel een tegel met de naam, het resultaat groot met eenheid, de PR-badge en de 🗑️-knop. Op mobiel staan ze in twee kolommen. Dit geldt voor zowel de weergave van één atleet als de uitklapbare lijst per atleet. De knop "✏️ PR's bewerken" blijft.
+
+**Ranglijst.** Blijft een tabel, maar met ronde rangnummers, lijntjes tussen de rijen en een lichte markering voor nummer 1.
+
+**Filters.** Alle / Jongens / Meisjes zijn pillen (dezelfde als bij Atleten). De keuzelijsten voor atleet en onderdeel staan op mobiel onder elkaar.
+
+**Kop.** Alle knoppen blijven bereikbaar (PR's exporteren, PR-overzicht importeren, Nieuw onderdeel, + Prestatie invoeren). Op mobiel staan ze in twee kolommen en is "+ Prestatie invoeren" een ronde plusknop rechtsonder, boven de onderbalk.
+
+**Bugfix: PR-badge zonder kleur.** `.pr-badge` gebruikte het ongeldige patroon `var(--accent)22`; vervangen door `color-mix(...)`. Daardoor had de badge geen kleurvlak. Ook de lijntjes tussen tabelrijen (`var(--border)44`) bleken ongeldig; op dit scherm hersteld.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen nieuwe functie. Contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336). Het geslachtsfilter hergebruikt `kiesSegment()` uit patch 73 en blijft het verborgen `<select id="prestatie-geslacht-filter">` aansturen.
+- `renderPrestatieTable()`: alleen het HTML-sjabloon is aangepast (tabel → `.pr-tegels` met `.pr-tegel`). Sortering (`DISC_VOLGORDE`), PR-bepaling (`prMap`) en de handlers `deletePrestatie('…')` en `openPrestatieModal(null,'…')` zijn ongewijzigd. `renderOnderdeelRanglijst()` en `renderPrestaties()` zijn niet aangeraakt; de ranglijst is alleen met CSS (gescoped op `#prestaties-content`) herstijld, het rangnummer als rondje via een CSS-teller (`counter(rang)`; de oorspronkelijke tekst in de cel blijft in de DOM).
+- De ronde plusknop en de kopknoppen hergebruiken de CSS van patch 73 (`.fab-mobiel`), nu ook voor `#view-prestaties`. De drie secundaire knoppen staan in een grid; daarvoor is `display:grid !important` nodig omdat het kopblok een inline `display:flex` heeft.
+- `th`/`td`-stijlen voor tabellen zijn globaal en worden ook door andere schermen gebruikt; de lijnherstel is daarom gescoped op `#prestaties-content`.
+- Gecontroleerd: `node --check`, contract-check en een headless render (Chromium) op 1280, 390 en 360 px met 8 atleten en 18 prestaties: accordeon (alle atleten), één atleet (6 tegels, 6 PR-badges), ranglijst (rang 1 t/m 6), geslachtspillen (Meisjes 3, Jongens 4, Alle 7), lege toestand, de verwijderknop roept `deletePrestatie` met het juiste id aan, "PR's bewerken" en de plusknop openen het prestatievenster met de juiste atleet, licht thema. Geen console-errors, geen horizontale overflow.
+- Niet getest: inloggen/2FA, echte Supabase-data (de render-test gebruikt een nep-Supabase), echte telefoon (iOS), het echt opslaan of verwijderen van een PR, PR-export en PR-overzicht importeren.
+- Bewust niet gebouwd (vraagt data die niet bestaat: geen datum per prestatie): tegels met verbetering ("▲ −0,2") of "Seizoen", de grafiek "Verloop" en de lijst met datums uit de mockup.
+
 ## [oktober 2026 — patch 73] — 2026-10-07
 
 ### 🏃 Atleten als lijst
