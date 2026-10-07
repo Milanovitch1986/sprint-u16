@@ -1791,6 +1791,43 @@
     #punten-tabel-panel tbody td:nth-child(7) { grid-column: 5; grid-row: 1 / span 2; }
   }
 
+  /* ══ Patch 80: Admin (UI-herontwerp patch F2) ══ */
+  /* Basisklassen: exact de waarden van de inline stijlen in de lijst-sjablonen */
+  .admin-rij { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .admin-rij-nowrap { flex-wrap: nowrap; }
+  .admin-rij-oud { padding: 8px 0; opacity: .65; }
+  .admin-rij-info { flex: 1; min-width: 200px; }
+  .admin-rij-titel { font-size: 13px; font-weight: 600; }
+  .admin-rij-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .admin-rij-status { font-size: 11px; color: var(--muted); }
+  .admin-trainer { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .admin-trainer-naam { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .admin-trainer-mail { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .admin-vinkjes { display: flex; flex-wrap: wrap; gap: 4px; }
+  .admin-vink { display: inline-flex; align-items: center; gap: 6px; margin-right: 16px; cursor: pointer; font-size: 13px; }
+  .admin-vink-input { accent-color: var(--accent); width: 15px; height: 15px; }
+  /* Pillen en labels. (De oude waarden var(--kleur)22/44 waren ongeldige CSS; daarom color-mix.) */
+  .status-pil {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px;
+    padding: 3px 10px; border-radius: 20px; border: 1px solid; white-space: nowrap;
+  }
+  .status-actief   { color: var(--accent);  background: color-mix(in srgb, var(--accent) 15%, transparent);  border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .status-gebruikt { color: var(--success); background: color-mix(in srgb, var(--success) 15%, transparent); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+  .status-verlopen { color: var(--accent2); background: color-mix(in srgb, var(--accent2) 15%, transparent); border-color: color-mix(in srgb, var(--accent2) 35%, transparent); }
+  .rol-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+  .rol-admin { color: var(--accent); }
+  .btn.btn-gevaar { color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 40%, transparent); }
+  .btn.btn-gevaar:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Inklapbare secties (native <details>, geen JavaScript) */
+  #view-admin .detail-panel { border-radius: var(--radius-lg); }
+  .admin-kop { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; list-style: none; }
+  .admin-kop::-webkit-details-marker { display: none; }
+  .admin-kop > span:first-child { flex: 1; }
+  .admin-kop::after { content: "▾"; margin-left: auto; padding-left: 12px; color: var(--muted); transition: transform .2s; }
+  details.admin-sectie:not([open]) > .admin-kop::after { transform: rotate(-90deg); }
+  details.admin-sectie:not([open]) > .admin-kop { border-bottom: none; }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2379,11 +2416,11 @@
     <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
 
     <!-- Uitnodigingen -->
-    <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
+      <summary class="section-label admin-kop">
         <span>📨 Uitnodigingen</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openUitnodigingModal()">+ Nieuwe uitnodiging</button>
-      </div>
+      </summary>
       <div id="uitnodigingen-lijst" style="padding:16px;"></div>
       <!-- Geschiedenis: gebruikt & verlopen -->
       <div id="uitnodigingen-geschiedenis-wrapper" style="display:none;">
@@ -2392,45 +2429,45 @@
         </div>
         <div id="uitnodigingen-geschiedenis" style="padding:0 16px 8px;"></div>
       </div>
-    </div>
+    </details>
 
     <!-- Gebruikers -->
-    <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label">👥 Geregistreerde gebruikers</div>
+    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
+      <summary class="section-label admin-kop">👥 Geregistreerde gebruikers</summary>
       <div id="gebruikers-lijst" style="padding:16px;"></div>
-    </div>
+    </details>
 
     <!-- Categorieën -->
-    <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
+      <summary class="section-label admin-kop">
         <span>📂 Categorieën</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openCategorieModal()">+ Nieuwe categorie</button>
-      </div>
+      </summary>
       <div id="categorieen-lijst" style="padding:16px;"></div>
-    </div>
+    </details>
 
     <!-- Trainer–categorie koppelingen -->
-    <div class="detail-panel" style="margin-bottom:24px;">
-      <div class="section-label">🔗 Toegang per trainer</div>
+    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
+      <summary class="section-label admin-kop">🔗 Toegang per trainer</summary>
       <div id="trainer-categorie-beheer" style="padding:16px;"></div>
-    </div>
+    </details>
 
     <!-- Releasenote-tags: hint bij veel "Overig" (patch 68) -->
-    <div class="detail-panel" id="tag-hint-panel" style="display:none;margin-bottom:24px;">
-      <div class="section-label">🏷️ Releasenote-tags</div>
+    <details class="detail-panel admin-sectie" open id="tag-hint-panel" style="display:none;margin-bottom:24px;">
+      <summary class="section-label admin-kop">🏷️ Releasenote-tags</summary>
       <div id="tag-hint-inhoud" style="padding:16px;"></div>
-    </div>
+    </details>
 
     <!-- Back-up & export (patch 64) -->
-    <div class="detail-panel">
-      <div class="section-label">💾 Back-up &amp; export</div>
+    <details class="detail-panel admin-sectie" open>
+      <summary class="section-label admin-kop">💾 Back-up &amp; export</summary>
       <div style="padding:16px;">
         <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:var(--text);">
           Download in één klik alle gegevens van de actieve categorie als Excel-bestand — een vangnet dat je lokaal kunt bewaren. Er wordt niets in de database gewijzigd.
         </p>
         <button class="btn btn-primary" onclick="backupNaarExcel()">📥 Back-up naar Excel</button>
       </div>
-    </div>
+    </details>
   </div>
 </main>
 
@@ -9227,19 +9264,17 @@ async function laadAdminUitnodigingen() {
       uitnEl.innerHTML = actief.map(u => {
         const catNaam = u.categorieen?.naam || "—";
         return `
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+          <div class="admin-rij">
+            <div class="admin-rij-info">
+              <div class="admin-rij-titel">${esc(u.email)}</div>
+              <div class="admin-rij-sub">
                 Categorie: <strong>${esc(catNaam)}</strong> ·
                 Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
               </div>
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-              color:var(--accent);background:var(--accent)22;border:1px solid var(--accent)44;
-              padding:3px 10px;border-radius:20px;">Actief</span>
+            <span class="status-pil status-actief">Actief</span>
             <button class="btn btn-ghost btn-sm" onclick="kopieerUitnodigingslink('${u.token}')">📋 Kopiëren</button>
-            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Intrekken</button>
+            <button class="btn btn-ghost btn-sm btn-gevaar" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Intrekken</button>
           </div>`;
       }).join("");
     }
@@ -9255,19 +9290,17 @@ async function laadAdminUitnodigingen() {
         const statusTekst = u.gebruikt ? "Gebruikt" : "Verlopen";
         const catNaam     = u.categorieen?.naam || "—";
         return `
-          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;opacity:0.65;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:13px;font-weight:600;">${esc(u.email)}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+          <div class="admin-rij admin-rij-oud">
+            <div class="admin-rij-info">
+              <div class="admin-rij-titel">${esc(u.email)}</div>
+              <div class="admin-rij-sub">
                 Categorie: <strong>${esc(catNaam)}</strong> ·
                 Aangemaakt: ${formatDate(u.aangemaakt)} · Vervalt: ${formatDate(u.vervalt)}
               </div>
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-              color:${statusKleur};background:${statusKleur}22;border:1px solid ${statusKleur}44;
-              padding:3px 10px;border-radius:20px;">${statusTekst}</span>
+            <span class="status-pil ${u.gebruikt ? "status-gebruikt" : "status-verlopen"}">${statusTekst}</span>
             ${verlopen && !u.gebruikt ? `
-              <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Verwijderen</button>
+              <button class="btn btn-ghost btn-sm btn-gevaar" onclick="intrekUitnodiging('${u.id}', '${esc(u.email)}')">🗑️ Verwijderen</button>
             ` : ""}
           </div>`;
       }).join("");
@@ -9276,6 +9309,7 @@ async function laadAdminUitnodigingen() {
 }
 
 async function laadAdminGebruikers() {
+  // patch 80: Admin-lijsten via klassen i.p.v. inline stijlen (alleen opmaak; alle onclick-/onchange-handlers ongewijzigd)
   const gebruEl = document.getElementById("gebruikers-lijst");
   gebruEl.innerHTML = `<div class="loading"><div class="spinner"></div> Laden…</div>`;
   try {
@@ -9291,14 +9325,13 @@ async function laadAdminGebruikers() {
       const isZelf     = g.id === huidigeProfiel?.id;
       const rolKleur   = g.rol === "admin" ? "var(--accent)" : "var(--muted)";
       return `
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-          <div style="flex:1;min-width:200px;">
-            <div style="font-size:13px;font-weight:600;">${esc(g.gebruikersnaam)} ${isZelf ? '<span style="color:var(--muted);font-size:11px;">(jij)</span>' : ""}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(g.email)}</div>
+        <div class="admin-rij">
+          <div class="admin-rij-info">
+            <div class="admin-rij-titel">${esc(g.gebruikersnaam)} ${isZelf ? '<span style="color:var(--muted);font-size:11px;">(jij)</span>' : ""}</div>
+            <div class="admin-rij-sub">${esc(g.email)}</div>
           </div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-            color:${rolKleur};text-transform:uppercase;">${g.rol}</span>
-          <span style="font-size:11px;color:var(--muted);">
+          <span class="rol-label ${g.rol === "admin" ? "rol-admin" : ""}">${g.rol}</span>
+          <span class="admin-rij-status">
             ${g.actief ? "✅ Actief" : "❌ Inactief"} ·
             Laatste login: ${g.laatste_login ? formatDate(g.laatste_login) : "nooit"}
           </span>
@@ -9306,7 +9339,7 @@ async function laadAdminGebruikers() {
             <button class="btn btn-ghost btn-sm" onclick="wisselRol('${g.id}', '${g.rol}')">
               ${g.rol === "admin" ? "→ Trainer" : "→ Admin"}
             </button>
-            <button class="btn btn-ghost btn-sm" style="color:var(--accent2);border-color:var(--accent2)44;"
+            <button class="btn btn-ghost btn-sm btn-gevaar"
               onclick="verwijderGebruiker('${g.id}', '${esc(g.gebruikersnaam)}', '${esc(g.email)}')">
               🗑️ Verwijderen
             </button>
@@ -9330,12 +9363,12 @@ async function laadCategorieBeheer() {
       return;
     }
     el.innerHTML = cats.map(c => `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div class="admin-rij admin-rij-nowrap">
         <div style="flex:1;">
           <span style="font-size:14px;font-weight:700;color:var(--accent);">${esc(c.naam)}</span>
           <span style="font-size:11px;color:var(--muted);margin-left:8px;">volgorde: ${c.volgorde}</span>
         </div>
-        <button class="btn btn-ghost btn-sm" style="color:var(--accent2);"
+        <button class="btn btn-ghost btn-sm btn-gevaar"
           onclick="verwijderCategorie('${c.id}', '${esc(c.naam)}')">🗑 Verwijderen</button>
       </div>
     `).join("");
@@ -9368,21 +9401,21 @@ async function laadTrainerCategorieBeheer() {
       const checkboxes = categorieen.map(c => {
         const gekoppeld = koppelingen.some(k => k.trainer_id === g.id && k.categorie_id === c.id);
         return `
-          <label style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;cursor:pointer;font-size:13px;">
+          <label class="admin-vink">
             <input type="checkbox" ${gekoppeld ? "checked" : ""}
               onchange="wisselTrainerCategorie('${g.id}', '${c.id}', this.checked)"
-              style="accent-color:var(--accent);width:15px;height:15px;">
+              class="admin-vink-input">
             ${esc(c.naam)}
           </label>`;
       }).join("");
 
       return `
-        <div style="padding:12px 0;border-bottom:1px solid var(--border);">
-          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">
+        <div class="admin-trainer">
+          <div class="admin-trainer-naam">
             ${esc(g.gebruikersnaam)}
-            <span style="font-size:11px;color:var(--muted);font-weight:400;"> — ${esc(g.email)}</span>
+            <span class="admin-trainer-mail"> — ${esc(g.email)}</span>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px;">${checkboxes}</div>
+          <div class="admin-vinkjes">${checkboxes}</div>
         </div>`;
     }).join("");
   } catch(e) { el.innerHTML = `<div style="color:var(--accent2);font-size:13px;">Fout: ${e.message}</div>`; }

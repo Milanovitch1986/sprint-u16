@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 80] — 2026-10-07
+
+### ⚙️ Admin in de nieuwe stijl, met inklapbare secties
+
+<!--RELEASENOTE
+versie: Patch 80
+titel: ⚙️ Admin in de nieuwe stijl, met inklapbare secties
+type: update
+tags: administratie
+beschrijving: Het Admin-scherm heeft een nieuwe opmaak. Elke sectie (Uitnodigingen, Gebruikers, Categorieën, Toegang per trainer, Releasenote-tags, Back-up) is nu inklapbaar met een pijltje rechts in de kop, handig op mobiel. De statuslabels Actief, Gebruikt en Verlopen hebben weer hun kleurvlak, de rollen Admin en Trainer zijn duidelijker en de verwijderknoppen hebben een zachte rode rand. Alle knoppen en keuzes doen precies hetzelfde als voorheen: alleen het uiterlijk is veranderd.
+-->
+
+Tiende stap van het UI-herontwerp (patch F, deel 2: Admin). Alleen uiterlijk; geen functie, handler of database is aangepast.
+
+**Inklapbare secties.** Elke sectie is een native HTML-element `<details>` (zonder JavaScript). Ze staan standaard open; klik op de titel of het pijltje om in of uit te klappen (ook met het toetsenbord: Enter of spatie). De knoppen in de kop ("+ Nieuwe uitnodiging", "+ Nieuwe categorie") klappen de sectie niet in. De gegevens worden ook geladen als een sectie dicht staat.
+
+**Lijsten.** De statuslabels (Actief, Gebruikt, Verlopen) hebben weer een kleurvlak; de rol (Admin in oranje, Trainer in grijs) en de verwijder- en intrekknoppen met een rode rand zijn consequent in alle lijsten. Rondere panelen (16 px).
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336).
+- De sjablonen van vier functies zijn aangepast: `laadAdminUitnodigingen`, `laadAdminGebruikers`, `laadCategorieBeheer` en `laadTrainerCategorieBeheer` (inline stijlen → klassen: `admin-rij`, `admin-rij-info`, `admin-rij-titel`, `admin-rij-sub`, `status-pil`, `rol-label`, `btn-gevaar`, `admin-trainer`, `admin-vink` e.a.). Alle `onclick`/`onchange`-handlers in die functies zijn letterlijk gelijk (gecontroleerd per functie); de rest van de JavaScript is byte-voor-byte identiek aan patch 79. Er is één commentaarregel (`// patch 80`) toegevoegd.
+- De basisklassen hebben dezelfde waarden als de inline stijlen die ze vervangen. De ongeldige `var(--kleur)22/44`-waarden in de statuslabels en knoprand zijn vervangen door `color-mix(...)`.
+- HTML-schil: de zes panelen zijn `<details class="detail-panel admin-sectie" open>` met een `<summary class="section-label admin-kop">`; alle id's (`uitnodigingen-lijst`, `gebruikers-lijst`, `categorieen-lijst`, `trainer-categorie-beheer`, `tag-hint-panel`, enz.) en inline `display` van `#tag-hint-panel` (door `laadOverigTagHint()` gezet) werken ongewijzigd.
+- Gecontroleerd (oud tegen nieuw, nep-backend): de lijst van 18 handlers in het Admin-scherm en de tekst van alle lijsten zijn identiek; negen knoppen (kopiëren, intrekken, rol wisselen, gebruiker verwijderen, categorie verwijderen, toegang aan/uit, nieuwe uitnodiging, nieuwe categorie, back-up) roepen dezelfde functie aan met dezelfde argumenten. Inklappen en uitklappen met muis en toetsenbord; een knop in de kop klapt niet in; `laadAdmin()` terwijl een sectie dicht staat laadt de data wel; het tag-paneel verschijnt en verdwijnt via `style.display`; lege toestand ("Geen actieve uitnodigingen."). Op 1280, 390 en 360 px geen horizontale overflow; licht thema.
+- Niet getest: echt uitnodigen, rol wisselen, gebruiker of categorie verwijderen en toegang wijzigen bij Supabase; de Excel-back-up; inloggen/2FA; een echte telefoon.
+- Bewust niet gebouwd: de tabs per sectie (Uitnodigingen/Gebruikers/…) en de pagina-per-sectie op mobiel uit de mockup (JavaScript); de inklapbare secties zijn daar het alternatief voor.
+
 ## [oktober 2026 — patch 79] — 2026-10-07
 
 ### 🧮 Punten en Profiel in de nieuwe stijl

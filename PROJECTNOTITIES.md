@@ -44,6 +44,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch F2: Admin (patch 80, okt 2026)
+Admin met inklapbare secties. Geen databasewijziging; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-F2` staat op de commit vóór deze patch (patch 79, `8bdb0eb`). Niet-live-kritiek scherm: gecommit direct na de tests (afgesproken in de bouwbrief).
+- **JS-wijziging, bewust klein:** alleen de sjablonen van `laadAdminUitnodigingen`, `laadAdminGebruikers`, `laadCategorieBeheer` en `laadTrainerCategorieBeheer` (inline stijlen → klassen). Alle `onclick`/`onchange`-handlers per functie gecontroleerd letterlijk gelijk; de rest van het JS is byte-voor-byte identiek aan patch 79 (check: JS zonder deze 4 functies vergelijken).
+- **Inklapbaar:** elk paneel is `<details class="detail-panel admin-sectie" open>` + `<summary class="section-label admin-kop">`. Pijltje via `.admin-kop::after`; gedraaid als `details:not([open])`. `<details>` verbergt de inhoud met `content-visibility`: `offsetHeight`/`innerText` zijn dan niet betrouwbaar; meet met `checkVisibility()` en `textContent`. Knoppen in een `<summary>` (bijv. "+ Nieuwe uitnodiging") laten de sectie dicht/open staan; een klik in het midden van een kop raakt op mobiel de knop, klik in tests op de titel (`position`).
+- **`#tag-hint-panel`:** `laadOverigTagHint()` zet `style.display = "" | "none"`; dat werkt ook op `<details>` (display:block). Geef het paneel in CSS geen `display` met `!important`.
+- **Nieuwe klassen:** `admin-rij` (+ `-nowrap`, `-oud`, `-info`, `-titel`, `-sub`, `-status`), `status-pil` (+ `status-actief|gebruikt|verlopen`), `rol-label`/`rol-admin`, `btn-gevaar`, `admin-trainer*`, `admin-vink*`. Basiswaarden gelijk aan de vervangen inline stijlen; `var(--kleur)22/44` vervangen door `color-mix`.
+- **Test-aanpak:** zoals bij 71–79, met een stub die `profielen`, `uitnodigingen`, `trainer_categorieen` en 6 releasenotes kent. Voor Admin: functies vervangen door spies (afsluiten met `;0` zodat Playwright de functie niet uitvoert) en op de echte knoppen klikken; handlers- en tekstvergelijking oud tegen nieuw.
+- **Niet getest in dit kanaal:** echt uitnodigen/rol wisselen/verwijderen/toegang wijzigen bij Supabase, Excel-back-up, inloggen/2FA, echte telefoon.
+- **Bewust niet gebouwd:** tabs per sectie en pagina-per-sectie op mobiel (JS).
+- **Volgende:** de globale modals (`.modal`, `.modal-overlay`, gedeeld door alle schermen: atleet, prestatie, wedstrijd, programma, WhatsApp-keuze, afronden, enz.). Eigen bouwbrief en akkoord; voorgesteld: alleen CSS, scoped per modal-id waar nodig, pas live op een rustig moment.
+
 ### UI-herontwerp, patch F1: Punten en Profiel (patch 79, okt 2026)
 Alleen vaste HTML + CSS; **inline scripts byte-voor-byte identiek aan patch 78**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-F1` staat op de commit vóór deze patch (patch 78, `62a675a`). Niet-live-kritiek scherm: gecommit direct na de tests (afgesproken in de bouwbrief).
 - **Punten:** `<select id="punten-geslacht" class="segment-select">` blijft de bron (alleen `berekenEnVoegToe()` leest het); de pillen zijn `kiesSegment(this,'punten-geslacht','M'|'V')`. Inline stijlen van labels/velden/knoprij → klassen (`punten-*`); `#punten-fout` houdt zijn inline `display:none` (JS toggelt dat).
