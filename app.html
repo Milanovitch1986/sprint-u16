@@ -1751,6 +1751,46 @@
     .opstelling-acties > select { width: 100%; }
   }
 
+  /* ══ Patch 79: Punten en Profiel (UI-herontwerp patch F1) ══ */
+  /* Basisklassen: exact de waarden van de inline stijlen die ze vervangen */
+  .punten-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+  .punten-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); display: block; margin-bottom: 6px; }
+  .punten-invoer {
+    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 14px; box-sizing: border-box;
+  }
+  .punten-acties { padding: 0 16px 16px; display: flex; align-items: center; gap: 12px; }
+  .punten-fout { color: #e05252; font-size: 13px; }
+  .profiel-kaarten { display: grid; grid-template-columns: repeat(2, minmax(0, 440px)); gap: 16px; align-items: start; }
+  .profiel-kaarten .detail-panel { margin-bottom: 0; }
+
+  #view-punten .detail-panel, #view-profiel .detail-panel { border-radius: var(--radius-lg); }
+  #view-punten .punten-invoer { border-radius: var(--radius-sm); padding: 10px 12px; }
+  #view-punten .punten-invoer:focus { outline: none; border-color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .punten-form { grid-template-columns: 1fr; padding: 14px; }
+    .punten-acties { flex-wrap: wrap; padding: 0 14px 14px; }
+    .punten-acties .btn { flex: 1 1 100%; justify-content: center; }
+    .profiel-kaarten { grid-template-columns: minmax(0, 1fr); }
+    /* Puntenresultaten als compacte kaartjes: de tabel was op mobiel breder dan het scherm (de punten vielen buiten beeld).
+       Inline stijlen in de cellen vragen om !important. Alleen op scherm <= 768 px. */
+    #punten-tabel-panel thead { display: none; }
+    #punten-tabel-panel table, #punten-tabel-panel tbody { display: block; width: 100%; }
+    #punten-tabel-panel tbody tr {
+      display: grid; grid-template-columns: 34px 1fr auto auto 36px; column-gap: 8px; row-gap: 2px;
+      align-items: center; padding: 10px 12px;
+    }
+    #punten-tabel-panel tbody td { padding: 0 !important; border: 0 !important; min-width: 0; overflow-wrap: anywhere; }
+    #punten-tabel-panel tbody td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; }
+    #punten-tabel-panel tbody td:nth-child(2) { grid-column: 2; grid-row: 1; }
+    #punten-tabel-panel tbody td:nth-child(3) { grid-column: 3; grid-row: 1; text-align: right; }
+    #punten-tabel-panel tbody td:nth-child(4) { grid-column: 2; grid-row: 2; }
+    #punten-tabel-panel tbody td:nth-child(5) { grid-column: 3; grid-row: 2; text-align: right; }
+    #punten-tabel-panel tbody td:nth-child(6) { grid-column: 4; grid-row: 1 / span 2; }
+    #punten-tabel-panel tbody td:nth-child(7) { grid-column: 5; grid-row: 1 / span 2; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2218,20 +2258,24 @@
   <!-- PROFIEL TAB -->
   <div id="view-profiel" style="display:none;">
     <div class="page-header"><div class="page-title">Mijn profiel</div></div>
-    <div class="detail-panel" style="max-width:480px;">
-      <div class="section-label">Accountgegevens</div>
-      <div style="padding:20px;">
-        <div class="field">
-          <label>Gebruikersnaam</label>
-          <input type="text" id="profiel-naam" class="profiel-input">
+    <div class="profiel-kaarten">
+      <div class="detail-panel">
+        <div class="section-label">Accountgegevens</div>
+        <div style="padding:20px;">
+          <div class="field">
+            <label>Gebruikersnaam</label>
+            <input type="text" id="profiel-naam" class="profiel-input">
+          </div>
+          <div class="field">
+            <label>E-mailadres</label>
+            <input type="email" id="profiel-email" class="profiel-input" readonly style="opacity:.6;">
+          </div>
+          <button class="btn btn-primary" onclick="slaProfielOp()">Opslaan</button>
         </div>
-        <div class="field">
-          <label>E-mailadres</label>
-          <input type="email" id="profiel-email" class="profiel-input" readonly style="opacity:.6;">
-        </div>
-        <button class="btn btn-primary" onclick="slaProfielOp()">Opslaan</button>
-        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Wachtwoord wijzigen</div>
+      </div>
+      <div class="detail-panel">
+        <div class="section-label">Wachtwoord wijzigen</div>
+        <div style="padding:20px;">
           <div class="field"><label>Nieuw wachtwoord (min. 8 tekens)</label>
             <input type="password" id="profiel-ww" placeholder="••••••••" class="profiel-input"></div>
           <button class="btn btn-ghost" onclick="wijzigWachtwoord()">Wachtwoord wijzigen</button>
@@ -2247,12 +2291,16 @@
 
     <div class="detail-panel" style="margin-bottom:20px;">
       <div class="section-label">Bereken punten</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;">
+      <div class="punten-form">
 
         <!-- Geslacht -->
         <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Geslacht</label>
-          <select id="punten-geslacht" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;">
+          <label class="punten-label">Geslacht</label>
+          <div class="segment" role="group" aria-label="Geslacht">
+            <button type="button" class="segment-knop active" onclick="kiesSegment(this,'punten-geslacht','M')">👦 Jongen</button>
+            <button type="button" class="segment-knop" onclick="kiesSegment(this,'punten-geslacht','V')">👧 Meisje</button>
+          </div>
+          <select id="punten-geslacht" class="segment-select">
             <option value="M">👦 Jongen</option>
             <option value="V">👧 Meisje</option>
           </select>
@@ -2260,8 +2308,8 @@
 
         <!-- Onderdeel -->
         <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Onderdeel</label>
-          <select id="punten-discipline" onchange="updatePuntenPlaceholder()" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;">
+          <label class="punten-label">Onderdeel</label>
+          <select id="punten-discipline" onchange="updatePuntenPlaceholder()" class="punten-invoer">
             <option value="100m">100m</option>
             <option value="80m">80m</option>
             <option value="150m">150m</option>
@@ -2281,24 +2329,23 @@
 
         <!-- Label (optioneel) -->
         <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Label <span style="font-weight:400;font-style:italic;">(optioneel)</span></label>
-          <input type="text" id="punten-label" placeholder="bijv. naam of omschrijving" style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;">
+          <label class="punten-label">Label <span style="font-weight:400;font-style:italic;">(optioneel)</span></label>
+          <input type="text" id="punten-label" placeholder="bijv. naam of omschrijving" class="punten-invoer">
         </div>
 
         <!-- Prestatie -->
         <div>
-          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px;">Prestatie</label>
-          <input type="text" id="punten-prestatie" placeholder="bijv. 10.84" id="punten-prestatie"
-            style="width:100%;padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;"
+          <label class="punten-label">Prestatie</label>
+          <input type="text" id="punten-prestatie" placeholder="bijv. 10.84" class="punten-invoer"
             onkeydown="if(event.key==='Enter') berekenEnVoegToe()">
         </div>
 
       </div>
 
       <!-- Knop + foutmelding -->
-      <div style="padding:0 16px 16px;display:flex;align-items:center;gap:12px;">
+      <div class="punten-acties">
         <button class="btn btn-primary" onclick="berekenEnVoegToe()">➕ Berekenen &amp; toevoegen</button>
-        <span id="punten-fout" style="color:#e05252;font-size:13px;display:none;"></span>
+        <span id="punten-fout" class="punten-fout" style="display:none;"></span>
       </div>
     </div>
 

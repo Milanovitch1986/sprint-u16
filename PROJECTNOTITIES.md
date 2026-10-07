@@ -44,6 +44,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch F1: Punten en Profiel (patch 79, okt 2026)
+Alleen vaste HTML + CSS; **inline scripts byte-voor-byte identiek aan patch 78**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-F1` staat op de commit vóór deze patch (patch 78, `62a675a`). Niet-live-kritiek scherm: gecommit direct na de tests (afgesproken in de bouwbrief).
+- **Punten:** `<select id="punten-geslacht" class="segment-select">` blijft de bron (alleen `berekenEnVoegToe()` leest het); de pillen zijn `kiesSegment(this,'punten-geslacht','M'|'V')`. Inline stijlen van labels/velden/knoprij → klassen (`punten-*`); `#punten-fout` houdt zijn inline `display:none` (JS toggelt dat).
+- **Mobiele resultaten:** `renderPuntenTabel()` zet inline stijlen op elke cel en de tabel was op 360–390 px ± 518 px breed (kolom Punten buiten beeld, ook zonder mijn patch). Opgelost met alleen CSS in `@media (max-width: 768px)`: `thead` verborgen, `tr` als grid (kolommen `34px 1fr auto auto 36px`), cellen met `nth-child`-posities en `!important` op padding/border. Cellen: 1 rang, 2 label, 3 geslacht, 4 onderdeel, 5 prestatie, 6 punten, 7 verwijderknop. Wijzig je die kolomvolgorde in `renderPuntenTabel()`, pas dan ook deze CSS aan.
+- **Profiel:** het ene paneel is twee panelen in `.profiel-kaarten` (2 kolommen op desktop, 1 op mobiel); ids en handlers (`profiel-naam`, `profiel-email`, `profiel-ww`, `slaProfielOp()`, `wijzigWachtwoord()`) ongewijzigd.
+- **Test-aanpak:** zoals bij 71–78. Puntenreeks oud tegen nieuw vergeleken (8 gevallen). Voor Profiel moet de nep-backend `auth.getUser` en `auth.updateUser` kennen, anders geeft `slaProfielOp()` een TypeError. Valkuil in tests: `page.evaluate("window.f = function(){…}")` voert de teruggegeven functie uit; geef een expressie die geen functie teruggeeft (bijv. eindig met `;0`).
+- **Niet getest in dit kanaal:** echt opslaan/wachtwoord wijzigen bij Supabase, inloggen/2FA, echte telefoon.
+- **Bewust niet gebouwd:** totaalrij en resultaatkaart (Punten); avatar, rolblokje, wachtwoordsterkte (Profiel).
+- **Volgende:** patch 80 (Admin): CSS plus de sjablonen van `laadAdminUitnodigingen`, `laadAdminGebruikers`, `laadCategorieBeheer` en `laadTrainerCategorieBeheer` (inline stijlen → klassen, herstel van de ongeldige `var(--kleur)22/44` in de statuspillen), eventueel inklapbare secties met `<details>`. Eigen kort akkoord; tag `ui-F2` komt op patch 79. Daarna de globale modals.
+
 ### UI-herontwerp, patch E: Opstelling (patch 78, okt 2026)
 Alleen CSS + twee kleine dingen in de vaste HTML-schil; **inline scripts byte-voor-byte identiek aan patch 77**; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-E` staat op de commit vóór deze patch (patch 77, `f251c67`).
 - **Wat is aangepast:** Jongens/Meisjes-balk (klasse `opstelling-geslacht`; `setOpstellingGeslacht()` wisselt `btn-primary`/`btn-ghost` op `#opstelling-tab-M/V`, de pilstijl hangt daaraan), de knoppenrij (klasse `opstelling-acties`; mobiel grid van 2 kolommen), rondere panelen/ploegen/reserves, wedstrijdlijst (stap 1) met oranje finale-rand.

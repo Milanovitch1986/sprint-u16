@@ -6,6 +6,33 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 79] — 2026-10-07
+
+### 🧮 Punten en Profiel in de nieuwe stijl
+
+<!--RELEASENOTE
+versie: Patch 79
+titel: 🧮 Punten en Profiel in de nieuwe stijl
+type: update
+tags: overig
+beschrijving: De Puntenrekentool en Mijn profiel hebben een nieuwe opmaak. Bij de puntenrekentool is "Geslacht" nu een keuze met pillen (Jongen / Meisje), staan de velden op mobiel onder elkaar met een brede knop, en zijn de uitkomsten op mobiel compacte kaartjes waarbij de punten gewoon in beeld blijven (die vielen eerder buiten het scherm). Mijn profiel heeft twee kaarten naast elkaar: Accountgegevens en Wachtwoord wijzigen. De berekening zelf is niet aangeraakt: alleen het uiterlijk is veranderd.
+-->
+
+Negende stap van het UI-herontwerp (patch F, deel 1: Punten en Profiel). Alleen uiterlijk; **geen enkele regel JavaScript is gewijzigd**.
+
+**Punten.** De velden hebben klassen in plaats van inline stijlen en rondere vormen. "Geslacht" is Jongen/Meisje als pillen; het verborgen keuzeveld blijft de bron, dus de berekening gebruikt precies dezelfde waarde als voorheen. Op mobiel staat het formulier in één kolom met een brede knop. De resultaten staan op mobiel als compacte kaartjes (naam en geslacht bovenaan, onderdeel en prestatie eronder, punten met balkje rechts) in plaats van een tabel die breder was dan het scherm waardoor de punten buiten beeld vielen.
+
+**Profiel.** Twee kaarten naast elkaar op de computer (Accountgegevens | Wachtwoord wijzigen), onder elkaar op mobiel. Dezelfde velden en knoppen.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen JavaScript. **Alle inline scripts zijn byte-voor-byte identiek aan patch 78**; contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336). De enige nieuwe handlers in de HTML zijn twee aanroepen van de bestaande `kiesSegment()` (patch 73). Het dubbele `id="punten-prestatie"`-attribuut op het prestatieveld is opgeruimd.
+- Nieuwe basisklassen (`punten-form`, `punten-label`, `punten-invoer`, `punten-acties`, `punten-fout`) hebben exact de waarden van de inline stijlen die ze vervangen. `#punten-fout` houdt zijn inline `display:none` (de JS zet het zichtbaar).
+- De puntentabel op mobiel: alleen CSS (`display:grid` op de rijen, cellen met `!important` omdat `renderPuntenTabel()` inline stijlen zet), alleen op schermen <= 768 px; op de computer is de tabel ongewijzigd. `renderPuntenTabel()` zelf is niet aangeraakt.
+- Gecontroleerd (oud tegen nieuw, nep-backend): een reeks van 8 berekeningen (beide geslachten, loop-, spring- en werponderdelen, tijden met minuten) geeft in beide versies exact dezelfde tabel; Enter in het prestatieveld rekent; een lege prestatie geeft "Voer een prestatie in."; de placeholder volgt het onderdeel; een rij verwijderen en "Wis alles"; Profiel: opslaan ("Profiel opgeslagen ✓"), een te kort wachtwoord ("Wachtwoord moet minimaal 8 tekens zijn") en een geldig wachtwoord (roept de wachtwoordwijziging aan, veld wordt leeg) gedragen zich identiek aan de oude versie. Op 1280, 390 en 360 px geen horizontale overflow; licht thema.
+- Niet getest: echt opslaan van het profiel en het echt wijzigen van een wachtwoord bij Supabase, inloggen/2FA, een echte telefoon.
+- Bewust niet gebouwd (nieuwe logica): de totaalrij en de grote resultaatkaart bij Punten; de avatar, het rolblokje en de wachtwoordsterkte-indicator bij Profiel.
+
 ## [oktober 2026 — patch 78] — 2026-10-07
 
 ### 📋 Opstelling in de nieuwe stijl
