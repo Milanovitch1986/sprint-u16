@@ -1660,6 +1660,20 @@
     .wedstrijd-acties .wedstrijd-live-knop { grid-column: 1 / -1; }
   }
 
+  /* ══ Patch 76: gelijke ruimte boven de titels (UI-herontwerp) ══ */
+  /* <main> had zelf onderruimte voor de onderbalk; de schermen na de eerste </main> begonnen daaronder en hadden ook nog een eigen
+     bovenrand (+48 px desktop, +100 px mobiel). Nu: main zelf geen onderruimte, de schermen in main krijgen die zelf, en de
+     schermen buiten main verliezen hun eigen bovenrand. */
+  main { padding-bottom: 0; }
+  #view-home, #view-atleten, #view-prestaties { padding-bottom: 24px; }
+  #view-wedstrijden, #view-wedstrijddag, #view-opstelling,
+  #view-punten, #view-profiel, #view-admin { padding-top: 0; }
+  @media (max-width: 768px) {
+    #view-home, #view-atleten, #view-prestaties {
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 28px);
+    }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }

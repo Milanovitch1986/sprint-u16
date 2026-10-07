@@ -44,6 +44,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch 76: gelijke ruimte boven de titels (okt 2026)
+Alleen CSS (14 regels, één blok vóór het print-blok), geen wijziging in HTML of JS; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D2` staat op de commit vóór deze patch (patch 75, `9461434`).
+- **Oorzaak (de "main-eigenaardigheid" uit het werkdocument):** `app.html` heeft één `<main>`-open en twee `</main>`-sluittags; de views Wedstrijden, Wedstrijddag, Opstelling, Punten, Profiel en Admin staan na de eerste `</main>`. Zij begonnen onder de onderruimte van `<main>` (mobiel 88 px, desktop 24 px) en hadden zelf nog een bovenrand (24 / 14 px).
+- **Oplossing:** `main { padding-bottom: 0 }`; `#view-home, #view-atleten, #view-prestaties` krijgen die onderruimte zelf (24 px; mobiel `calc(60px + env(safe-area-inset-bottom, 0px) + 28px)`); de zes views buiten `main` krijgen `padding-top: 0`. Het blok staat bewust ná de bestaande `main`-/view-regels (ook die in de mobiele media-query) zodat het zonder `!important` wint.
+- **Regel voor de toekomst:** voeg je een nieuw scherm toe, zet het dan in `main` (en geef het de onderruimte-regel) óf erbuiten (dan `padding-top: 0`). Verander de onderruimte van `main` niet meer, die zit nu per scherm.
+- **Gemeten:** titel op 24 px (1280) / 14 px (390 en 360) voor alle negen schermen; ruimte onder de laatste inhoud boven de onderbalk op mobiel onveranderd (28 px).
+- **Test-aanpak:** eerst een proef met `add_style_tag` in headless Chromium, daarna als vaste CSS gemeten op oud (patch 75) tegen nieuw; testdata met 12 atleten, 36 prestaties en 8 wedstrijden voor lange pagina's.
+- **Niet getest in dit kanaal:** echte telefoon (iOS), echte printdialoog.
+- **Volgende:** patch 77 (Wedstrijddag, alleen CSS en HTML-schil; geen `wd*`-functie of resultaatregel-sjabloon aanraken). Eigen bouwbrief en eigen akkoord; pas live als er geen wedstrijddag loopt. Tag `ui-D3` komt dan op patch 76.
+
 ### UI-herontwerp, patch D1: Wedstrijden (patch 75, okt 2026)
 Wedstrijden in de nieuwe stijl. Alleen uiterlijk, geen databasewijziging, geen nieuwe functie; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-D1` staat op de commit vóór deze patch (patch 74, `b7b0d66`).
 - **Wat is aangepast:** CSS (alles gescoped op `#wedstrijden-grid`), de knop `+ Wedstrijd toevoegen` (class `fab-mobiel` + `aria-label`) en alleen inline stijlen → klassen in `wedstrijdKaartHtml()`. `renderWedstrijden()` en alle handlers ongewijzigd.

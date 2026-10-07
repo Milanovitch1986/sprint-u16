@@ -6,6 +6,31 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 76] — 2026-10-07
+
+### 📐 Gelijke ruimte boven de titels
+
+<!--RELEASENOTE
+versie: Patch 76
+titel: 📐 Gelijke ruimte boven de titels
+type: update
+tags: techniek
+beschrijving: Op Wedstrijden, Wedstrijddag, Opstelling, Punten, Profiel en Admin stond de titel een stuk lager dan op Home, Atleten en Prestaties (72 px op de computer en 116 px op mobiel, tegen 24 en 14 px). Dat is rechtgetrokken: alle schermen beginnen nu op dezelfde hoogte. De ruimte onderaan, boven de onderbalk, is gelijk gebleven. Alleen het uiterlijk is veranderd.
+-->
+
+Zesde stap van het UI-herontwerp (afstemming van de schermschil). Alleen uiterlijk; geen HTML, JavaScript, functie of database is aangepast.
+
+**Wat was er aan de hand.** `<main>` had onderruimte voor de onderbalk op mobiel. De zes schermen die na de eerste `</main>` in het bestand staan, begonnen daaronder en hadden daarbovenop nog een eigen bovenrand. Daardoor stond de inhoud 48 px (computer) of 102 px (mobiel) lager dan bij Home, Atleten en Prestaties.
+
+**Wat is er veranderd.** Vier CSS-regels: `main` heeft zelf geen onderruimte meer; Home, Atleten en Prestaties (de schermen in `main`) krijgen die onderruimte zelf (24 px; op mobiel 60 px + safe-area + 28 px, precies zoals voorheen); de zes schermen buiten `main` verliezen hun eigen bovenrand.
+
+#### Technisch
+
+- Alleen een CSS-blok toegevoegd (14 regels, vóór het print-blok); geen bestaande regel gewijzigd. Contract-check: 271 id's, 140 handlers en 336 functies, 0 verdwenen, 0 nieuw.
+- Gemeten (afstand titel tot bovenkant): Wedstrijden/Wedstrijddag/Opstelling/Punten/Profiel/Admin 72 → 24 px op 1280 px en 116 → 14 px op 390 en 360 px; Home/Atleten/Prestaties ongewijzigd (24 / 14 px). De ruimte tussen de laatste inhoud en de onderbalk is op mobiel op alle schermen gelijk gebleven (28 px). Geen horizontale overflow, geen console-errors. Printweergave van de opstelling: de zijbalk blijft verborgen en de inhoud begint 24 px hoger.
+- De proef is eerst alleen in de browser uitgeprobeerd (stijl-injectie), daarna als vast CSS-blok in `app.html` gezet.
+- Niet getest: een echte telefoon (iOS safe-area onderaan), de echte printdialoog.
+
 ## [oktober 2026 — patch 75] — 2026-10-07
 
 ### 🏆 Wedstrijden in de nieuwe stijl
