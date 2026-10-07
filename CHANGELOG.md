@@ -6,6 +6,41 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 72] — 2026-10-07
+
+### 🏠 Nieuwe Home: releasenotes in kaarten
+
+<!--RELEASENOTE
+versie: Patch 72
+titel: 🏠 Nieuwe Home: releasenotes in kaarten
+type: update
+tags: techniek
+beschrijving: De beginpagina is opnieuw opgemaakt. Het logo staat compacter bovenaan en de releasenotes staan in nieuwe, ronde kaarten met een gekleurd label per type (feature, bugfix, update). De filterknoppen zijn pillen die je op mobiel zijwaarts kunt schuiven. De knoppen bij de releasenotes breken op mobiel netjes af, zodat niets meer buiten het scherm valt, en de categorie-wissel krijgt op mobiel een eigen rij. Alleen het uiterlijk is veranderd, alle functies werken als eerst.
+-->
+
+Tweede stap van het UI-herontwerp (patch B: Home, voorstel 2). Alleen uiterlijk; geen functie, berekening of database is aangepast.
+
+**Logo en ondertitel.** Het SVG-logo is ongewijzigd, maar staat nu zonder de grote lege ruimte eronder (voorheen 45% van het scherm), zodat de releasenotes meteen zichtbaar zijn. Op desktop ±380 px breed, op mobiel ±300 px.
+
+**Releasenotes.** Kop met titel links en de beheerknoppen (Archief, Uit GitHub, Automatisch taggen, + Toevoegen) rechts; die zijn nog steeds alleen voor admins zichtbaar. Op mobiel komen de knoppen onder de titel te staan en breken ze af, waardoor de rij niet meer breder is dan het scherm. De kaarten zijn ronder (16 px) met een type-label als gekleurde pil, titel, versie en datum, beschrijving en tag-pillen. Op mobiel staan versie en datum onder de titel.
+
+**Tag-filter.** De chips zijn pillen; op mobiel vormen ze één rij die je zijwaarts kunt schuiven. Een actieve chip heeft nu weer zichtbaar een oranje achtergrond.
+
+**Categorie-wissel op mobiel.** Bij twee of meer categorieën krijgt de wissel een eigen, zijwaarts scrollbare rij onder de bovenbalk in plaats van buiten het scherm te vallen. Met één categorie is de bovenbalk ongewijzigd (56 px). Op smalle telefoons (≤380 px) is de bovenbalk iets compacter.
+
+**Bugfix: type-labels zonder kleur.** De CSS gebruikte het patroon `var(--kleur)22`, dat geen geldige CSS is; daardoor hadden de type-labels en de actieve tag-chip nooit een kleurvlak. Vervangen door `color-mix(...)`. Dit is hersteld voor de Home-onderdelen en de tag-keuze in het notitievenster.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen nieuwe JavaScript. Contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 139 / 335).
+- `renderReleasenotesLijst()`: alleen het HTML-sjabloon is aangepast (inline stijlen → klassen `note-titel`, `note-meta`, `note-tekst`, `note-tags`, `note-acties`, `note-verwijder`). `data-note`, de handlers (`bewerkNoteVanuitKnop`, `archiveerNote`, `verwijderNoteVanuitKnop`) en de filter-, archief- en importlogica zijn ongewijzigd.
+- De knoppen `btn-archief`, `btn-note-import`, `btn-note-autotag` en `btn-note-toevoegen` houden hun id's en hun inline `display:none` (de JS zet die per rol op zichtbaar). De oranje rand van de importknop zit nu in de klasse `home-btn-accent`.
+- `.note-kaart` en `.note-kaart-header` worden ook door de importlijst in het venster "Uit GitHub" gebruikt en zijn daar visueel mee gecontroleerd.
+- Er is bewust geen "Alle"-chip toegevoegd (dat vraagt JavaScript). Het filter wissen gaat zoals voorheen door een actieve chip opnieuw aan te tikken.
+- Gecontroleerd: `node --check`, contract-check en een headless render (Chromium) op 1280 px en 360/375/380/390/414 px, als admin en als trainer, met 1 en 2 categorieën, in donker en licht thema; tag-filter, archief-knop en het importvenster (met de echte CHANGELOG van GitHub). Geen console-errors, geen horizontale overflow.
+- Niet getest: inloggen/2FA, echte Supabase-data (de render-test gebruikt een nep-Supabase met voorbeeldnotities), echte telefoon (iOS), bewerken/archiveren/verwijderen van een echte releasenote.
+- Bekend, nog niet aangepakt: in dezelfde CSS staan nog ±27 andere plekken met het ongeldige patroon `var(--kleur)22`/`44` (o.a. badges en meldingen in andere tabs); die worden per tab meegenomen in de volgende patches.
+
 ## [oktober 2026 — patch 71] — 2026-10-07
 
 ### 🧭 Nieuwe navigatie: zijbalk en onderbalk

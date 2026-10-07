@@ -743,60 +743,85 @@
   }
   .programma-rij select:focus, .programma-rij input:focus { border-color: var(--accent); }
 
-  /* ── Homepage ── */
+  /* ── Homepage (patch 72: UI-herontwerp patch B, voorstel 2) ── */
   .home-logo-sectie {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 24px 40px;
-    min-height: 45vh;
+    padding: 28px 24px 26px;
     border-bottom: 1px solid var(--border);
   }
   .home-logo-svg {
-    width: min(400px, 80vw);
+    width: min(380px, 80vw);
     height: auto;
   }
-  .home-notes-sectie {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 32px 24px;
+  .home-subtitel {
+    margin-top: 16px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    color: var(--muted);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    text-align: center;
   }
+  .home-notes-sectie {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 0 8px;
+  }
+  .notes-kop {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px 12px; margin-bottom: 16px;
+  }
+  .notes-titel { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; }
+  .notes-acties { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .btn.home-btn-accent { border-color: var(--accent); color: var(--accent); }
   .note-kaart {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     padding: 16px 20px;
     margin-bottom: 12px;
   }
   .note-kaart-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px 10px;
     flex-wrap: wrap;
     margin-bottom: 6px;
   }
+  .note-titel { font-size: 15px; min-width: 0; }
+  .note-meta { font-size: 11px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .note-tekst { font-size: 13px; color: var(--muted); white-space: pre-line; line-height: 1.5; }
+  .note-tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .note-acties { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .note-acties .btn { padding: 5px 11px; font-size: 11px; }
+  .note-acties .note-verwijder { color: var(--accent2); }
+  /* Type-label als pil. (Het oude patroon var(--kleur)22 is ongeldige CSS; daarom color-mix.) */
   .note-badge {
     font-size: 11px;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 20px;
-    background: var(--accent)22;
-    color: var(--accent);
-    border: 1px solid var(--accent)44;
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
   }
-  .note-badge.bugfix { background: var(--accent2)22; color: var(--accent2); border-color: var(--accent2)44; }
-  .note-badge.update { background: var(--success)22; color: var(--success); border-color: var(--success)44; }
-  .note-badge.removed { background: var(--muted)22; color: var(--muted); border-color: var(--muted)44; }
+  .note-badge.bugfix { background: color-mix(in srgb, var(--accent2) 15%, transparent); color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 30%, transparent); }
+  .note-badge.update { background: color-mix(in srgb, var(--info) 15%, transparent); color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+  .note-badge.removed { background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); border-color: color-mix(in srgb, var(--muted) 30%, transparent); }
 
   /* ── Releasenote-tags (patch 68) ── */
-  .tag-filter-rij { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .tag-filter-rij { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .tag-filter-chip {
-    font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer;
+    font-size: 12.5px; padding: 6px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap;
     background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
     user-select: none; transition: border-color .15s, color .15s, background .15s;
   }
-  .tag-filter-chip.actief { background: var(--accent)22; border-color: var(--accent); color: var(--accent); }
+  .tag-filter-chip:hover { border-color: var(--accent); color: var(--text); }
+  .tag-filter-chip.actief { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: var(--accent); color: var(--accent); }
   .tag-pil {
     font-size: 11px; padding: 3px 9px; border-radius: 20px;
     background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
@@ -808,7 +833,7 @@
     color: var(--muted); user-select: none;
   }
   .tag-checkbox-chip input { margin: 0; cursor: pointer; }
-  .tag-checkbox-chip.aangevinkt { background: var(--accent)22; border-color: var(--accent); color: var(--accent); }
+  .tag-checkbox-chip.aangevinkt { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: var(--accent); color: var(--accent); }
   .tag-suggestie-hint { font-size: 11px; color: var(--accent); margin-bottom: 6px; }
 
   /* ── Wedstrijd kaart ── */
@@ -1451,6 +1476,45 @@
     #mob-meer button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
   }
 
+  /* Patch 72: Home en categorie-wissel op mobiel */
+  @media (max-width: 768px) {
+    .home-logo-sectie { padding: 14px 0 20px; }
+    .home-logo-svg { width: min(300px, 78vw); }
+    .home-subtitel { font-size: 13px; letter-spacing: 2px; margin-top: 12px; }
+    .home-notes-sectie { padding-top: 20px; }
+    .notes-acties { flex-basis: 100%; justify-content: flex-start; }
+    .tag-filter-rij {
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      margin-left: -14px; margin-right: -14px; padding: 0 14px 4px;
+    }
+    .tag-filter-rij::-webkit-scrollbar { display: none; }
+    .tag-filter-chip { flex: 0 0 auto; }
+    .note-kaart { padding: 14px 16px; }
+    .note-meta { flex-basis: 100%; margin-left: 0; order: 3; }
+
+    /* Categorie-wissel (alleen bij 2+ categorieën): eigen rij onder de bovenbalk, zij-scrollend */
+    header:has(#categorie-switcher:not(:empty)) {
+      flex-wrap: wrap; height: auto; min-height: 56px; row-gap: 6px; padding-top: 8px; padding-bottom: 8px;
+    }
+    header:has(#categorie-switcher:not(:empty)) #categorie-switcher {
+      order: 4; flex: 1 1 100%; min-width: 0; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none;
+    }
+    #categorie-switcher::-webkit-scrollbar { display: none; }
+    #categorie-switcher .cat-btn { flex: 0 0 auto; }
+  }
+  /* Smalle telefoons (≤374px): iets compactere bovenbalk zodat logo + knoppen op één rij passen */
+  @media (max-width: 374px) {
+    header { gap: 6px; }
+    header .logo { font-size: 17px; letter-spacing: .5px; }
+    header .sync-btn { width: 34px; height: 34px; }
+  }
+  /* Met categorie-rij wrapt de balk (geen krimp meer): daar is compact nodig t/m 380px */
+  @media (max-width: 380px) {
+    header:has(#categorie-switcher:not(:empty)) { column-gap: 6px; }
+    header:has(#categorie-switcher:not(:empty)) .logo { font-size: 17px; letter-spacing: .5px; }
+    header:has(#categorie-switcher:not(:empty)) .sync-btn { width: 34px; height: 34px; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -1543,16 +1607,16 @@
     </g>
   </g>
 </svg>
-      <div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Atletiekbeheertool · <span id="home-subtitle-cat">U16</span></div>
+      <div class="home-subtitel">Atletiekbeheertool · <span id="home-subtitle-cat">U16</span></div>
     </div>
 
     <!-- Releasenotes sectie -->
     <div class="home-notes-sectie">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;">📋 Releasenotes</div>
-        <div style="display:flex;gap:8px;">
+      <div class="notes-kop">
+        <div class="notes-titel">📋 Releasenotes</div>
+        <div class="notes-acties">
           <button class="btn btn-ghost btn-sm" id="btn-archief" style="display:none;" onclick="toggleArchief()">📦 Archief</button>
-          <button class="btn btn-ghost btn-sm" id="btn-note-import" style="display:none;border-color:var(--accent);color:var(--accent);" onclick="openReleasenoteImport()">📥 Uit GitHub</button>
+          <button class="btn btn-ghost btn-sm home-btn-accent" id="btn-note-import" style="display:none;" onclick="openReleasenoteImport()">📥 Uit GitHub</button>
           <button class="btn btn-ghost btn-sm" id="btn-note-autotag" style="display:none;" onclick="autoTagReleasenotes()">🏷️ Automatisch taggen</button>
           <button class="btn btn-primary btn-sm" id="btn-note-toevoegen" style="display:none;" onclick="openNoteModal()">+ Toevoegen</button>
         </div>
@@ -9887,6 +9951,7 @@ function renderReleasenotesLijst() {
   }
 
   const typeLabel = { feature: "✨ Feature", bugfix: "🐛 Bugfix", update: "🔧 Update", removed: "🗑️ Verwijderd" };
+  // patch 72: kaartopmaak via klassen i.p.v. inline-stijlen (alleen opmaak; ids, data-note en handlers ongewijzigd)
 
   lijst.innerHTML = data.map(n => {
     const isAdmin = huidigeProfiel?.rol === "admin";
@@ -9897,15 +9962,15 @@ function renderReleasenotesLijst() {
     <div class="note-kaart">
       <div class="note-kaart-header">
         <span class="note-badge ${n.type}">${typeLabel[n.type] || n.type}</span>
-        <strong style="font-size:14px;">${esc(n.titel)}</strong>
-        <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
+        <strong class="note-titel">${esc(n.titel)}</strong>
+        <span class="note-meta">${esc(n.versie)} · ${new Date(n.gepubliceerd_op).toLocaleDateString("nl-NL")}</span>
       </div>
-      ${n.beschrijving ? `<div style="font-size:13px;color:var(--muted);white-space:pre-line;">${esc(n.beschrijving)}</div>` : ""}
-      ${tags.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">${tags.map(tk => `<span class="tag-pil">${esc((RELEASE_TAG_MAP[tk] || {}).label || tk)}</span>`).join("")}</div>` : ""}
-      ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${n.beschrijving ? `<div class="note-tekst">${esc(n.beschrijving)}</div>` : ""}
+      ${tags.length ? `<div class="note-tags">${tags.map(tk => `<span class="tag-pil">${esc((RELEASE_TAG_MAP[tk] || {}).label || tk)}</span>`).join("")}</div>` : ""}
+      ${isAdmin ? `<div class="note-acties">
         <button class="btn btn-ghost btn-sm" data-note='${payload}' onclick="bewerkNoteVanuitKnop(this)">✏️ Bewerken</button>
         ${!toonArchief ? `<button class="btn btn-ghost btn-sm" onclick="archiveerNote('${n.id}')">📦 Archiveren</button>` : ""}
-        <button class="btn btn-ghost btn-sm" style="color:var(--accent2);" data-note='${payload}' onclick="verwijderNoteVanuitKnop(this)">🗑️ Verwijderen</button>
+        <button class="btn btn-ghost btn-sm note-verwijder" data-note='${payload}' onclick="verwijderNoteVanuitKnop(this)">🗑️ Verwijderen</button>
       </div>` : ""}
     </div>`;
   }).join("");

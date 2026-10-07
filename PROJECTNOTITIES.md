@@ -44,6 +44,18 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### UI-herontwerp, patch B: Home (patch 72, okt 2026)
+Home volgens voorstel 2 (logo + releasenotes). Alleen uiterlijk, geen databasewijziging, geen nieuwe JavaScript; contract-check 0 verdwenen/0 nieuw. Gecommit direct op `main`; tag `ui-A` staat op de commit vóór deze patch (patch 71, `0d3576f`).
+- **Wat is aangepast:** CSS van `.home-*`, `.notes-*`, `.note-*`, `.tag-filter-*`; HTML van de releasenotes-kop en de ondertitel; alleen het sjabloon in `renderReleasenotesLijst()` (inline stijlen → klassen). `data-note`, handlers, id's en de filter-/archief-/importlogica zijn ongewijzigd.
+- **Inline `display:none` blijft:** de vier beheerknoppen (`btn-archief`, `btn-note-import`, `btn-note-autotag`, `btn-note-toevoegen`) zetten hun zichtbaarheid via `style.display` in `laadReleasenotes()`; die inline stijl dus nooit naar een klasse verplaatsen.
+- **Gedeelde klassen:** `.note-kaart`/`.note-kaart-header` worden ook gebruikt in het importvenster (`renderReleasenoteImport()`).
+- **Ongeldige CSS-valkuil:** `var(--kleur)22` is geen geldige CSS (variabele en hex-alfa kun je niet plakken). Gebruik `color-mix(in srgb, var(--kleur) 15%, transparent)`. Hersteld voor de Home-onderdelen en `.tag-checkbox-chip.aangevinkt`; ±27 andere plekken in de CSS hebben nog hetzelfde probleem en worden per tab meegenomen.
+- **Type-kleuren:** feature = `--success`, bugfix = `--accent2`, update = `--info`, removed = `--muted`.
+- **Categorie-wissel mobiel:** `header:has(#categorie-switcher:not(:empty))` wrapt de bovenbalk naar twee rijen (switcher `order:4`, zijwaarts scrollbaar). Zonder tweede categorie blijft de balk 56px. ≤374px (altijd) en ≤380px (bij categorie-rij) is de bovenbalk compacter (logo 17px, kleinere knoppen) omdat een wrappende flexbox niet meer krimpt.
+- **Bewust niet gebouwd:** een "Alle"-chip (vraagt JS) en de dashboardkaarten uit de eerste mockup.
+- **Test-aanpak:** zoals bij patch 71 (headless Chromium + nep-Supabase met ~60 ms vertraagde `getSession`); de importlijst haalt tijdens de test de echte CHANGELOG van GitHub op.
+- **Niet getest in dit kanaal:** inloggen/2FA, echte data, echte telefoon (iOS), bewerken/archiveren/verwijderen van een echte releasenote.
+
 ### UI-herontwerp, patch A: navigatie en design tokens (patch 71, okt 2026)
 Eerste stap van het UI-herontwerp (zie werkdocument UI/UX-herontwerp). Alleen uiterlijk, geen databasewijziging, geen bestaande functie gewijzigd. Gecommit direct op `main`; terugdraaien kan via de tag `voor-ui-herontwerp-p70` (commit `2213781` = patch 70 + keepalive-workflow van 25 sep; `app.html` is daar identiek aan patch 70, commit `aed5cef`).
 - **Fasering:** A navigatie + tokens (klaar, patch 71) → B Home → C Atleten/Prestaties → D Wedstrijden/Wedstrijddag → E Opstelling → F Punten/Profiel/Admin. Eén patch = één commit, alleen UI.
