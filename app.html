@@ -411,7 +411,7 @@
   tbody tr:hover { background: var(--surface2); }
   tbody td {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border)44;
+    border-bottom: 1px solid var(--border);
     vertical-align: middle;
   }
   .pr-badge {
@@ -610,9 +610,9 @@
     font-weight: 800; font-size: 18px; text-transform: uppercase;
   }
   .ploeg-punten {
-    background: var(--accent)22;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
     color: var(--accent);
-    border: 1px solid var(--accent)44;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700; font-size: 13px;
     padding: 3px 10px; border-radius: 20px;
@@ -632,8 +632,8 @@
     line-height: 1.4;
   }
   .ploeg-actie-btn:hover {
-    background: var(--accent)18;
-    border-color: var(--accent)66;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   }
   .onderdeel-rij {
     display: grid;
@@ -641,7 +641,7 @@
     gap: 8px;
     align-items: center;
     padding: 10px 20px;
-    border-bottom: 1px solid var(--border)44;
+    border-bottom: 1px solid var(--border);
     transition: background .15s;
     overflow: visible;
   }
@@ -684,7 +684,7 @@
     vertical-align: middle;
   }
   .atleet-slot.bezet { border-style: solid; border-color: var(--border); background: var(--surface); }
-  .atleet-slot.conflict { border-color: var(--accent2); background: var(--accent2)11; }
+  .atleet-slot.conflict { border-color: var(--accent2); background: color-mix(in srgb, var(--accent2) 8%, transparent); }
   .atleet-slot .slot-naam { flex: 1; }
   .atleet-slot .slot-punten {
     font-family: 'Barlow Condensed', sans-serif;
@@ -696,7 +696,7 @@
     font-size: 14px; cursor: pointer; padding: 2px 4px;
     border-radius: 4px;
   }
-  .atleet-slot .slot-remove:hover { color: var(--accent2); background: var(--accent2)22; }
+  .atleet-slot .slot-remove:hover { color: var(--accent2); background: color-mix(in srgb, var(--accent2) 15%, transparent); }
   .conflict-badge {
     font-size: 10px; color: var(--accent2);
     margin-left: 6px;
@@ -858,13 +858,13 @@
     letter-spacing: .5px;
     padding: 2px 8px;
     border-radius: 20px;
-    background: var(--accent)22;
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
     color: var(--accent);
-    border: 1px solid var(--accent)44;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     white-space: nowrap;
     vertical-align: middle;
   }
-  .wedstrijd-card.is-finale { border-color: var(--accent)66; }
+  .wedstrijd-card.is-finale { border-color: var(--accent); }
   .wedstrijd-card.afgelopen { opacity: .62; }
   .wedstrijd-card.afgelopen:hover { opacity: 1; }
   .wedstrijd-card.afgelopen .wedstrijd-datum { color: var(--muted); }
@@ -2609,7 +2609,7 @@
 
     <!-- Stap 2: preview -->
     <div id="pdf-import-stap2" style="display:none;">
-      <div id="pdf-import-waarschuwing" style="display:none;background:var(--accent2)22;border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+      <div id="pdf-import-waarschuwing" style="display:none;background:color-mix(in srgb, var(--accent2) 13%, transparent);border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <!-- Jongens -->
@@ -2670,7 +2670,7 @@
 
     <!-- Stap 3: preview (alleen het gekozen geslacht) + eventueel vraagscherm -->
     <div id="finale-import-stap3" style="display:none;">
-      <div id="finale-import-waarschuwing" style="display:none;background:var(--accent2)22;border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
+      <div id="finale-import-waarschuwing" style="display:none;background:color-mix(in srgb, var(--accent2) 13%, transparent);border:1px solid var(--accent2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;"></div>
       <div id="finale-preview-wrap"></div>
       <div id="finale-vraag-wrap" style="display:none;margin-top:16px;"></div>
     </div>
@@ -4939,7 +4939,7 @@ function renderPRImportStap2(onbekend) {
 
       // Standaard aangevinkt: altijd aangevinkt (gebruiker kan uitvinken)
       return `
-        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)22;">
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);">
           <input type="checkbox" id="${checkId}" data-rij="${rijIdx}" data-disc="${dIdx}" checked style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
           <label for="${checkId}" style="flex:1;font-size:13px;cursor:pointer;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
             <span style="min-width:130px;font-weight:600;">${esc(d.disc)}</span>
@@ -5748,7 +5748,7 @@ function addProgrammaRijMet(p) {
       <option value="A" ${p.startgroep === "A" || !p.startgroep ? "selected" : ""}>Groep A</option>
       <option value="B" ${p.startgroep === "B" ? "selected" : ""}>Groep B</option>
     </select>
-    <button onclick="this.parentElement.remove()" style="background:var(--accent2)22;border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+    <button onclick="this.parentElement.remove()" style="background:color-mix(in srgb, var(--accent2) 15%, transparent);border:none;color:var(--accent2);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
   `;
   lijst.appendChild(div);
   // Zet de waarde programmatisch voor betrouwbare weergave

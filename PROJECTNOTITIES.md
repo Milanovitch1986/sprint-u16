@@ -44,6 +44,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 
 ## ⚠️ Bekende technische beslissingen
 
+### Opruimpatch H: ongeldige var(--kleur)NN-waarden (patch 82, okt 2026)
+15 regels gewijzigd, geen nieuwe regels, geen nieuwe functies; contract-check 0 verdwenen/0 nieuw. Tag `ui-H` staat op de commit vóór deze patch (patch 81, `2ce08a2`). Direct na de tests gecommit (afgesproken: alleen kleuren en lijntjes).
+- **Het probleem:** `var(--accent)22` (een variabele met een hex-alfa erachter geplakt) is geen geldige CSS. De declaratie is "invalid at computed-value time" en wordt `unset`: een `background` wordt transparant, een `border-bottom: 1px solid <ongeldig>` verdwijnt helemaal, een `border-color` valt terug op `currentcolor` (daarom waren finale-randen wit). Gebruik altijd `color-mix(in srgb, var(--kleur) 15%, transparent)`; hex-alfa → procent: `22`≈13%, `44`≈27%, `66`≈40%, `11`≈7%, `18`≈9%.
+- **Gekozen waarden:** tinten 15% (hover 10%, conflict 8%), randen 35–40%; scheidingslijntjes de volle `var(--border)` (zoals bij Prestaties/Admin, de 27% uit het origineel was vrijwel onzichtbaar).
+- **Controle op regressies:** zoek opnieuw met de regex `var\(--[a-z0-9]+\)[0-9a-f]{2}\b`; sinds patch 82 zijn er 8 treffers, allemaal uitlegtekst in CSS-commentaar. Elk nieuw treffer buiten commentaar is een fout.
+- **Print:** `.onderdeel-rij` krijgt in print zelf `border-bottom: 1px solid #eee` (blok bij regel ±959); de directe afdruk van de Opstelling-pagina is pixel-identiek gemeten. De overschrijvingen per scherm uit patch 75/77/78/81 staan er nog; ze zijn overbodig maar onschadelijk (weggehaald is alleen extra wijziging).
+- **Pixelvergelijking als methode:** screenshot van 13 schermen (desktop) en 12 (mobiel) oud tegen nieuw met `PIL.ImageChops.difference`; wacht ≥ 5,8 s na het laden zodat de toast weg is, anders krijg je ruis. Anti-aliasing aan de rand van ronde knoppen geeft enkele pixels verschil zonder betekenis.
+- **Niet getest in dit kanaal:** echte telefoon, echte PR-import met een Excel-bestand.
+- **Status UI-herontwerp:** afgerond (patch 71–81) plus deze opruimpatch. Alleen nog optioneel: de bewust overgeslagen mockup-onderdelen die JavaScript of nieuwe data vragen.
+
 ### UI-herontwerp, patch G: gedeelde vensters/modals (patch 81, okt 2026)
 Alleen een CSS-blok (±16 regels); **geen HTML, geen JS**; inline scripts byte-voor-byte identiek aan patch 80; contract-check 0 verdwenen/0 nieuw. Tag `ui-G` staat op de commit vóór deze patch (patch 80, `9cd96a5`). Live gezet nadat Milanovitch "commit nu" zei.
 - **Structuur van de vensters:** 16 `.modal-overlay`'s in de vaste HTML (`atleetModal`, `prestatieModal`, `waTeamModal`, `onderdeelModal`, `wdAfrondModal`, `wdAtleetOnderdelenModal`, `uitnodigingModal`, `categorieModal`, `wedstrijdModal`, `programmaModal`, `pdfImportModal`, `finaleImportModal`, `prOverzichtModal`, `noteModal`, `releasenoteImportModal`, `nieuweOpenWedstrijdModal`) plus de aparte `confirmOverlay` (class `confirm-overlay`/`confirm-box`, geopend door `bevestig()`). Open/dicht = class `open` op de overlay (`openModal`/`closeModal`); `display` is altijd `flex`, test dus op de class.

@@ -6,6 +6,30 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 82] — 2026-10-08
+
+### 🧹 Opruimen: ontbrekende lijntjes en tinten hersteld
+
+<!--RELEASENOTE
+versie: Patch 82
+titel: 🧹 Opruimen: ontbrekende lijntjes en tinten hersteld
+type: bugfix
+tags: techniek
+beschrijving: Een opruimactie van kleine kleurfoutjes. Op een paar plekken ontbraken lijntjes of een lichte kleurtint doordat de oude kleurinstelling niet geldig was: de scheidingslijntjes tussen de onderdelen in een ploeg bij Opstelling, de lijntjes in stap 2 van het PR-overzicht importeren, de lichte tint bij het hoveren over de knopjes in de kop van een ploeg, en de lichte rode achtergrond van het ✕-knopje bij een programmarij. Alles werkt hetzelfde als voorheen: alleen het uiterlijk is veranderd.
+-->
+
+Twaalfde stap (opruimen) na het UI-herontwerp. Alleen kleuren en lijntjes; geen functie, handler of database is aangepast.
+
+**Hersteld.** Een regel als `background: var(--accent)22` is geen geldige CSS, waardoor de browser de instelling negeert. Dat gold voor 15 plekken. Nu zijn ze geldig gemaakt (`color-mix(...)` voor tinten, de volle lijnkleur voor scheidingslijntjes). Zichtbaar verandert: de lijntjes tussen onderdeel-rijen in een ploeg (Opstelling), de lijntjes in stap 2 van het PR-overzicht, de hover-tint op de knopjes in de ploegkop, de rode tint achter ✕ bij een programmarij en de lijntjes in de overige tabellen. Op de plekken die ik in eerdere patches al per scherm had overschreven (finale-badge en -rand in de lijsten, ploegpunten, conflict-slot, importwaarschuwingen) is het resultaat gelijk gebleven; daar is alleen de basisdefinitie nu ook geldig.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336). In totaal 15 regels gewijzigd (geen toevoegingen van nieuwe regels): 11 CSS-regels, 2 inline stijlen in de vaste HTML (importwaarschuwingen) en 2 sjablonen in `renderPRImportStap2()` en `addProgrammaRijMet()` (alleen de kleurwaarde in de stijl; de `onclick`-handlers zijn letterlijk gelijk, en de JavaScript buiten die twee functies is byte-voor-byte identiek).
+- De acht overgebleven treffers van de zoek-regex `var\(--[a-z0-9]+\)[0-9a-f]{2}\b` zijn uitsluitend uitlegtekst in CSS-commentaar van eerdere patches; er staat geen echte ongeldige instelling meer in het bestand.
+- Printweergave: de afdrukregels raken `.onderdeel-rij` (print zet zelf `border-bottom: 1px solid #eee`), `.atleet-slot` en `.slot-remove`. De directe afdruk van de Opstelling-pagina is gemeten pixel-identiek (oud tegen nieuw). `printOpstelling()` en `printPloeg()` bouwen een eigen document en zijn onafhankelijk.
+- Gecontroleerd (oud tegen nieuw, nep-backend, pixelvergelijking van 13 schermen op 1280 px en 12 op 390 px): alle schermen pixel-identiek, behalve de bedoelde lijntjes (Opstelling-detail is 1 px per onderdeel-rij hoger: 4 px; Punten subtiele tabellijntjes). Op Atleten mobiel zijn 7 pixels anders door anti-aliasing aan de rand van de ronde plusknop (geen echte wijziging). Specifiek: de scheidingslijn op `.onderdeel-rij` (0 px → 1 px), de hover van `.ploeg-actie-btn` (geen tint → oranje tint), de rode tint op de ✕ bij een programmarij (handler ongewijzigd, rij verdwijnt bij klikken), en stap 2 van het PR-overzicht echt gerenderd met voorbeelddata (lijntjes aanwezig, tekst identiek).
+- Niet getest: een echte telefoon; de echte PR-import met een Excel-bestand.
+
 ## [oktober 2026 — patch 81] — 2026-10-07
 
 ### 🪟 Vensters (modals): betere opmaak en twee fouten verholpen
