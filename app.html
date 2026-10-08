@@ -1828,6 +1828,24 @@
   details.admin-sectie:not([open]) > .admin-kop::after { transform: rotate(-90deg); }
   details.admin-sectie:not([open]) > .admin-kop { border-bottom: none; }
 
+  /* ══ Patch 81: gedeelde vensters (UI-herontwerp patch G) ══ */
+  /* Alleen op scherm; inline max-height/overflow van afzonderlijke vensters blijft winnen. */
+  @media screen {
+    .modal { border-radius: var(--radius-lg); max-height: 90vh; overflow-y: auto; }
+    /* Een rij met 3 of meer knoppen (Programma) kon niet omslaan en viel op mobiel half buiten beeld.
+       Bewust alleen voor zulke rijen (een door de JS verborgen derde knop, style="display:none", telt niet mee):
+       rijen met 2 zichtbare knoppen blijven precies zoals ze waren. */
+    .modal-actions:has(> :not([style*="none"]) ~ :not([style*="none"]) ~ :not([style*="none"])) { flex-wrap: wrap; }
+    /* Het oude patroon var(--accent2)22 (inline) was ongeldige CSS: de tint ontbrak; inline vraagt om !important */
+    #pdf-import-waarschuwing, #finale-import-waarschuwing { background: color-mix(in srgb, var(--accent2) 13%, transparent) !important; }
+  }
+  @media screen and (min-width: 769px) {
+    .modal-overlay { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  }
+  @media screen and (max-width: 768px) {
+    .modal-actions:has(> :not([style*="none"]) ~ :not([style*="none"]) ~ :not([style*="none"])) .btn { flex: 1 1 auto; justify-content: center; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }

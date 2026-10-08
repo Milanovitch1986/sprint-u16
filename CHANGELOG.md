@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 81] — 2026-10-07
+
+### 🪟 Vensters (modals): betere opmaak en twee fouten verholpen
+
+<!--RELEASENOTE
+versie: Patch 81
+titel: 🪟 Vensters (modals): betere opmaak en twee fouten verholpen
+type: bugfix
+tags: techniek
+beschrijving: De pop-upvensters (atleet, wedstrijd, programma, afronden en alle andere) zijn opgefrist met ronde hoeken en op de computer een zacht vervaagde achtergrond. Twee fouten zijn verholpen: in het Programma-venster op mobiel viel de knop "Annuleren" half buiten beeld, en op een laag computerscherm konden vensters als "Atleet toevoegen" boven of onder buiten beeld vallen zonder dat je kon scrollen. Ook het afronden van een wedstrijd waarbij "Wedstrijd beëindigen" erbij staat past nu op mobiel. Er is verder niets aan de werking veranderd.
+-->
+
+Elfde stap van het UI-herontwerp (patch G: de gedeelde vensters). Alleen CSS; **geen enkele regel JavaScript of HTML is gewijzigd**.
+
+**Fouten verholpen.**
+1. *Programma-venster op mobiel.* De knoppenrij met drie knoppen (Annuleren, Afdrukken, Opslaan) kon niet omslaan, waardoor "Annuleren" op 390 px 43 px en op 360 px 72 px buiten het venster viel. Nu slaat de rij om en staan Annuleren en Afdrukken naast elkaar met Opslaan eronder. Hetzelfde probleem had het Afrond-venster van Wedstrijddag zodra de knop "Wedstrijd beëindigen" zichtbaar is (drie knoppen): ook die past nu.
+2. *Vensters op een laag scherm.* Op desktop hadden vensters geen maximumhoogte (alleen op mobiel). Op een scherm van 500 px hoog vielen "Atleet toevoegen" (492 px) en "Notitie" (491 px) boven en onder buiten beeld. Nu hebben alle vensters een maximumhoogte van 90% van het scherm en scrollen ze binnen het venster.
+
+**Opmaak.** Ronde hoeken (16 px) en op desktop een zachte vervaging van de achtergrond (niet op mobiel, om haperingen op oudere telefoons te voorkomen). De twee waarschuwingsblokken bij de PDF- en Finale-import hebben weer hun rode tint (die ontbrak door een ongeldige kleurwaarde).
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL, geen HTML, geen JavaScript. De inline scripts zijn byte-voor-byte identiek aan patch 80; contract-check: 0 id's, handlers of functies verdwenen en ook geen nieuwe (271 / 140 / 336). Het is een pure toevoeging van een CSS-blok (±16 regels).
+- Alles binnen `@media screen`: de printweergave is pixel-identiek (gemeten met een open venster, oud tegen nieuw; de berekende waarden in print zijn gelijk). Inline `max-height`/`overflow` van afzonderlijke vensters (o.a. Programma, Importvensters) blijft winnen.
+- Het omslaan van knoppenrijen is bewust beperkt tot rijen met drie of meer *zichtbare* knoppen: `.modal-actions:has(> :not([style*="none"]) ~ :not([style*="none"]) ~ :not([style*="none"]))`. Rijen met twee zichtbare knoppen (waaronder de bevestigingsdialoog en het Afrond-venster in de gewone situatie) zijn daardoor gemeten identiek aan de oude versie (zelfde hoogte en posities op 390 en 360 px). Een eerdere variant die alle rijen liet omslaan, liet de bevestigingsdialoog op 360 px onnodig onder elkaar staan en is daarom niet gekozen.
+- Gecontroleerd (oud tegen nieuw): alle 17 vensters (16 + bevestigingsdialoog) op 1280x720, 1280x500, 390x844 en 360x640: geen enkel venster heeft nog inhoud buiten het venster of buiten beeld; verschillen alleen de bedoelde (ronde hoeken, scrollen op laag scherm, Programma- en Afrond-venster). Echte bediening: openen met de echte knoppen, Annuleren, klikken naast het venster sluit, klikken in het venster sluit niet, de bevestigingsdialoog (ja, nee en de meldingsvariant) geeft dezelfde uitkomsten.
+- Niet getest: echt opslaan (de nep-backend geeft bij het opslaan van een atleet in zowel de oude als de nieuwe versie dezelfde foutmelding), het toetsenbordgedrag op een echte telefoon bij het invullen in een venster, en de vervaging op een echte telefoon (staat daar uit).
+- Bewust niet gebouwd: vensters als "bottom sheet" op mobiel (raakt het toetsenbordgedrag en is niet op een echte telefoon te testen).
+
 ## [oktober 2026 — patch 80] — 2026-10-07
 
 ### ⚙️ Admin in de nieuwe stijl, met inklapbare secties
