@@ -1840,8 +1840,8 @@
   }
 
   /* ══ Patch 85: Wedstrijden (tabs Aankomend/Afgelopen, badge "Over n d", knop Opstelling, ondertitel) ══ */
-  .wedstrijden-sub { flex: 1 1 100%; margin-top: -6px; font-size: 13px; color: var(--muted); }
-  .wedstrijden-sub:empty { display: none; }
+  .wedstrijden-sub, .atleten-sub { flex: 1 1 100%; margin-top: -6px; font-size: 13px; color: var(--muted); }
+  .wedstrijden-sub:empty, .atleten-sub:empty { display: none; }
   .wedstrijd-tabs { margin: 0 0 16px; }
   #wedstrijden-grid .wedstrijd-kop { flex-wrap: wrap; }
   .wedstrijd-over {
@@ -1858,6 +1858,54 @@
   }
   @media print {
     .wedstrijd-tabs, .wedstrijden-sub, .wedstrijd-over { display: none; }
+  }
+
+  /* ══ Patch 86: Atleten (⋯-menu per rij, ondertitel, doorstroming als compacte balk) ══ */
+  .atleet-menu-knop {
+    flex-shrink: 0; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent; border-radius: 50%; color: var(--muted);
+    font-size: 22px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .atleet-menu-knop:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  /* Op mobiel zweeft de ronde "+"-knop rechtsonder boven de onderbalk (60 px + 16 px marge + 52 px hoog). Extra ruimte onderaan,
+     zodat de onderste atleet (⋯-knop) en de onderste wedstrijd er helemaal boven kunnen scrollen en niet half eronder blijven liggen. */
+  @media screen and (max-width: 768px) {
+    #view-atleten, #view-wedstrijden { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px + 52px + 12px); }
+    /* Ondertitel direct onder de titel (de knoppenrij komt daarna) */
+    #view-atleten .page-header .atleten-sub { order: 1; }
+    #view-atleten .page-header .ml-auto { order: 2; }
+    /* Doorstroombalk: titel en pijltje op de eerste regel, de korte tekst op een tweede regel */
+    .doorstroom-kop { flex-wrap: wrap; row-gap: 2px; }
+    .doorstroom-kop > span:first-child { white-space: nowrap; }
+    .doorstroom-kop::after { margin-left: auto; }
+    .doorstroom-kop-tekst { order: 3; flex: 1 1 100%; margin-left: 0; }
+  }
+  /* Op scherm vervangt het ⋯ het pijltje; in print blijft het pijltje zoals het was */
+  @media screen { .atleet-rij.heeft-menu .atleet-chevron { display: none; } }
+  .atleet-menu {
+    display: none; position: fixed; z-index: 320; min-width: 210px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .atleet-menu.open { display: block; }
+  .atleet-menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; text-align: left;
+    background: transparent; border: none; border-radius: var(--radius-sm); color: var(--text);
+    font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .atleet-menu button:hover { background: var(--surface2); }
+  .atleet-menu button.gevaar { color: var(--accent2); }
+  .doorstroom-kop { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .doorstroom-kop-tekst { margin-left: auto; text-transform: none; letter-spacing: 0; font-family: inherit; font-weight: 600; font-size: 12px; color: var(--accent); }
+  .doorstroom-kop::after { content: "▾"; font-size: 14px; transition: transform .2s; }
+  #doorstroom-paneel.open .doorstroom-kop::after { transform: rotate(180deg); }
+  #doorstroom-paneel:not(.open) #doorstroom-lijst { display: none; }
+  #doorstroom-paneel:not(.open) .doorstroom-kop { border-bottom: 0; }
+  @media print {
+    .atleten-sub, .atleet-menu-knop, .atleet-menu { display: none; }
+    .doorstroom-kop { display: block; cursor: default; }
+    .doorstroom-kop::after, .doorstroom-kop-tekst { display: none; }
+    #doorstroom-paneel:not(.open) #doorstroom-lijst { display: block; }
   }
 
   @media print {
@@ -1986,6 +2034,7 @@
         </label>
         <button class="btn btn-primary fab-mobiel" aria-label="Atleet toevoegen" onclick="openAtleetModal()">+ Atleet toevoegen</button>
       </div>
+      <div class="atleten-sub" id="atleten-sub"></div>
     </div>
 
     <!-- Selectie toolbar (verborgen tot selectiemodus aan is) -->
@@ -1998,7 +2047,7 @@
     <!-- Doorstroming (patch 49 → verplaatst naar Atleten-tab in patch 50).
          Alleen zichtbaar als er atleten klaarstaan. -->
     <div id="doorstroom-paneel" class="detail-panel" style="display:none;margin-bottom:16px;">
-      <div class="section-label">🔀 Doorstroming</div>
+      <div class="section-label doorstroom-kop" onclick="toggleDoorstroomPaneel()"><span>🔀 Doorstroming</span><span class="doorstroom-kop-tekst" id="doorstroom-kop-tekst"></span></div>
       <div id="doorstroom-lijst" style="padding:16px;"></div>
     </div>
 
@@ -2826,6 +2875,7 @@
   </div>
 </div>
 
+<div id="atleet-menu" class="atleet-menu" role="menu"></div>
 <div id="toast"></div>
 
 <script>
@@ -3292,6 +3342,14 @@ function renderAtleten() {
     return true;
   });
 
+  // Patch 86: ondertitel met de samenstelling van de hele categorie (niet van de gefilterde lijst)
+  const subEl = document.getElementById("atleten-sub");
+  if (subEl) {
+    const nM = atleten.filter(a => a.geslacht === "M").length;
+    const nV = atleten.filter(a => a.geslacht === "V").length;
+    subEl.textContent = atleten.length ? nM + " jongen" + (nM === 1 ? "" : "s") + " · " + nV + " meisje" + (nV === 1 ? "" : "s") : "";
+  }
+
   document.getElementById("atleten-count").textContent = list.length;
   const grid = document.getElementById("atleten-grid");
 
@@ -3313,7 +3371,7 @@ function renderAtleten() {
       : "";
     // patch 73: rij-opmaak via klassen (alleen opmaak; data-id, onclick-handlers en card-checkbox ongewijzigd)
     return `
-      <div class="card atleet-rij ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""}" data-id="${a.id}"
+      <div class="card atleet-rij ${selecteerModus ? "selecteerbaar" : ""} ${isSel ? "geselecteerd" : ""} ${selecteerModus ? "" : "heeft-menu"}" data-id="${a.id}"
            onclick="${selecteerModus ? `toggleSelectie('${a.id}', event)` : `openAtleetModal('${a.id}')`}">
         ${cbHtml}
         <div class="detail-avatar atleet-avatar">${initials}</div>
@@ -3322,9 +3380,63 @@ function renderAtleten() {
           <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr} · <span class="atleet-aantal">${cnt} prestatie${cnt !== 1 ? "s" : ""}</span></div>
         </div>
         <div class="card-badge ${gBadge}">${gLabel}</div>
+        ${selecteerModus ? "" : `<button type="button" class="atleet-menu-knop" aria-label="Meer acties voor ${esc(a.naam || "")}" aria-haspopup="menu" onclick="toggleAtleetMenu('${a.id}', event)">⋯</button>`}
         <span class="atleet-chevron" aria-hidden="true">›</span>
       </div>`;
   }).join("");
+}
+
+function toggleAtleetMenu(id, event) {
+  // ⋯-menu bij een atletenrij: Bewerken, Prestaties bekijken, Verwijderen (patch 86)
+  if (event) event.stopPropagation();
+  const menu = document.getElementById("atleet-menu");
+  if (!menu) return;
+  if (menu.classList.contains("open") && menu.dataset.atleetId === String(id)) { sluitAtleetMenu(); return; }
+  const a = atleten.find(x => String(x.id) === String(id));
+  if (!a) return;
+  menu.dataset.atleetId = String(id);
+  menu.innerHTML = `<button type="button" role="menuitem" onclick="atleetMenuActie('bewerk', '${a.id}')">✏️ Bewerken</button>`
+    + `<button type="button" role="menuitem" onclick="atleetMenuActie('prestaties', '${a.id}')">📈 Prestaties bekijken</button>`
+    + `<button type="button" role="menuitem" class="gevaar" onclick="atleetMenuActie('verwijder', '${a.id}')">🗑️ Verwijderen</button>`;
+  menu.classList.add("open");
+  // Positie: onder de knop, rechts uitgelijnd; past dat niet, dan erboven. Altijd binnen het scherm.
+  const knop = event && event.currentTarget ? event.currentTarget : null;
+  const r = knop ? knop.getBoundingClientRect() : { top: 80, bottom: 80, right: window.innerWidth - 16 };
+  const mh = menu.offsetHeight, mw = menu.offsetWidth;
+  let top = r.bottom + 4;
+  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+  const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
+  menu.style.top = top + "px";
+  menu.style.left = left + "px";
+  // Sluiten bij een klik ernaast, Escape, scrollen of draaien (eenmalig geregistreerd)
+  if (!window.__atleetMenuLuisteraars) {
+    window.__atleetMenuLuisteraars = true;
+    document.addEventListener("click", e => { if (!e.target.closest("#atleet-menu")) sluitAtleetMenu(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") sluitAtleetMenu(); });
+    window.addEventListener("scroll", sluitAtleetMenu, true);
+    window.addEventListener("resize", sluitAtleetMenu);
+  }
+}
+
+function sluitAtleetMenu() {
+  const menu = document.getElementById("atleet-menu");
+  if (menu) { menu.classList.remove("open"); delete menu.dataset.atleetId; }
+}
+
+function atleetMenuActie(actie, id) {
+  sluitAtleetMenu();
+  if (actie === "bewerk") { openAtleetModal(id); return; }
+  if (actie === "prestaties") {
+    showTab("prestaties");   // showTab vult de atletenlijst van het filter opnieuw (populateAtleetSelects)
+    const sel = document.getElementById("prestatie-atleet-filter");
+    if (sel) sel.value = String(id);
+    renderPrestaties();
+    return;
+  }
+  if (actie === "verwijder") {
+    editAtleetId = id;   // deleteAtleet() werkt op de atleet van het bewerkvenster; dezelfde vraag en dezelfde verwijdering
+    deleteAtleet();
+  }
 }
 
 // ── Prestaties render ─────────────────────────────────────────
@@ -9653,7 +9765,25 @@ async function laadDoorstroming() {
   const paneel = document.getElementById("doorstroom-paneel");
   if (paneel) paneel.style.display = doorstroomKandidaten.length ? "" : "none";
   renderDoorstroomLijst();
+  werkDoorstroomKopBij();
   renderDoorstroomMelding();
+}
+
+function toggleDoorstroomPaneel() {
+  // Klapt het doorstroompaneel open of dicht (patch 86); de inhoud blijft in de pagina, dus de vinkjes blijven bestaan
+  const paneel = document.getElementById("doorstroom-paneel");
+  if (paneel) paneel.classList.toggle("open");
+}
+
+function werkDoorstroomKopBij() {
+  // Korte tekst op de balk van het paneel, bijv. "2 atleten staan klaar · 1 geblokkeerd" (patch 86)
+  const el = document.getElementById("doorstroom-kop-tekst");
+  if (!el) return;
+  const n = doorstroomKandidaten.filter(k => k.doelCat).length;
+  const geblokkeerd = doorstroomKandidaten.length - n;
+  let tekst = n ? n + (n === 1 ? " atleet staat" : " atleten staan") + " klaar" : "niemand kan nu doorstromen";
+  if (geblokkeerd) tekst += " · " + geblokkeerd + " geblokkeerd";
+  el.textContent = tekst;
 }
 
 function renderDoorstroomLijst() {
@@ -9745,7 +9875,7 @@ function renderDoorstroomMelding() {
     <div class="doorstroom-banner">
       <span style="font-size:18px;">🔀</span>
       <span><b>${verplaatsbaar} atlet${verplaatsbaar === 1 ? "e staat" : "en staan"} klaar voor doorstroming</b> naar een volgende categorie.</span>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto;white-space:nowrap;" onclick="showTab('atleten');setTimeout(()=>document.getElementById('doorstroom-paneel')?.scrollIntoView({behavior:'smooth'}),50);">Bekijk doorstroming</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto;white-space:nowrap;" onclick="showTab('atleten');document.getElementById('doorstroom-paneel')?.classList.add('open');setTimeout(()=>document.getElementById('doorstroom-paneel')?.scrollIntoView({behavior:'smooth'}),50);">Bekijk doorstroming</button>
     </div>`;
 }
 

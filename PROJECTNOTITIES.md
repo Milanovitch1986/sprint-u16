@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 85)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 86)*
 
 ---
 
@@ -43,6 +43,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 86: Atleten (patch 86, okt 2026)
+Derde patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-L` staat op de commit vóór deze patch (patch 85, `bc47ded`). Direct na de tests gecommit (Atleten is geen live-kritiek scherm). De [data]-onderdelen van Atleten (onderdelen per atleet, geboortejaar-chip) volgen in patch 93.
+- **⋯-menu:** `renderAtleten()` zet per rij een `.atleet-menu-knop` (niet in selectiemodus; dan blijft het pijltje) en de rijklasse `heeft-menu`. Eén los menu `#atleet-menu` staat direct voor `#toast` (vast gepositioneerd, `z-index: 320`; zo knipt `overflow: hidden` van de lijst of een transform van de view het niet af). `toggleAtleetMenu(id, event)` vult en positioneert het menu (onder de knop, rechts uitgelijnd, bij gebrek aan ruimte erboven, altijd binnen het scherm); `atleetMenuActie(actie, id)` sluit het menu en voert uit: `openAtleetModal(id)`, of `showTab("prestaties")` + filter `#prestatie-atleet-filter` zetten + `renderPrestaties()`, of `editAtleetId = id` + `deleteAtleet()` (zelfde bevestigingsvraag en verwijdering als in het bewerkvenster). De luisteraars (`click`, `keydown`, `scroll` capture, `resize`) worden bij het eerste openen eenmalig gekoppeld (vlag `window.__atleetMenuLuisteraars`); een scroll sluit het menu bewust.
+- **Ondertitel:** `#atleten-sub` in de paginakop, gevuld in `renderAtleten()` met het aantal jongens en meisjes van de hele categorie (niet van de gefilterde lijst); op mobiel via `order` direct onder de titel.
+- **Doorstroming:** het paneel `#doorstroom-paneel` is ingeklapt tot een balk (`.doorstroom-kop`); de klasse `open` op het paneel toont `#doorstroom-lijst` (alleen met CSS verborgen, dus de vinkjes `doorstroom-chk-n` en `startDoorstroming()` werken ongewijzigd). `werkDoorstroomKopBij()` (aangeroepen vanuit `laadDoorstroming()`) vult `#doorstroom-kop-tekst`; de knop in de melding bovenaan (`renderDoorstroomMelding()`) voegt de klasse `open` toe.
+- **Zwevende plusknop (belangrijk):** op mobiel zweeft de ronde `.fab-mobiel` rechtsonder (`bottom: 60px + veilige zone + 16px`, 52 px hoog, dus tot ± 140 px boven de onderkant). De onderruimte van de schermen was kleiner (88 px), waardoor de onderste atleet-rij (nu met aanklikbare ⋯-knop) en de rechterkant van de onderste wedstrijdkaart eronder lagen. Nu `padding-bottom: calc(60px + veilige zone + 16px + 52px + 12px)` op `#view-atleten` en `#view-wedstrijden`, alleen op scherm en op mobiel. `#view-prestaties` en `#view-wedstrijddag` hebben dezelfde zwevende knop en zijn bewust niet aangepast; bij een volgende patch met aanklikbare elementen onderaan daar opnieuw meten.
+- **Print:** het ⋯, de ondertitel en het menu zijn in print verborgen; het pijltje blijft (de regel die het op scherm verbergt staat in `@media screen`); de doorstroomlijst is in print altijd zichtbaar.
+- **Testmethode (nieuw geleerd):** (1) meet bij elke nieuwe aanklikbare knop op mobiel of de zwevende plusknop of de onderbalk erover ligt: scroll naar de onderkant en vergelijk `getBoundingClientRect()`; Playwright meldt dit als "intercepts pointer events". (2) Een scroll sluit het menu; Playwright scrolt een knop bij `click()` zelf in beeld, dus gebruik voor "menu wisselt van rij" een directe `element.click()` via `evaluate`. (3) Een open menu bedekt de ⋯ van de volgende rijen; test wisselen met een rij die niet bedekt wordt. (4) Een spy op `sb.from` met een Proxy die per keten alle aanroepen verzamelt en pas bij `then` logt (alleen als er een schrijfmethode in zat) geeft vergelijkbare schrijflogs (`atleten: delete() > eq("id","a0") > eq("categorie_id","c1")`) tussen oude en nieuwe route. (5) `contract.py` gebruikt: nieuwe functies in `JS_NIEUW` van `commit_sjabloon.py`, bewust gewijzigde handlers in `HANDLERS_VRIJ`.
+- **Terugdraaien:** Revert op de commit van patch 86, of terug naar tag `ui-L`.
 
 ### Patch 85: Wedstrijden (patch 85, okt 2026)
 Tweede patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-K` staat op de commit vóór deze patch (patch 84, `d7aa662`). Direct na de tests gecommit (Wedstrijden is geen live-kritiek scherm; de knoppen naar Opstelling en Wedstrijddag roepen de bestaande functies aan).

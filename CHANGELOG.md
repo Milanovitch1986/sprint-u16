@@ -6,6 +6,37 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 86] — 2026-10-09
+
+### 🏃 Atleten: ⋯-menu per rij, ondertitel en compacte doorstroombalk
+
+<!--RELEASENOTE
+versie: Patch 86
+titel: 🏃 Atleten: ⋯-menu per rij, ondertitel en compacte doorstroombalk
+type: feature
+tags: atleten
+beschrijving: Elke atleet heeft nu een ⋯-knop met Bewerken, Prestaties bekijken en Verwijderen. Onder de titel staat hoeveel jongens en meisjes er zijn, en het paneel Doorstroming is een compacte balk die je openklapt met een tik. Op de telefoon is er extra ruimte onder de lijst, zodat de ronde plusknop de laatste rij niet meer afdekt.
+-->
+
+Zestiende stap na het UI-herontwerp: Atleten uit de lijst met open mockup-onderdelen (de [data]-onderdelen "onderdelen per atleet" en de geboortejaar-chip volgen in patch 93). Geen databasewijziging en geen SQL.
+
+**⋯-menu per rij.** Rechts in elke atletenrij staat een ⋯-knop met een menu: **Bewerken** (hetzelfde venster als bij een tik op de rij), **Prestaties bekijken** (het scherm Prestaties met die atleet al gekozen) en **Verwijderen** (precies dezelfde bevestigingsvraag en verwijdering als in het bewerkvenster). Het menu sluit bij een klik ernaast, Escape of scrollen en blijft binnen het scherm. De rij zelf blijft klikbaar. In selectiemodus is er geen ⋯ en staat het pijltje zoals voorheen.
+
+**Ondertitel.** Onder de titel staat bijvoorbeeld "6 jongens · 4 meisjes" (de hele categorie, ook als je filtert).
+
+**Doorstroming als compacte balk.** Het paneel is standaard ingeklapt tot één balk met een korte tekst ("1 atleet staat klaar · 1 geblokkeerd"). Een tik klapt de lijst open; de lijst, de vinkjes en de knop "Doorstromen" werken zoals voorheen. De knop "Bekijk doorstroming" in de melding bovenaan de app klapt het paneel meteen open.
+
+**Extra ruimte onder de lijst (mobiel).** De ronde plusknop rechtsonder lag over de onderste atleet (en over de rechterkant van de onderste wedstrijdkaart op Wedstrijden). Op een telefoon is er nu genoeg ruimte onderaan om de onderste rij vrij boven die knop te scrollen; dit geldt voor Atleten en Wedstrijden.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Nieuwe functies: `toggleAtleetMenu()`, `sluitAtleetMenu()`, `atleetMenuActie()`, `toggleDoorstroomPaneel()` en `werkDoorstroomKopBij()`. Aangepast: `renderAtleten()` (ondertitel, ⋯-knop, klasse `heeft-menu`), `laadDoorstroming()` (één regel die de balktekst vult) en `renderDoorstroomMelding()` (de knop klapt het paneel mee open). Alle andere JavaScript is byte-voor-byte gelijk aan patch 85. Verwijderen hergebruikt `deleteAtleet()` en zet daarvoor `editAtleetId`.
+- Nieuwe vaste HTML: `#atleten-sub` in de paginakop, `#atleet-menu` (één los, vast gepositioneerd menu direct voor `#toast`, zodat niets het afkapt), en de klikbare kop `.doorstroom-kop` met `#doorstroom-kop-tekst` in het doorstroompaneel. Contract-check: 0 id's, handlers of functies verdwenen; 3 id's, 3 handlers en 5 functies nieuw.
+- Het menu sluit via vier luisteraars die bij het eerste openen eenmalig worden gekoppeld (`click`, `keydown`, `scroll` in de capture-fase en `resize`). Het staat op `z-index: 320`, boven het Meer-menu en de onderbalk.
+- CSS: nieuwe klassen `.atleet-menu-knop`, `.atleet-menu`, `.doorstroom-kop`, `.doorstroom-kop-tekst`, `.heeft-menu`, `.atleten-sub`; de ondertitelregels van patch 85 gelden nu ook voor Atleten. Alles op scherm; in print zijn het ⋯, de ondertitel en het menu verborgen, staat het pijltje er nog en is de doorstroomlijst altijd open, zodat de afdruk gelijk blijft. De extra onderruimte op mobiel staat in `@media screen and (max-width: 768px)`.
+- Gecontroleerd (oud tegen nieuw, nep-backend, desktop en mobiel): rijen en aantallen gelijk; rij-klik en Bewerken geven hetzelfde venster; Prestaties bekijken geeft dezelfde staat als het filter handmatig zetten; Verwijderen toont dezelfde bevestigingsvraag, annuleren doet niets en bevestigen geeft dezelfde schrijfaanroepen (`atleten: delete > eq(id) > eq(categorie_id)`), dezelfde toast en één rij minder; selectiemodus gelijk; doorstroomlijst, vinkjes en de schrijfaanroepen van "Doorstromen" gelijk; menu opent, sluit, wisselt van rij, blijft binnen beeld (ook bij de onderste rij) en ligt boven de onderbalk. Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek; alleen Atleten (en op mobiel Wedstrijden, door de extra onderruimte) is op het scherm anders.
+- Niet getest: een echte telefoon en echt verwijderen of doorstromen in Supabase (alleen de aanroepen zijn vergeleken).
+
 ## [oktober 2026 — patch 85] — 2026-10-09
 
 ### 🏆 Wedstrijden: tabs Aankomend/Afgelopen, aftelblokje en snelle knop naar de opstelling
