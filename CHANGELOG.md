@@ -6,6 +6,30 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 83] — 2026-10-09
+
+### 🧹 Opruimen: overbodige opmaakregels weggehaald
+
+<!--RELEASENOTE
+versie: Patch 83
+titel: 🧹 Opruimen: overbodige opmaakregels weggehaald
+type: update
+tags: techniek
+beschrijving: Een technische opruiming achter de schermen: een aantal opmaakregels uit eerdere stappen van het herontwerp deed niets meer en is weggehaald. Er verandert niets zichtbaars; alles ziet er hetzelfde uit en werkt hetzelfde.
+-->
+
+Dertiende stap (opruimen) na het UI-herontwerp, en de eerste van de reeks die de nog openstaande punten oppakt. Alleen CSS en één tekstregel in de projectnotities; geen functie, handler of database is aangepast.
+
+**Opgeruimd.** Patch 82 herstelde de ongeldige kleurregels in de basis-CSS. Daardoor zetten een aantal schermspecifieke regels uit patch 75, 77, 78 en 81 exact dezelfde waarden als de basis. Die zijn nu weg: de randkleur van finale-kaarten en de tint en rand van de finale-badge (Wedstrijden, Wedstrijddag, Opstelling), de tint van de puntenbadge, een conflictslot en de verwijderknop in een ploeg (Opstelling), en de achtergrond van de importwaarschuwingen (PR-import en finale-import). Wat wél afweek van de basis (afmetingen en afrondingen) staat er nog.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Alle inline scripts zijn byte-voor-byte gelijk aan patch 82. Contract-check: 0 id's, handlers of functies verdwenen en geen nieuwe (271 / 140 / 336).
+- 15 CSS-regels verwijderd en 3 regels ingekort (alleen de dubbele `background`/`border` eruit; `font-size` en `padding` van `.finale-badge` blijven).
+- Gecontroleerd met een pixelvergelijking oud tegen nieuw: alle 9 tabs, het Opstelling-detail (ploegen open, conflictslot, verwijderknop met hover), het Wedstrijddag-detail en beide importwaarschuwingen in hun venster, op scherm en in printmodus, op 1280, 390 en 360 px in lichte en donkere weergave. Resultaat: pixel-identiek.
+- `PROJECTNOTITIES.md`: de kopregel "Laatste update" staat nu op patch 83 (stond nog op patch 71).
+- Niet getest: een echte telefoon; de echte PR-import met een Excel-bestand.
+
 ## [oktober 2026 — patch 82] — 2026-10-08
 
 ### 🧹 Opruimen: ontbrekende lijntjes en tinten hersteld

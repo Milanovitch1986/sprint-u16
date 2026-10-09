@@ -1639,15 +1639,9 @@
   /* ══ Patch 75: Wedstrijden (UI-herontwerp patch D1) ══ */
   #wedstrijden-grid .grid { gap: 14px; }
   #wedstrijden-grid .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; display: flex; flex-direction: column; }
-  #wedstrijden-grid .wedstrijd-card.is-finale { border-color: var(--accent); }
   #wedstrijden-grid .wedstrijd-naam { font-size: 22px; }
   #wedstrijden-grid .wedstrijd-datum { font-size: 13px; }
-  /* Het oude patroon var(--accent)22/44 was ongeldige CSS; vandaar color-mix */
-  #wedstrijden-grid .finale-badge {
-    font-size: 11px; padding: 3px 10px;
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  }
+  #wedstrijden-grid .finale-badge { font-size: 11px; padding: 3px 10px; }
   .wedstrijd-kop { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .wedstrijd-kop .wedstrijd-datum { margin-bottom: 0; }
   .wedstrijd-notitie { font-size: 12px; color: var(--muted); margin-top: 6px; }
@@ -1699,13 +1693,7 @@
 
   /* Overzicht met de wedstrijdkeuze */
   #wd-wedstrijd-lijst .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; }
-  /* Het oude patroon var(--accent)66 was ongeldige CSS (de rand werd wit) */
-  #wd-wedstrijd-lijst .wedstrijd-card.is-finale { border-color: var(--accent); }
-  #wd-wedstrijd-lijst .finale-badge {
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    padding: 3px 10px; font-size: 11px;
-  }
+  #wd-wedstrijd-lijst .finale-badge { padding: 3px 10px; font-size: 11px; }
 
   /* ══ Patch 78: Opstelling (UI-herontwerp patch E) ══ */
   /* Basisklassen: exact dezelfde waarden als de inline stijlen die ze vervangen (dus ook in print gelijk) */
@@ -1715,13 +1703,7 @@
   /* Alles hieronder alleen op scherm: de printweergave blijft ongewijzigd */
   @media screen {
     #opstelling-wedstrijd-lijst .wedstrijd-card { border-radius: var(--radius-lg); padding: 16px 18px; }
-    /* Het oude patroon var(--accent)66 was ongeldige CSS (de rand werd wit) */
-    #opstelling-wedstrijd-lijst .wedstrijd-card.is-finale { border-color: var(--accent); }
-    #opstelling-wedstrijd-lijst .finale-badge {
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-      padding: 3px 10px; font-size: 11px;
-    }
+    #opstelling-wedstrijd-lijst .finale-badge { padding: 3px 10px; font-size: 11px; }
     .opstelling-geslacht {
       width: fit-content; max-width: 100%; gap: 2px; padding: 3px;
       background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
@@ -1734,13 +1716,6 @@
     #view-opstelling .ploeg-container { border-radius: var(--radius-lg); }
     #view-opstelling .ploeg-header { border-radius: var(--radius-lg); }
     #view-opstelling .ploeg-header.open { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-    /* Ongeldige var(--kleur)22/11-patronen binnen dit scherm hersteld */
-    #view-opstelling .ploeg-punten {
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    }
-    #view-opstelling .atleet-slot.conflict { background: color-mix(in srgb, var(--accent2) 8%, transparent); }
-    #view-opstelling .atleet-slot .slot-remove:hover { background: color-mix(in srgb, var(--accent2) 15%, transparent); }
   }
   @media screen and (max-width: 768px) {
     /* Knoppenrij: nette 2-koloms indeling i.p.v. wild omslaan */
@@ -1836,8 +1811,6 @@
        Bewust alleen voor zulke rijen (een door de JS verborgen derde knop, style="display:none", telt niet mee):
        rijen met 2 zichtbare knoppen blijven precies zoals ze waren. */
     .modal-actions:has(> :not([style*="none"]) ~ :not([style*="none"]) ~ :not([style*="none"])) { flex-wrap: wrap; }
-    /* Het oude patroon var(--accent2)22 (inline) was ongeldige CSS: de tint ontbrak; inline vraagt om !important */
-    #pdf-import-waarschuwing, #finale-import-waarschuwing { background: color-mix(in srgb, var(--accent2) 13%, transparent) !important; }
   }
   @media screen and (min-width: 769px) {
     .modal-overlay { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }

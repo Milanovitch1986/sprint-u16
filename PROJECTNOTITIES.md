@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 7 oktober 2026 (patch 71)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 83)*
 
 ---
 
@@ -43,6 +43,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Opruimpatch I: overbodige schermspecifieke CSS (patch 83, okt 2026)
+Alleen CSS (15 regels weg, 3 ingekort) plus de kopregel van dit bestand; scripts byte-voor-byte identiek, contract-check 0 verdwenen/0 nieuw. Tag `ui-I` staat op de commit vóór deze patch (patch 82, `8adaf43`). Eerste patch van de reeks die de open punten uit de werkinstructie (§9) oppakt, met afspraak: eerst bouwen en testen, dan wachten op "commit nu" (de regels raken Wedstrijddag en Opstelling).
+- **Waarom weg:** sinds patch 82 hebben de basisregels (`.finale-badge`, `.wedstrijd-card.is-finale`, `.ploeg-punten`, `.atleet-slot.conflict`, `.slot-remove:hover`) zelf geldige `color-mix`-waarden; de overschrijvingen per scherm uit patch 75/77/78 en de `!important`-regel voor de importwaarschuwingen (patch 81, inline stijl is sinds patch 82 gelijk) zetten dezelfde waarde.
+- **Wat blijft:** `font-size` en `padding` van `.finale-badge` per scherm, en alle afmetingen/afrondingen (`border-radius`, `padding`) in patch 75/77/78: die wijken wél af van de basis.
+- **Methode:** pixelvergelijking oud/nieuw met `test83.py`-achtige opzet: 9 tabs plus Opstelling-detail (ploegen open, conflictslot, hover op verwijderknop), Wedstrijddag-detail en beide waarschuwingen in hun venster; scherm én print; 1280, 390 en 360 px; licht en donker. Print navigeer je met `showTab()` (de navigatie is bij print verborgen, klikken faalt).
+- **Terugdraaien:** Revert op de commit van patch 83, of terug naar tag `ui-I`.
 
 ### Opruimpatch H: ongeldige var(--kleur)NN-waarden (patch 82, okt 2026)
 15 regels gewijzigd, geen nieuwe regels, geen nieuwe functies; contract-check 0 verdwenen/0 nieuw. Tag `ui-H` staat op de commit vóór deze patch (patch 81, `2ce08a2`). Direct na de tests gecommit (afgesproken: alleen kleuren en lijntjes).
