@@ -6,6 +6,32 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 84] — 2026-10-09
+
+### 🧮 Punten: resultaatkaart en totaal · 👤 Profiel: avatar, rol en wachtwoordsterkte
+
+<!--RELEASENOTE
+versie: Patch 84
+titel: 🧮 Punten: resultaatkaart en totaal · 👤 Profiel: avatar, rol en wachtwoordsterkte
+type: feature
+tags: overig
+beschrijving: Bij de Puntenrekentool zie je nu direct een grote kaart met het laatst berekende resultaat en onderaan het totaal van alle punten. Je profiel heeft een avatar met je initialen, een blokje met je rol (Admin of Trainer) en een sterktebalk bij het kiezen van een nieuw wachtwoord. Op de telefoon klapt de kaart "Wachtwoord wijzigen" open met een tik.
+-->
+
+Veertiende stap na het UI-herontwerp en de eerste patch met nieuwe JavaScript uit de lijst met open mockup-onderdelen (alleen Punten en Profiel). Geen databasewijziging en geen SQL.
+
+**Punten.** Zodra er resultaten in de vergelijking staan, verschijnt bovenaan een grote kaart met de punten van het laatst toegevoegde resultaat (onderdeel, prestatie, label en "plek 2 van 3"), en onder de lijst een totaalrij met het aantal resultaten en de som van alle punten. De tabel zelf, de sortering, verwijderen en "Wis alles" werken zoals voorheen.
+
+**Profiel.** Bovenaan de accountkaart staat een ronde avatar met je initialen, je naam en een blokje met je rol. Onder het wachtwoordveld staat een balkje (zwak, redelijk of sterk) dat meebeweegt terwijl je typt; het is alleen een indicatie, de regel "minimaal 8 tekens" blijft precies hetzelfde en het wachtwoord wordt nergens naartoe gestuurd. Op een telefoon is de kaart "Wachtwoord wijzigen" ingeklapt en klapt open als je erop tikt; op een computer blijft hij gewoon open.
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Nieuwe functies: `werkProfielKopBij()`, `toonWachtwoordSterkte()` en `toggleWachtwoordKaart()`. Aangepast: `renderPuntenTabel()` (kaart en totaalrij erbij; de bestaande rijen zijn onveranderd), `checkAuth()` (één regel die de avatar vult), `slaProfielOp()` (ververst de avatar na opslaan) en `wijzigWachtwoord()` (wist de balk na een gelukte wijziging). Alle andere JavaScript is byte-voor-byte gelijk aan patch 83.
+- Nieuwe id's: `profiel-avatar`, `profiel-kop-naam`, `profiel-rol`, `profiel-ww-kaart`, `profiel-ww-sterkte`, `profiel-ww-sterkte-tekst`, `punten-resultaatkaart`, `punten-totaal`; nieuwe handlers `toonWachtwoordSterkte` (oninput op `#profiel-ww`) en `toggleWachtwoordKaart` (onclick op de kop van de wachtwoordkaart). Contract-check: 0 id's, handlers of functies verdwenen; 8 id's, 2 handlers en 3 functies nieuw.
+- CSS alleen op scherm en alleen voor de nieuwe klassen; in print zijn de nieuwe onderdelen verborgen zodat de afdruk gelijk blijft (pixel-identiek gemeten).
+- Gecontroleerd (oud tegen nieuw, nep-backend): alle bestaande gedragingen zijn gelijk (rijen en sortering, foutmeldingen, verwijderen en wissen, de update naar `profielen`, `updateUser` bij een geldig en een te kort wachtwoord, de toasts). Het getoonde totaal en de kaart kloppen met de som en de laatste rij. Pixelvergelijking van alle schermen op 1280, 390 en 360 px, licht en donker, scherm en print: alleen Profiel en Punten-met-resultaten zijn anders (bedoeld).
+- Niet getest: een echte wachtwoordwijziging bij Supabase, het gedrag van wachtwoordmanagers, het toetsenbord op een telefoon en een echte telefoon.
+
 ## [oktober 2026 — patch 83] — 2026-10-09
 
 ### 🧹 Opruimen: overbodige opmaakregels weggehaald

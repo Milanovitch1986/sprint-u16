@@ -1819,6 +1819,62 @@
     .modal-actions:has(> :not([style*="none"]) ~ :not([style*="none"]) ~ :not([style*="none"])) .btn { flex: 1 1 auto; justify-content: center; }
   }
 
+  /* ══ Patch 84: Punten en Profiel (resultaatkaart, totaalrij, avatar, rolblokje, wachtwoordsterkte) ══ */
+  /* Alles alleen op scherm en alleen voor de nieuwe elementen; de print en de andere schermen blijven gelijk */
+  @media screen {
+    .punten-resultaat {
+      margin: 16px; padding: 16px 20px; display: flex; align-items: center; gap: 20px;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .punten-resultaat-getal { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 56px; line-height: 1; color: var(--accent); min-width: 72px; text-align: center; }
+    .punten-resultaat-tekst { min-width: 0; }
+    .punten-resultaat-kop { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .punten-resultaat-titel { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; overflow-wrap: anywhere; }
+    .punten-resultaat-sub { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .punten-totaal { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-top: 2px solid var(--border); font-weight: 700; font-size: 14px; }
+    .punten-totaal-getal { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; color: var(--accent); }
+
+    .profiel-kop { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+    .profiel-avatar {
+      flex: none; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: .02em; color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .profiel-kop-tekst { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+    .profiel-kop-naam { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; line-height: 1.1; overflow-wrap: anywhere; }
+    .profiel-rol {
+      display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+      padding: 2px 10px; border-radius: 20px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+    }
+    .profiel-rol[data-rol="admin"] { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .profiel-rol:empty { display: none; }
+
+    .ww-sterkte { margin-top: 8px; min-height: 30px; }
+    .ww-sterkte-balk { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .ww-sterkte-balk > span { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--muted); transition: width .2s, background .2s; }
+    .ww-sterkte-tekst { margin-top: 5px; font-size: 12px; color: var(--muted); }
+    .ww-sterkte[data-niveau="zwak"] .ww-sterkte-balk > span { width: 33%; background: var(--accent2); }
+    .ww-sterkte[data-niveau="redelijk"] .ww-sterkte-balk > span { width: 66%; background: var(--accent); }
+    .ww-sterkte[data-niveau="sterk"] .ww-sterkte-balk > span { width: 100%; background: var(--success); }
+  }
+  @media screen and (max-width: 768px) {
+    .punten-resultaat { margin: 12px; padding: 14px 16px; gap: 14px; }
+    .punten-resultaat-getal { font-size: 44px; min-width: 56px; }
+    .punten-resultaat-titel { font-size: 19px; }
+    .profiel-ww-kop { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .profiel-ww-kop::after { content: "▾"; font-size: 14px; transition: transform .2s; }
+    .profiel-ww-kaart.open .profiel-ww-kop::after { transform: rotate(180deg); }
+    .profiel-ww-kaart:not(.open) .profiel-ww-body { display: none; }
+    .profiel-ww-kaart:not(.open) .profiel-ww-kop { border-bottom: 0; }
+  }
+  /* Print blijft zoals het was: de nieuwe onderdelen horen alleen bij het scherm */
+  @media print {
+    .punten-resultaat, .punten-totaal, .profiel-kop, .ww-sterkte { display: none; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2290,6 +2346,13 @@
       <div class="detail-panel">
         <div class="section-label">Accountgegevens</div>
         <div style="padding:20px;">
+          <div class="profiel-kop">
+            <div class="profiel-avatar" id="profiel-avatar" aria-hidden="true">?</div>
+            <div class="profiel-kop-tekst">
+              <div class="profiel-kop-naam" id="profiel-kop-naam"></div>
+              <span class="profiel-rol" id="profiel-rol"></span>
+            </div>
+          </div>
           <div class="field">
             <label>Gebruikersnaam</label>
             <input type="text" id="profiel-naam" class="profiel-input">
@@ -2301,11 +2364,12 @@
           <button class="btn btn-primary" onclick="slaProfielOp()">Opslaan</button>
         </div>
       </div>
-      <div class="detail-panel">
-        <div class="section-label">Wachtwoord wijzigen</div>
-        <div style="padding:20px;">
+      <div class="detail-panel profiel-ww-kaart" id="profiel-ww-kaart">
+        <div class="section-label profiel-ww-kop" onclick="toggleWachtwoordKaart()">Wachtwoord wijzigen</div>
+        <div class="profiel-ww-body" style="padding:20px;">
           <div class="field"><label>Nieuw wachtwoord (min. 8 tekens)</label>
-            <input type="password" id="profiel-ww" placeholder="••••••••" class="profiel-input"></div>
+            <input type="password" id="profiel-ww" placeholder="••••••••" class="profiel-input" oninput="toonWachtwoordSterkte()">
+            <div class="ww-sterkte" id="profiel-ww-sterkte" data-niveau=""><div class="ww-sterkte-balk"><span></span></div><div class="ww-sterkte-tekst" id="profiel-ww-sterkte-tekst"></div></div></div>
           <button class="btn btn-ghost" onclick="wijzigWachtwoord()">Wachtwoord wijzigen</button>
         </div>
       </div>
@@ -2383,6 +2447,7 @@
         <span>📊 Vergelijking</span>
         <button class="btn btn-ghost btn-sm" onclick="leegPuntenTabel()" style="margin:8px 16px;">🗑️ Wis alles</button>
       </div>
+      <div id="punten-resultaatkaart" class="punten-resultaat"></div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <thead>
@@ -2399,6 +2464,7 @@
           <tbody id="punten-tabel-body"></tbody>
         </table>
       </div>
+      <div id="punten-totaal" class="punten-totaal"></div>
     </div>
   </div>
   <!-- ── einde Punten tab ──────────────────────────────────────────── -->
@@ -2814,6 +2880,7 @@ async function checkAuth() {
   }
   document.getElementById("profiel-naam").value  = profiel?.gebruikersnaam || "";
   document.getElementById("profiel-email").value = session.user.email || "";
+  werkProfielKopBij();
   await sb.from("profielen").update({ laatste_login: new Date().toISOString() }).eq("id", session.user.id);
 
   // Laad categorieën waar deze trainer toegang toe heeft
@@ -3095,6 +3162,26 @@ function renderPuntenTabel() {
       + "</td>"
       + "</tr>";
   }).join("");
+
+  // Resultaatkaart (laatst toegevoegd) en totaalrij
+  const laatste = puntenRijen.reduce((a, r) => (r.id > a.id ? r : a), puntenRijen[0]);
+  const plek = puntenRijen.indexOf(laatste) + 1;   // puntenRijen is gesorteerd op punten
+  const kaart = document.getElementById("punten-resultaatkaart");
+  if (kaart) {
+    const lGeslacht = laatste.geslacht === "M" ? "Jongen" : "Meisje";
+    kaart.innerHTML = '<div class="punten-resultaat-getal">' + laatste.punten + '</div>'
+      + '<div class="punten-resultaat-tekst">'
+      +   '<div class="punten-resultaat-kop">Laatst toegevoegd</div>'
+      +   '<div class="punten-resultaat-titel">' + esc(laatste.discipline) + ' · ' + esc(laatste.prestatie) + '</div>'
+      +   '<div class="punten-resultaat-sub">' + esc(laatste.label) + ' · ' + lGeslacht + ' · plek ' + plek + ' van ' + puntenRijen.length + '</div>'
+      + '</div>';
+  }
+  const totaalEl = document.getElementById("punten-totaal");
+  if (totaalEl) {
+    const som = puntenRijen.reduce((t, r) => t + r.punten, 0);
+    totaalEl.innerHTML = '<span>Totaal · ' + puntenRijen.length + (puntenRijen.length === 1 ? ' resultaat' : ' resultaten') + '</span>'
+      + '<span class="punten-totaal-getal">' + som + '</span>';
+  }
 }
 // einde Puntenrekentool
 
@@ -9179,6 +9266,7 @@ async function slaProfielOp() {
       .eq("id", uid);
     if (error) throw error;
     if (huidigeProfiel) huidigeProfiel.gebruikersnaam = naam;
+    werkProfielKopBij();
     toast("Profiel opgeslagen ✓");
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
@@ -9190,8 +9278,53 @@ async function wijzigWachtwoord() {
     const { error } = await sb.auth.updateUser({ password: ww });
     if (error) throw error;
     document.getElementById("profiel-ww").value = "";
+    toonWachtwoordSterkte();
     toast("Wachtwoord gewijzigd ✓");
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+function werkProfielKopBij() {
+  // Avatar (initialen), naam en rolblokje bovenaan de accountkaart (patch 84)
+  const naam = (document.getElementById("profiel-naam")?.value || "").trim();
+  const woorden = naam.split(/\s+/).filter(Boolean);
+  let initialen = "?";
+  if (woorden.length === 1) initialen = Array.from(woorden[0])[0];
+  else if (woorden.length > 1) initialen = Array.from(woorden[0])[0] + Array.from(woorden[woorden.length - 1])[0];
+  const av = document.getElementById("profiel-avatar");
+  if (av) av.textContent = initialen.toUpperCase();
+  const kopNaam = document.getElementById("profiel-kop-naam");
+  if (kopNaam) kopNaam.textContent = naam;
+  const rolEl = document.getElementById("profiel-rol");
+  if (rolEl) {
+    const rol = huidigeProfiel?.rol || "";
+    rolEl.dataset.rol = rol;
+    rolEl.textContent = rol === "admin" ? "Admin" : rol === "trainer" ? "Trainer" : rol;
+  }
+}
+
+function toonWachtwoordSterkte() {
+  // Alleen een indicatie onder het wachtwoordveld; de regel (min. 8 tekens) staat in wijzigWachtwoord (patch 84)
+  const ww = document.getElementById("profiel-ww")?.value || "";
+  const box = document.getElementById("profiel-ww-sterkte");
+  const tekst = document.getElementById("profiel-ww-sterkte-tekst");
+  if (!box || !tekst) return;
+  if (!ww) { box.dataset.niveau = ""; tekst.textContent = ""; return; }
+  let punten = 0;
+  if (ww.length >= 8) punten++;
+  if (ww.length >= 12) punten++;
+  if (/[a-z]/.test(ww) && /[A-Z]/.test(ww)) punten++;
+  if (/\d/.test(ww)) punten++;
+  if (/[^A-Za-z0-9]/.test(ww)) punten++;
+  const niveau = (ww.length < 8 || punten <= 2) ? "zwak" : punten === 3 ? "redelijk" : "sterk";
+  box.dataset.niveau = niveau;
+  tekst.textContent = ww.length < 8 ? "Te kort (minimaal 8 tekens)" : niveau === "zwak" ? "Zwak" : niveau === "redelijk" ? "Redelijk" : "Sterk";
+}
+
+function toggleWachtwoordKaart() {
+  // Alleen op mobiel inklapbaar; op desktop blijft de kaart open (patch 84)
+  if (!window.matchMedia("(max-width: 768px)").matches) return;
+  const kaart = document.getElementById("profiel-ww-kaart");
+  if (kaart) kaart.classList.toggle("open");
 }
 
 // ── Admin panel ───────────────────────────────────────────────

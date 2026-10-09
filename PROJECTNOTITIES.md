@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 83)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 84)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 84: Punten en Profiel (patch 84, okt 2026)
+Eerste patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-J` staat op de commit vóór deze patch (patch 83, `a7e8f24`). Direct na de tests gecommit (afgesproken: Punten en Profiel zijn niet live-kritiek).
+- **Punten:** `renderPuntenTabel()` vult twee nieuwe vaste elementen: `#punten-resultaatkaart` (laatst toegevoegde rij = hoogste `id`, met "plek n van m" in de op punten gesorteerde lijst) en `#punten-totaal` (aantal resultaten en som van de punten). De bestaande rij-sjablonen zijn niet aangeraakt (de mobiele kaartjes-CSS leunt op 7 cellen per rij).
+- **Profiel:** `werkProfielKopBij()` zet initialen (eerste letter van het eerste en laatste woord; één woord = één letter), naam en rolblokje (`huidigeProfiel.rol`, `data-rol`); aangeroepen vanuit `checkAuth()` (bij het laden) en `slaProfielOp()` (na opslaan). `toonWachtwoordSterkte()` (oninput op `#profiel-ww`) toont alleen een indicatie via `data-niveau` (zwak/redelijk/sterk; korter dan 8 tekens is altijd zwak); de regel in `wijzigWachtwoord()` is niet veranderd, die wist alleen de balk na een gelukte wijziging. `toggleWachtwoordKaart()` klapt op mobiel (≤ 768 px) de kaart open/dicht via de klasse `open`; op desktop doet de functie niets en is de kaart altijd open.
+- **Print:** de nieuwe elementen zijn in print verborgen (`@media print`), anders verschenen ze ongestyled in de afdruk (dat bleek bij de pixelvergelijking in printmodus).
+- **Testmethode (nieuw geleerd):** zet in pixeltests de muis vóór elke screenshot op een vaste plek (`page.mouse.move(1, 1)`); een andere muispositie geeft een hover-markering op een andere lijstrij en dus schijnbare verschillen. Zet animaties uit met een `<style>` die `animation`/`transition` op `none` zet. Een gedragstest met een Proxy om `sb.from` kan `update`-aanroepen opvangen als spy.
+- **Terugdraaien:** Revert op de commit van patch 84, of terug naar tag `ui-J`.
 
 ### Opruimpatch I: overbodige schermspecifieke CSS (patch 83, okt 2026)
 Alleen CSS (15 regels weg, 3 ingekort) plus de kopregel van dit bestand; scripts byte-voor-byte identiek, contract-check 0 verdwenen/0 nieuw. Tag `ui-I` staat op de commit vóór deze patch (patch 82, `8adaf43`). Eerste patch van de reeks die de open punten uit de werkinstructie (§9) oppakt, met afspraak: eerst bouwen en testen, dan wachten op "commit nu" (de regels raken Wedstrijddag en Opstelling).
