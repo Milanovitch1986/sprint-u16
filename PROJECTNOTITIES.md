@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 86)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 87)*
 
 ---
 
@@ -43,6 +43,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 87: Admin (patch 87, okt 2026)
+Vierde patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home), maar met maar één nieuwe functie en geen gewijzigde bestaande functie. Geen databasewijziging. Tag `ui-M` staat op de commit vóór deze patch (patch 86, `0ba5e9b`). Direct na de tests gecommit (Admin is geen live-kritiek scherm). "Laatste back-up: …" ([data]) volgt in patch 94.
+- **Ontwerp:** één attribuut `data-actief` op `#view-admin` bepaalt welke sectie zichtbaar is; `kiesAdminSectie(naam)` zet alleen dat attribuut (en scrolt op mobiel naar boven). Alle regels staan in CSS: `#view-admin [data-admin-pagina] { display: none }` en per sectie een regel `#view-admin[data-actief="x"] [data-admin-pagina="x"] { display: block }`. `data-actief=""` = op desktop de eerste tab (`@media (min-width: 769px)`), op mobiel de lijst `.admin-menu`. Daardoor werkt het ook bij het verkleinen of draaien van het venster, zonder resize-luisteraar of staat in JavaScript. De actieve tab (desktop) krijgt zijn kleur via dezelfde attributen, niet via een klasse.
+- **Secties:** de zes `<details>`/`<summary>` zijn gewone `div`'s geworden (het inklappen is vervallen); `data-admin-pagina` = uitnodigingen, gebruikers, categorieen, toegang, backup. De hintmelding `#tag-hint-panel` (inline `display:none`, door `laadOverigTagHint` getoond) is geen sectie meer en staat boven de tabs; de inline stijl blijft dus winnen. `laadAdmin()` laadt alle lijsten ongewijzigd, ook voor verborgen secties. Verwijderd uit de CSS van patch 80: het pijltje, het draaien, `details.admin-sectie:not([open])`, `::-webkit-details-marker`, `cursor`/`user-select`/`list-style` op `.admin-kop`.
+- **Mobiel:** de lijst en de terugknop staan in `@media screen and (max-width: 768px)` (niet in print); de tabbalk is daar verborgen. De kopknop (inline `margin: 8px 16px`) krijgt op mobiel `margin: 8px 0 !important` en de titel `white-space: nowrap`, anders brak de titel over twee regels (`!important` is nodig tegen de inline stijl; zelfde reden als in patch 79).
+- **Print:** `@media print` toont alle secties (`display: block`) en verbergt tabs, lijst en terugknop; het enige verschil met de oude afdruk zijn de ▾-pijltjes (230 pixels in een kolom van 8 px).
+- **Testmethode (nieuw geleerd):** het HTML-bestand heeft twee `</main>`; neem voor een bereik rond `#view-admin` het eerste `</main>` ná `id="view-admin"` (`n.index('</main>', a)`), anders is het bereik leeg en lijkt een telling "0 gevonden" te slagen. Meet printverschillen met een bounding box en het aantal afwijkende pixels om te bewijzen dat alleen de verwachte plek verschilt. Test "schalen" met `page.set_viewport_size()` zonder de pagina te herladen.
+- **Terugdraaien:** Revert op de commit van patch 87, of terug naar tag `ui-M`.
 
 ### Patch 86: Atleten (patch 86, okt 2026)
 Derde patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-L` staat op de commit vóór deze patch (patch 85, `bc47ded`). Direct na de tests gecommit (Atleten is geen live-kritiek scherm). De [data]-onderdelen van Atleten (onderdelen per atleet, geboortejaar-chip) volgen in patch 93.

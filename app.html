@@ -1758,14 +1758,10 @@
   .btn.btn-gevaar { color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 40%, transparent); }
   .btn.btn-gevaar:hover { border-color: var(--accent2); color: var(--accent2); }
 
-  /* Inklapbare secties (native <details>, geen JavaScript) */
+  /* Secties (sinds patch 87 geen inklapbare <details> meer: tabs op desktop, pagina's op mobiel) */
   #view-admin .detail-panel { border-radius: var(--radius-lg); }
-  .admin-kop { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; list-style: none; }
-  .admin-kop::-webkit-details-marker { display: none; }
+  .admin-kop { display: flex; align-items: center; gap: 8px; }
   .admin-kop > span:first-child { flex: 1; }
-  .admin-kop::after { content: "▾"; margin-left: auto; padding-left: 12px; color: var(--muted); transition: transform .2s; }
-  details.admin-sectie:not([open]) > .admin-kop::after { transform: rotate(-90deg); }
-  details.admin-sectie:not([open]) > .admin-kop { border-bottom: none; }
 
   /* ══ Patch 81: gedeelde vensters (UI-herontwerp patch G) ══ */
   /* Alleen op scherm; inline max-height/overflow van afzonderlijke vensters blijft winnen. */
@@ -1906,6 +1902,57 @@
     .doorstroom-kop { display: block; cursor: default; }
     .doorstroom-kop::after, .doorstroom-kop-tekst { display: none; }
     #doorstroom-paneel:not(.open) #doorstroom-lijst { display: block; }
+  }
+
+  /* ══ Patch 87: Admin (tabs per sectie op desktop, pagina per sectie op mobiel) ══ */
+  /* Eén attribuut op #view-admin (data-actief) bepaalt welke sectie zichtbaar is; "" = op desktop de eerste tab, op mobiel de lijst */
+  #view-admin [data-admin-pagina] { display: none; }
+  #view-admin[data-actief="uitnodigingen"] [data-admin-pagina="uitnodigingen"],
+  #view-admin[data-actief="gebruikers"] [data-admin-pagina="gebruikers"],
+  #view-admin[data-actief="categorieen"] [data-admin-pagina="categorieen"],
+  #view-admin[data-actief="toegang"] [data-admin-pagina="toegang"],
+  #view-admin[data-actief="backup"] [data-admin-pagina="backup"] { display: block; }
+  .admin-tabs { margin: 0 0 16px; flex-wrap: wrap; border-radius: var(--radius-lg); }
+  #view-admin[data-actief="uitnodigingen"] .admin-tabs [data-admin-tab="uitnodigingen"],
+  #view-admin[data-actief="gebruikers"] .admin-tabs [data-admin-tab="gebruikers"],
+  #view-admin[data-actief="categorieen"] .admin-tabs [data-admin-tab="categorieen"],
+  #view-admin[data-actief="toegang"] .admin-tabs [data-admin-tab="toegang"],
+  #view-admin[data-actief="backup"] .admin-tabs [data-admin-tab="backup"] { background: var(--accent); color: #000; }
+  @media (min-width: 769px) {
+    #view-admin[data-actief=""] [data-admin-pagina="uitnodigingen"] { display: block; }
+    #view-admin[data-actief=""] .admin-tabs [data-admin-tab="uitnodigingen"] { background: var(--accent); color: #000; }
+  }
+  .admin-menu, .admin-terug { display: none; }
+  @media screen and (max-width: 768px) {
+    .admin-tabs { display: none; }
+    #view-admin[data-actief=""] .admin-menu {
+      display: block; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    #view-admin:not([data-actief=""]) .admin-terug {
+      display: flex; align-items: center; margin: 0 0 12px; padding: 6px 0; background: transparent; border: none;
+      color: var(--accent); font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .admin-menu-rij {
+      display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left;
+      background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text);
+      font-family: 'Barlow', sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .admin-menu-rij:last-child { border-bottom: none; }
+    .admin-menu-rij:active { background: var(--surface2); }
+    .admin-menu-icoon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+    .admin-menu-tekst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .admin-menu-tekst b { font-size: 16px; }
+    .admin-menu-tekst small { font-size: 12px; color: var(--muted); }
+    .admin-menu-pijl { color: var(--muted); font-size: 22px; line-height: 1; flex-shrink: 0; }
+    /* Sectiekop: titel en knop naast elkaar (de knop had een inline marge van 16 px die de titel over twee regels dwong) */
+    .admin-kop > span:first-child { white-space: nowrap; }
+    .admin-kop > .btn { margin: 8px 0 !important; }
+  }
+  /* Print: alle secties onder elkaar, zonder tabs en lijst */
+  @media print {
+    #view-admin [data-admin-pagina] { display: block; }
+    .admin-tabs, .admin-menu, .admin-terug { display: none; }
   }
 
   @media print {
@@ -2504,15 +2551,39 @@
   </div>
   <!-- ── einde Punten tab ──────────────────────────────────────────── -->
 
-  <div id="view-admin" style="display:none;">
+  <div id="view-admin" data-actief="" style="display:none;">
     <div class="page-header"><div class="page-title">⚙️ Admin</div></div>
 
+    <!-- Releasenote-tags: hint bij veel "Overig" (patch 68) -->
+    <div class="detail-panel admin-sectie" id="tag-hint-panel" style="display:none;margin-bottom:24px;">
+      <div class="section-label admin-kop">🏷️ Releasenote-tags</div>
+      <div id="tag-hint-inhoud" style="padding:16px;"></div>
+    </div>
+
+    <!-- Sectiekeuze (patch 87): op desktop tabs, op mobiel een lijst en daarna een pagina per sectie -->
+    <div class="segment admin-tabs" role="group" aria-label="Admin-secties">
+      <button type="button" class="segment-knop" data-admin-tab="uitnodigingen" onclick="kiesAdminSectie('uitnodigingen')">📨 Uitnodigingen</button>
+      <button type="button" class="segment-knop" data-admin-tab="gebruikers" onclick="kiesAdminSectie('gebruikers')">👥 Gebruikers</button>
+      <button type="button" class="segment-knop" data-admin-tab="categorieen" onclick="kiesAdminSectie('categorieen')">📂 Categorieën</button>
+      <button type="button" class="segment-knop" data-admin-tab="toegang" onclick="kiesAdminSectie('toegang')">🔗 Toegang</button>
+      <button type="button" class="segment-knop" data-admin-tab="backup" onclick="kiesAdminSectie('backup')">💾 Back-up</button>
+    </div>
+    <div class="admin-menu">
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('uitnodigingen')"><span class="admin-menu-icoon">📨</span><span class="admin-menu-tekst"><b>Uitnodigingen</b><small>Trainers uitnodigen per categorie</small></span><span class="admin-menu-pijl">›</span></button>
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('gebruikers')"><span class="admin-menu-icoon">👥</span><span class="admin-menu-tekst"><b>Geregistreerde gebruikers</b><small>Wie heeft een account en welke rol</small></span><span class="admin-menu-pijl">›</span></button>
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('categorieen')"><span class="admin-menu-icoon">📂</span><span class="admin-menu-tekst"><b>Categorieën</b><small>Categorieën beheren</small></span><span class="admin-menu-pijl">›</span></button>
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('toegang')"><span class="admin-menu-icoon">🔗</span><span class="admin-menu-tekst"><b>Toegang per trainer</b><small>Welke trainer ziet welke categorie</small></span><span class="admin-menu-pijl">›</span></button>
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('backup')"><span class="admin-menu-icoon">💾</span><span class="admin-menu-tekst"><b>Back-up &amp; export</b><small>Excel-back-up van deze categorie</small></span><span class="admin-menu-pijl">›</span></button>
+    </div>
+    <button type="button" class="admin-terug" onclick="kiesAdminSectie('')">‹ Admin</button>
+
+
     <!-- Uitnodigingen -->
-    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
-      <summary class="section-label admin-kop">
+    <div class="detail-panel admin-sectie" data-admin-pagina="uitnodigingen" style="margin-bottom:24px;">
+      <div class="section-label admin-kop">
         <span>📨 Uitnodigingen</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openUitnodigingModal()">+ Nieuwe uitnodiging</button>
-      </summary>
+      </div>
       <div id="uitnodigingen-lijst" style="padding:16px;"></div>
       <!-- Geschiedenis: gebruikt & verlopen -->
       <div id="uitnodigingen-geschiedenis-wrapper" style="display:none;">
@@ -2521,45 +2592,39 @@
         </div>
         <div id="uitnodigingen-geschiedenis" style="padding:0 16px 8px;"></div>
       </div>
-    </details>
+    </div>
 
     <!-- Gebruikers -->
-    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
-      <summary class="section-label admin-kop">👥 Geregistreerde gebruikers</summary>
+    <div class="detail-panel admin-sectie" data-admin-pagina="gebruikers" style="margin-bottom:24px;">
+      <div class="section-label admin-kop">👥 Geregistreerde gebruikers</div>
       <div id="gebruikers-lijst" style="padding:16px;"></div>
-    </details>
+    </div>
 
     <!-- Categorieën -->
-    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
-      <summary class="section-label admin-kop">
+    <div class="detail-panel admin-sectie" data-admin-pagina="categorieen" style="margin-bottom:24px;">
+      <div class="section-label admin-kop">
         <span>📂 Categorieën</span>
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openCategorieModal()">+ Nieuwe categorie</button>
-      </summary>
+      </div>
       <div id="categorieen-lijst" style="padding:16px;"></div>
-    </details>
+    </div>
 
     <!-- Trainer–categorie koppelingen -->
-    <details class="detail-panel admin-sectie" open style="margin-bottom:24px;">
-      <summary class="section-label admin-kop">🔗 Toegang per trainer</summary>
+    <div class="detail-panel admin-sectie" data-admin-pagina="toegang" style="margin-bottom:24px;">
+      <div class="section-label admin-kop">🔗 Toegang per trainer</div>
       <div id="trainer-categorie-beheer" style="padding:16px;"></div>
-    </details>
-
-    <!-- Releasenote-tags: hint bij veel "Overig" (patch 68) -->
-    <details class="detail-panel admin-sectie" open id="tag-hint-panel" style="display:none;margin-bottom:24px;">
-      <summary class="section-label admin-kop">🏷️ Releasenote-tags</summary>
-      <div id="tag-hint-inhoud" style="padding:16px;"></div>
-    </details>
+    </div>
 
     <!-- Back-up & export (patch 64) -->
-    <details class="detail-panel admin-sectie" open>
-      <summary class="section-label admin-kop">💾 Back-up &amp; export</summary>
+    <div class="detail-panel admin-sectie" data-admin-pagina="backup">
+      <div class="section-label admin-kop">💾 Back-up &amp; export</div>
       <div style="padding:16px;">
         <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:var(--text);">
           Download in één klik alle gegevens van de actieve categorie als Excel-bestand — een vangnet dat je lokaal kunt bewaren. Er wordt niets in de database gewijzigd.
         </p>
         <button class="btn btn-primary" onclick="backupNaarExcel()">📥 Back-up naar Excel</button>
       </div>
-    </details>
+    </div>
   </div>
 </main>
 
@@ -9440,6 +9505,14 @@ function toggleWachtwoordKaart() {
   if (!window.matchMedia("(max-width: 768px)").matches) return;
   const kaart = document.getElementById("profiel-ww-kaart");
   if (kaart) kaart.classList.toggle("open");
+}
+
+function kiesAdminSectie(naam) {
+  // Kiest welke sectie van het scherm Admin zichtbaar is (patch 87): op desktop de tab, op mobiel de pagina; "" = de lijst op mobiel
+  const view = document.getElementById("view-admin");
+  if (!view) return;
+  view.setAttribute("data-actief", naam || "");
+  if (window.matchMedia("(max-width: 768px)").matches) window.scrollTo(0, 0);
 }
 
 // ── Admin panel ───────────────────────────────────────────────

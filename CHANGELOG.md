@@ -6,6 +6,36 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 87] — 2026-10-09
+
+### ⚙️ Admin: tabs per sectie op desktop, een pagina per sectie op mobiel
+
+<!--RELEASENOTE
+versie: Patch 87
+titel: ⚙️ Admin: tabs per sectie op desktop, een pagina per sectie op mobiel
+type: feature
+tags: administratie
+beschrijving: Het scherm Admin is overzichtelijker: op een computer kies je een sectie met een tab (Uitnodigingen, Gebruikers, Categorieën, Toegang, Back-up), op een telefoon zie je eerst een lijst en tik je een sectie open als eigen pagina met een knop terug. Het inklappen van secties is daarmee vervallen.
+-->
+
+Zeventiende stap na het UI-herontwerp: Admin uit de lijst met open mockup-onderdelen. "Laatste back-up: …" is een [data]-onderdeel en volgt in patch 94. Geen databasewijziging en geen SQL.
+
+**Desktop.** Bovenaan staat een tabbalk met vijf tabs; je ziet steeds één sectie. "Uitnodigingen" staat actief bij het openen.
+
+**Mobiel.** Admin opent als een lijst met vijf rijen (icoon, titel, korte uitleg, ›). Een tik opent die sectie als eigen pagina met bovenaan "‹ Admin" om terug te gaan. De gekozen sectie blijft staan zolang de app open is. Wissel je van telefoon- naar computerweergave (of andersom), dan past het scherm zich aan: op desktop staat dan de gekozen tab (of de eerste) open, op mobiel de gekozen pagina.
+
+**Overig.** De melding over releasenote-tags (die alleen soms verschijnt) staat nu boven de tabs en is dus op elke tab zichtbaar. De knoppen in de koppen ("+ Nieuwe uitnodiging", "+ Nieuwe categorie") en alle lijsten werken zoals voorheen. Op een telefoon staan titel en knop in de sectiekop nu naast elkaar (de titel brak eerst over twee regels).
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Eén nieuwe functie: `kiesAdminSectie(naam)`; die zet alleen het attribuut `data-actief` op `#view-admin` (en scrolt op mobiel naar boven). **Geen enkele bestaande functie is gewijzigd**; alle lijsten worden nog steeds door `laadAdmin()` geladen, ook als hun sectie verborgen is. Alle andere JavaScript is byte-voor-byte gelijk aan patch 86.
+- De zichtbaarheid wordt volledig door CSS bepaald uit `data-actief` (`""` = op desktop de eerste tab, op mobiel de lijst); zo werkt het ook bij het verkleinen of draaien van het venster zonder luisteraar.
+- De secties zijn geen `<details>`/`<summary>` meer maar gewone `div`'s met `data-admin-pagina`; de CSS voor het inklappen (patch 80: pijltje, draaien, `details.admin-sectie:not([open])`, `::-webkit-details-marker`) is weggehaald. De hintmelding `#tag-hint-panel` is naar boven verplaatst en is zelf geen sectie.
+- Nieuwe elementen: `.admin-tabs` (met `data-admin-tab`), `.admin-menu` met `.admin-menu-rij`, `.admin-terug`. Contract-check: 0 id's, handlers of functies verdwenen; 0 nieuwe id's, 1 nieuwe handler en 1 nieuwe functie (`kiesAdminSectie`).
+- Print: alle secties staan onder elkaar, zonder tabs en lijst; het enige verschil met de oude afdruk zijn de ▾-pijltjes in de sectiekoppen (230 pixels in een kolom van 8 px breed).
+- Gecontroleerd (oud tegen nieuw, nep-backend, desktop en mobiel): de HTML van alle lijsten is identiek; elke tab/pagina toont alleen zijn eigen sectie; de kop-knoppen openen dezelfde vensters (`uitnodigingModal`, `categorieModal`); de back-upknop roept `backupNaarExcel()` aan; de hintmelding blijft op elke sectie zichtbaar; de gekozen sectie blijft staan na een tabwissel; schalen van mobiel naar desktop en terug. Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek.
+- Niet getest: een echte telefoon en een echte back-up-download (alleen de aanroep).
+
 ## [oktober 2026 — patch 86] — 2026-10-09
 
 ### 🏃 Atleten: ⋯-menu per rij, ondertitel en compacte doorstroombalk
