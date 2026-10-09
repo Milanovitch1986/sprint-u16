@@ -6,6 +6,36 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 85] — 2026-10-09
+
+### 🏆 Wedstrijden: tabs Aankomend/Afgelopen, aftelblokje en snelle knop naar de opstelling
+
+<!--RELEASENOTE
+versie: Patch 85
+titel: 🏆 Wedstrijden: tabs Aankomend/Afgelopen, aftelblokje en snelle knop naar de opstelling
+type: feature
+tags: wedstrijden
+beschrijving: Op het scherm Wedstrijden kies je nu met twee tabs tussen Aankomend en Afgelopen. Aankomende wedstrijden tonen een blokje met "Vandaag", "Morgen" of "Over 12 d", er is een knop Opstelling op de kaart die direct de opstelling opent, en onder de titel staat hoeveel wedstrijden er aankomend en afgelopen zijn.
+-->
+
+Vijftiende stap na het UI-herontwerp: Wedstrijden uit de lijst met open mockup-onderdelen. Geen databasewijziging en geen SQL.
+
+**Tabs.** De twee secties onder elkaar (met een inklapbare lijst Afgelopen) zijn vervangen door twee tabs met het aantal erbij: "Aankomend (2)" en "Afgelopen (1)". Je ziet steeds één lijst; de gekozen tab blijft staan zolang de app open is. De sortering (eerstvolgende bovenaan; afgelopen meest recent bovenaan) en het klikken op een afgelopen kaart voor de alleen-lezen opstelling zijn ongewijzigd.
+
+**Aftelblokje.** Aankomende kaarten tonen naast de datum "Vandaag", "Morgen" of "Over n d". Zonder datum geen blokje; afgelopen kaarten krijgen er geen.
+
+**Knop Opstelling.** Aankomende kaarten hebben een knop "📋 Opstelling" die de opstelling van die wedstrijd opent (hetzelfde als via het tabblad Opstelling). Op een telefoon staan Opstelling en Wedstrijddag naast elkaar op de laatste rij.
+
+**Ondertitel.** Onder de titel staat bijvoorbeeld "2 aankomend · 1 afgelopen".
+
+#### Technisch
+
+- Geen databasewijziging, geen SQL. Nieuwe functies: `kiesWedstrijdenTab()`, `openOpstellingVanWedstrijd()` (net als `bekijkOpstelling()`: `showTab("opstelling")` en dan `openOpstelling(id)`) en `wedstrijdOverTekst()`. Aangepast: `renderWedstrijden()` (tabs, ondertitel) en `wedstrijdKaartHtml()` (blokje en knop). Nieuwe variabele `wedstrijdenTab`. Alle andere JavaScript is byte-voor-byte gelijk aan patch 84.
+- **Bewust verdwenen:** `toggleAfgelopen()` (functie en handler), de variabele `afgelopenIngeklapt` en de id's `afgelopen-grid` en `afgelopen-chevron`; ze hoorden bij de inklapbare sectie die door de tab is vervangen. Er verwees niets anders naar. Ook de CSS van `.wedstrijd-sectie-kop` (met `.sectie-count` en `.chevron`) is weg; `.wedstrijd-sectie-leeg` blijft in gebruik. Nieuw: id `wedstrijden-sub`, handlers `kiesWedstrijdenTab` en `openOpstellingVanWedstrijd`.
+- CSS: nieuwe klassen `.wedstrijden-sub`, `.wedstrijd-tabs`, `.wedstrijd-over`, `.wedstrijd-over-nu`, `.wedstrijd-opstel-knop`. De mobiele regel die Wedstrijddag over de volle breedte zette is weggehaald zodat de laatste rij twee knoppen naast elkaar toont. In print zijn de tabs, de ondertitel en het blokje verborgen; je print nu alleen de lijst van de gekozen tab.
+- Gecontroleerd (oud tegen nieuw, nep-backend, vaste datum 9 oktober 2026, desktop en mobiel): dezelfde wedstrijden in dezelfde volgorde per tab; alle oude knoppen blijven en alleen `openOpstellingVanWedstrijd` komt erbij; de alleen-lezen opstelling bij een afgelopen kaart geeft dezelfde staat; de nieuwe knop geeft dezelfde staat als klikken in het tabblad Opstelling; blokjes Vandaag, Morgen, Over 9 d, Over 30 d en geen blokje zonder datum; lege tab Afgelopen en geen wedstrijden. Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek.
+- Niet getest: een echte telefoon en een echte wedstrijddag.
+
 ## [oktober 2026 — patch 84] — 2026-10-09
 
 ### 🧮 Punten: resultaatkaart en totaal · 👤 Profiel: avatar, rol en wachtwoordsterkte

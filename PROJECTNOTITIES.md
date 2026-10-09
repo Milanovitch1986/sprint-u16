@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 84)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 85)*
 
 ---
 
@@ -43,6 +43,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 85: Wedstrijden (patch 85, okt 2026)
+Tweede patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-K` staat op de commit vóór deze patch (patch 84, `d7aa662`). Direct na de tests gecommit (Wedstrijden is geen live-kritiek scherm; de knoppen naar Opstelling en Wedstrijddag roepen de bestaande functies aan).
+- **Tabs:** `renderWedstrijden()` toont één lijst per tab, gestuurd door de variabele `wedstrijdenTab` ("aankomend" of "afgelopen", standaard aankomend, blijft staan tot de pagina herlaadt). `kiesWedstrijdenTab(tab)` zet de variabele en rendert opnieuw. De tabs gebruiken de bestaande `.segment`/`.segment-knop`-stijl; op mobiel over de volle breedte via `.wedstrijd-tabs`.
+- **Ondertitel:** vast element `#wedstrijden-sub` in de paginakop (eigen regel via `flex: 1 1 100%`), gevuld door `renderWedstrijden()`; leeg wanneer er geen wedstrijden zijn.
+- **Aftelblokje:** `wedstrijdOverTekst(datum)` geeft "Vandaag", "Morgen", "Over n d" of leeg (geen datum of in het verleden); alleen op aankomende kaarten. Rekent met lokale middernacht, net als `isWedstrijdAfgelopen()`.
+- **Knop Opstelling:** `openOpstellingVanWedstrijd(id)` = `showTab("opstelling")` + `openOpstelling(id)` (zelfde patroon als `bekijkOpstelling`, maar bewerkbaar). Klasse `.wedstrijd-opstel-knop` heeft dezelfde accentkleur als `.wedstrijd-live-knop`.
+- **Verwijderd (bewust):** `toggleAfgelopen()`, `afgelopenIngeklapt`, de id's `afgelopen-grid` en `afgelopen-chevron` en de CSS van `.wedstrijd-sectie-kop` (+ `.sectie-count`, `.chevron`). `contract.py` meldt deze als verdwenen; dat is verwacht. `.wedstrijd-sectie-leeg` blijft.
+- **Print:** tabs, ondertitel en blokje zijn in print verborgen; de afdruk toont alleen de lijst van de gekozen tab (vroeger beide secties).
+- **Testmethode (nieuw geleerd):** zet een vaste "vandaag" met een init-script dat `Date` vervangt (`new Date()` zonder argumenten en `Date.now()` geven een vaste tijd) en laad de pagina daarna opnieuw (`add_init_script` + `reload`); dan zijn de aftelteksten voorspelbaar. Voor de oude versie die een bewerkbare opstelling opent: roep `openOpstelling('id')` aan zoals de kaart in de Opstelling-lijst doet (na een alleen-lezen opstelling is stap 1, de lijst, verborgen). `commit_sjabloon.py` kent nu `JS_NIEUW` (nieuwe functies), `JS_VERVANG` (letterlijke vervangingen van oude code) en `HANDLERS_VRIJ` (functies waarvan de handlers bewust wijzigen).
+- **Terugdraaien:** Revert op de commit van patch 85, of terug naar tag `ui-K`.
 
 ### Patch 84: Punten en Profiel (patch 84, okt 2026)
 Eerste patch met nieuwe JavaScript uit de open mockup-onderdelen (reeks patch 83–95, zonder Home). Geen databasewijziging. Tag `ui-J` staat op de commit vóór deze patch (patch 83, `a7e8f24`). Direct na de tests gecommit (afgesproken: Punten en Profiel zijn niet live-kritiek).

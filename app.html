@@ -869,41 +869,6 @@
   .wedstrijd-card.afgelopen:hover { opacity: 1; }
   .wedstrijd-card.afgelopen .wedstrijd-datum { color: var(--muted); }
 
-  .wedstrijd-sectie-kop {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: var(--text);
-    padding-left: 10px;
-    border-left: 3px solid var(--accent);
-    margin: 4px 0 14px;
-  }
-  .wedstrijd-sectie-kop.afgelopen {
-    color: var(--muted);
-    border-left-color: var(--border);
-    cursor: pointer;
-    user-select: none;
-    margin-top: 28px;
-  }
-  .wedstrijd-sectie-kop .sectie-count {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--muted);
-    background: var(--surface2);
-    padding: 1px 8px;
-    border-radius: 20px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .wedstrijd-sectie-kop .chevron {
-    display: inline-block;
-    width: 14px;
-    font-size: 12px;
-  }
   .wedstrijd-sectie-leeg {
     color: var(--muted);
     font-size: 13px;
@@ -1647,13 +1612,12 @@
   .wedstrijd-notitie { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .wedstrijd-acties { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .wedstrijd-acties .btn { padding: 6px 12px; font-size: 12px; }
-  .wedstrijd-acties .wedstrijd-live-knop { border-color: var(--accent); color: var(--accent); }
+  .wedstrijd-acties .wedstrijd-live-knop, .wedstrijd-acties .wedstrijd-opstel-knop { border-color: var(--accent); color: var(--accent); }
   .wedstrijd-bekijk { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 14px; }
 
   @media (max-width: 768px) {
     .wedstrijd-acties { display: grid; grid-template-columns: 1fr 1fr; }
     .wedstrijd-acties .btn { justify-content: center; text-align: center; white-space: normal; line-height: 1.15; padding: 9px 8px; }
-    .wedstrijd-acties .wedstrijd-live-knop { grid-column: 1 / -1; }
   }
 
   /* ══ Patch 76: gelijke ruimte boven de titels (UI-herontwerp) ══ */
@@ -1873,6 +1837,27 @@
   /* Print blijft zoals het was: de nieuwe onderdelen horen alleen bij het scherm */
   @media print {
     .punten-resultaat, .punten-totaal, .profiel-kop, .ww-sterkte { display: none; }
+  }
+
+  /* ══ Patch 85: Wedstrijden (tabs Aankomend/Afgelopen, badge "Over n d", knop Opstelling, ondertitel) ══ */
+  .wedstrijden-sub { flex: 1 1 100%; margin-top: -6px; font-size: 13px; color: var(--muted); }
+  .wedstrijden-sub:empty { display: none; }
+  .wedstrijd-tabs { margin: 0 0 16px; }
+  #wedstrijden-grid .wedstrijd-kop { flex-wrap: wrap; }
+  .wedstrijd-over {
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+    background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .wedstrijd-over-nu {
+    background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  @media (max-width: 768px) {
+    .wedstrijd-tabs { display: flex; width: 100%; }
+    .wedstrijd-tabs .segment-knop { flex: 1; padding: 9px 8px; }
+  }
+  @media print {
+    .wedstrijd-tabs, .wedstrijden-sub, .wedstrijd-over { display: none; }
   }
 
   @media print {
@@ -2187,6 +2172,7 @@
       <div class="ml-auto">
         <button class="btn btn-primary fab-mobiel" aria-label="Wedstrijd toevoegen" onclick="openWedstrijdModal()">+ Wedstrijd toevoegen</button>
       </div>
+      <div class="wedstrijden-sub" id="wedstrijden-sub"></div>
     </div>
     <div id="wedstrijden-grid"></div>
   </div>
@@ -5350,7 +5336,7 @@ function getDisciplineType(naam) {
 }
 
 // ── Wedstrijden render ────────────────────────────────────────
-let afgelopenIngeklapt = false; // afgelopen-lijst standaard opengeklapt
+let wedstrijdenTab = "aankomend"; // gekozen tab op het scherm Wedstrijden: "aankomend" of "afgelopen"
 
 // Bepaalt of een wedstrijd al geweest is (datum vóór vandaag).
 // Wedstrijden zonder datum tellen als aankomend.
@@ -5364,6 +5350,8 @@ function isWedstrijdAfgelopen(w) {
 function wedstrijdKaartHtml(w, afgelopen) {
   // patch 75: inline stijlen → klassen (alleen opmaak; onclick-handlers, ids en tekst ongewijzigd)
   const finaleBadge = w.is_finale ? `<span class="finale-badge">🏆 FINALE</span>` : "";
+  const over = afgelopen ? "" : wedstrijdOverTekst(w.datum);
+  const overBadge = over ? `<span class="wedstrijd-over${over === "Vandaag" || over === "Morgen" ? " wedstrijd-over-nu" : ""}">${over}</span>` : "";
   // Afgelopen kaarten hebben geen knoppen: de hele kaart opent de opstelling
   // in alleen-lezen-modus.
   const kaartKlik = afgelopen ? ` onclick="bekijkOpstelling('${w.id}')" style="cursor:pointer;" title="Klik om de opstelling te bekijken"` : "";
@@ -5374,12 +5362,14 @@ function wedstrijdKaartHtml(w, afgelopen) {
         <button class="btn btn-ghost btn-sm" onclick="openProgrammaVanWedstrijd('${w.id}')">📋 Programma</button>
         <button class="btn btn-ghost btn-sm" onclick="openPdfImportModal('${w.id}')">📄 Importeer PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="openFinaleImportModal('${w.id}')" title="Importeer een vast finale-tijdschema uit Excel">📊 Importeer finale (Excel)</button>
+        <button class="btn btn-ghost btn-sm wedstrijd-opstel-knop" onclick="openOpstellingVanWedstrijd('${w.id}')" title="Opstelling maken of aanpassen">📋 Opstelling</button>
         <button class="btn btn-ghost btn-sm wedstrijd-live-knop" onclick="openWedstrijddag('${w.id}')" title="Live resultaten invoeren op de wedstrijddag">🏟️ Wedstrijddag</button>
       </div>`;
   return `
     <div class="wedstrijd-card${w.is_finale ? " is-finale" : ""}${afgelopen ? " afgelopen" : ""}"${kaartKlik}>
       <div class="wedstrijd-kop">
         <span class="wedstrijd-datum">${formatDate(w.datum)}</span>
+        ${overBadge}
         ${finaleBadge}
       </div>
       <div class="wedstrijd-naam">${esc(w.naam||"")}</div>
@@ -5394,7 +5384,9 @@ function renderWedstrijden() {
   const zichtbaar = wedstrijden.filter(w => !w.is_open);
   document.getElementById("wedstrijden-count").textContent = zichtbaar.length;
   const grid = document.getElementById("wedstrijden-grid");
+  const sub = document.getElementById("wedstrijden-sub");
   if (!zichtbaar.length) {
+    if (sub) sub.textContent = "";
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏟️</div>Nog geen wedstrijden. Voeg er een toe!</div>`;
     return;
   }
@@ -5406,35 +5398,46 @@ function renderWedstrijden() {
   const afgelopen = zichtbaar.filter(isWedstrijdAfgelopen)
     .sort((a, b) => (b.datum || "").localeCompare(a.datum || "")); // meest recente bovenaan
 
-  let html = "";
+  if (sub) sub.textContent = aankomend.length + " aankomend · " + afgelopen.length + " afgelopen";
 
-  // Aankomende sectie (altijd zichtbaar)
-  html += `<div class="wedstrijd-sectie-kop">📅 Aankomende wedstrijden <span class="sectie-count">${aankomend.length}</span></div>`;
-  if (aankomend.length) {
-    html += `<div class="grid">${aankomend.map(w => wedstrijdKaartHtml(w, false)).join("")}</div>`;
+  // Patch 85: twee tabs in plaats van twee secties; je ziet steeds één lijst.
+  const tab = wedstrijdenTab === "afgelopen" ? "afgelopen" : "aankomend";
+  let html = `<div class="segment wedstrijd-tabs" role="group" aria-label="Wedstrijden">`
+    + `<button type="button" class="segment-knop${tab === "aankomend" ? " active" : ""}" onclick="kiesWedstrijdenTab('aankomend')">Aankomend (${aankomend.length})</button>`
+    + `<button type="button" class="segment-knop${tab === "afgelopen" ? " active" : ""}" onclick="kiesWedstrijdenTab('afgelopen')">Afgelopen (${afgelopen.length})</button>`
+    + `</div>`;
+  const lijst = tab === "afgelopen" ? afgelopen : aankomend;
+  if (lijst.length) {
+    html += `<div class="grid">${lijst.map(w => wedstrijdKaartHtml(w, tab === "afgelopen")).join("")}</div>`;
   } else {
-    html += `<div class="wedstrijd-sectie-leeg">Geen aankomende wedstrijden.</div>`;
-  }
-
-  // Afgelopen sectie (inklapbaar, alleen tonen als er afgelopen wedstrijden zijn)
-  if (afgelopen.length) {
-    html += `<div class="wedstrijd-sectie-kop afgelopen" onclick="toggleAfgelopen()">
-               <span class="chevron" id="afgelopen-chevron">${afgelopenIngeklapt ? "▸" : "▾"}</span>
-               ✅ Afgelopen wedstrijden <span class="sectie-count">${afgelopen.length}</span>
-             </div>`;
-    html += `<div class="grid" id="afgelopen-grid"${afgelopenIngeklapt ? ' style="display:none;"' : ""}>${afgelopen.map(w => wedstrijdKaartHtml(w, true)).join("")}</div>`;
+    html += `<div class="wedstrijd-sectie-leeg">${tab === "afgelopen" ? "Nog geen afgelopen wedstrijden." : "Geen aankomende wedstrijden."}</div>`;
   }
 
   grid.innerHTML = html;
 }
 
-// Klapt de lijst met afgelopen wedstrijden in/uit (standaard opengeklapt).
-function toggleAfgelopen() {
-  afgelopenIngeklapt = !afgelopenIngeklapt;
-  const lijst = document.getElementById("afgelopen-grid");
-  const chevron = document.getElementById("afgelopen-chevron");
-  if (lijst)   lijst.style.display = afgelopenIngeklapt ? "none" : "";
-  if (chevron) chevron.textContent = afgelopenIngeklapt ? "▸" : "▾";
+function kiesWedstrijdenTab(tab) {
+  // Wisselt tussen de lijst met aankomende en afgelopen wedstrijden (patch 85)
+  wedstrijdenTab = tab === "afgelopen" ? "afgelopen" : "aankomend";
+  renderWedstrijden();
+}
+
+function openOpstellingVanWedstrijd(wedstrijdId) {
+  // Opent de opstelling van een aankomende wedstrijd rechtstreeks vanuit de Wedstrijden-tab (patch 85)
+  showTab("opstelling");
+  openOpstelling(wedstrijdId);
+}
+
+function wedstrijdOverTekst(datum) {
+  // "Vandaag", "Morgen" of "Over 12 d" voor een aankomende wedstrijd; leeg zonder datum (patch 85)
+  if (!datum) return "";
+  const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0);
+  const d = new Date(datum); d.setHours(0, 0, 0, 0);
+  const dagen = Math.round((d - vandaag) / 86400000);
+  if (dagen < 0) return "";
+  if (dagen === 0) return "Vandaag";
+  if (dagen === 1) return "Morgen";
+  return "Over " + dagen + " d";
 }
 
 // ── Wedstrijd Modal ───────────────────────────────────────────
