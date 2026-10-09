@@ -6,6 +6,40 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 88] — 2026-10-09
+
+### 📋 Opstelling: voortgangsbalk, ploegkeuze, grote schakelaars, onderbalk en samenvatting bij Delen
+
+<!--RELEASENOTE
+versie: Patch 88
+titel: 📋 Opstelling: voortgangsbalk, ploegkeuze, grote schakelaars, onderbalk en samenvatting bij Delen
+type: feature
+tags: opstelling
+beschrijving: Bij het maken van een opstelling zie je nu bovenaan in drie stappen hoe ver je bent (beschikbaar, ploegen, opslaan en delen). Het aantal ploegen kies je met drie knoppen, beschikbaarheid zet je aan of uit met grote schakelaars, onderaan verschijnt een balk als er nog niet-opgeslagen wijzigingen zijn, en het venster Delen toont eerst een samenvatting van wat je gaat versturen.
+-->
+
+Achttiende stap na het UI-herontwerp: Opstelling deel 1. Het opstellen, het opslaan en het opbouwen van de WhatsApp-tekst zijn niet veranderd; er verandert geen enkele databasevraag. Deel 2 (indeling per stap op mobiel, drie ploegen naast elkaar) en deel 3 (slepen) volgen.
+
+**Voortgangsbalk.** Onder de keuze Jongens/Meisjes staan drie stappen met een korte status: **① Beschikbaar** ("5 van 5 beschikbaar"), **② Ploegen** ("9 van 24 plekken gevuld") en **③ Opslaan & delen** ("Opgeslagen", "Niet opgeslagen" of "Nog niets ingevuld"). Een stap krijgt een vinkje als hij klaar is; een tik scrolt naar dat onderdeel. In alleen-lezen is de balk er niet.
+
+**Keuze 1/2/3 ploegen.** De dropdown is vervangen door drie knoppen naast elkaar. Ze doen hetzelfde als de dropdown en blijven kloppen als je tussen Jongens en Meisjes wisselt (het aantal ploegen wordt per geslacht onthouden).
+
+**Grote schakelaars.** Bij "Beschikbare atleten" staan grote aan/uit-schakelaars; de hele rij is aanklikbaar. Elke wijziging wordt direct opgeslagen, precies zoals voorheen.
+
+**Onderbalk "Niet-opgeslagen wijzigingen".** Zodra de indeling (of de reserves) afwijkt van wat het laatst is geladen of opgeslagen, verschijnt onderaan een balk met een knop Opslaan (dezelfde als de bestaande knop). Draai je een wijziging terug, dan verdwijnt de balk weer. Het aantal ploegen telt bewust niet mee: dat is een algemene instelling, geen onderdeel van de opstelling. Beschikbaarheid ook niet, want die wordt direct opgeslagen.
+
+**Samenvatting bij Delen.** Het venster "Welke teams delen?" toont bovenaan de wedstrijd en datum, per team hoeveel plekken gevuld zijn, het aantal reserves en, als er nog niet-opgeslagen wijzigingen zijn, een waarschuwing dat je deelt wat nu op het scherm staat.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `opstellingToestand()`, `neemOpstellingSnapshot()`, `werkOpstellingStatusBij()`, `scrollNaarOpstellingStap()`, `kiesAantalPloegen()` en `vulDeelSamenvatting()`. Kleine wijzigingen in bestaande functies: `laadProgrammaEnOpstelling()` en `opslaanOpstelling()` roepen elk één regel `neemOpstellingSnapshot()` aan, `deelViaWhatsApp()` roept `vulDeelSamenvatting()` aan, en `renderBeschikbaarheid()` gebruikt klassen in plaats van inline stijlen (de handler `toggleBeschikbaar(...)` is letterlijk gelijk). De generatie- en aanvul-logica, de conflictcontrole, het kiezen van atleten, reserves, opslaan, exporteren, afdrukken en het bouwen van de WhatsApp-tekst zijn ongewijzigd. Alle andere JavaScript is byte-voor-byte gelijk aan patch 87.
+- "Niet opgeslagen" wordt bepaald door de huidige `opstellingData` (genormaliseerd: gesorteerde sleutels, lege plekken en lege ploegen weggelaten) te vergelijken met de stand van het laatste laden of opslaan, per wedstrijd en geslacht. Een `setInterval` van 500 ms (eenmalig gestart in `neemOpstellingSnapshot()`) ververst de status zolang stap 2 van Opstelling in beeld is; zo worden alle wijzigingsroutes gevangen zonder de render- of opstelfuncties aan te raken. Alle statuscode zit in `try/catch`: een fout daarin kan het laden of opslaan nooit verstoren.
+- De dropdown `#aantal-ploegen-select` blijft in de pagina (`setOpstellingGeslacht()` zet er een waarde in) en is op scherm verborgen; de segmentknoppen volgen `aantalPloegenPerGeslacht[actiefGeslacht]`. In print blijft de dropdown zichtbaar en zijn de nieuwe onderdelen verborgen.
+- Nieuwe id's: `opstelling-voortgang`, `opstelling-acties`, `opstelling-onderbalk`, `wa-team-samenvatting`; nieuwe handlers `scrollNaarOpstellingStap` en `kiesAantalPloegen`. Contract-check: 0 id's, handlers of functies verdwenen; 4 id's, 2 handlers en 6 functies nieuw.
+- De onderbalk is `position: fixed` (`z-index: 90`, onder alle vensters en de onderbalk van de app): op desktop naast de zijbalk, op mobiel direct boven de onderbalk van de app.
+- Gecontroleerd (oud tegen nieuw, nep-backend met een spy op alle schrijfaanroepen, desktop en mobiel): de ploegen- en reserves-HTML, de indeling, de beschikbaarheidsrijen en hun handlers zijn gelijk; 1/2/3 ploegen en wisselen van geslacht geven dezelfde uitkomst; schakelaars en "Alles aan/uit" geven dezelfde `upsert`-aanroepen; Automatisch opstellen geeft dezelfde indeling; Opslaan (via de oude knop of de onderbalk) geeft dezelfde `upsert` van dezelfde rijen en dezelfde melding; Delen geeft dezelfde teamlijst en dezelfde WhatsApp-link; alleen-lezen is gelijk en toont de nieuwe onderdelen niet. De onderbalk verschijnt bij een wijziging, verdwijnt na opslaan en ook als je een wijziging terugdraait, en de aantallen in de voortgangsbalk kloppen met een onafhankelijke telling (5 van 5 beschikbaar; 9 van 24 plekken). Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek; alleen het Opstelling-detail op het scherm is anders (de print daarvan is identiek).
+- Niet getest: een echte telefoon, echt opslaan in Supabase en een echte WhatsApp-verzending (alleen de aanroep en de link zijn vergeleken).
+
 ## [oktober 2026 — patch 87] — 2026-10-09
 
 ### ⚙️ Admin: tabs per sectie op desktop, een pagina per sectie op mobiel

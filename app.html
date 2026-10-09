@@ -1955,6 +1955,75 @@
     .admin-tabs, .admin-menu, .admin-terug { display: none; }
   }
 
+  /* ══ Patch 88: Opstelling deel 1 (voortgangsbalk, keuze 1/2/3 ploegen, schakelaars, onderbalk, samenvatting bij Delen) ══ */
+  #beschikbaarheid-sectie, #ploegen-container, #opstelling-acties { scroll-margin-top: 16px; }
+  .opstelling-voortgang { display: flex; gap: 8px; margin: 0 0 16px; }
+  .voortgang-stap {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; text-align: left;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    color: var(--text); font-family: 'Barlow', sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .voortgang-stap:hover { border-color: var(--muted); }
+  .voortgang-nr {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .voortgang-stap.klaar .voortgang-nr { background: var(--success); border-color: var(--success); color: #000; }
+  .voortgang-tekst { display: flex; flex-direction: column; min-width: 0; }
+  .voortgang-tekst b { font-size: 13px; }
+  .voortgang-sub { font-size: 11px; color: var(--muted); }
+  .voortgang-sub:empty { display: none; }
+
+  /* Keuze 1/2/3 ploegen; de dropdown blijft in de pagina (setOpstellingGeslacht zet er een waarde in) maar is op scherm verborgen */
+  @media screen { #aantal-ploegen-select { display: none; } }
+  .aantal-ploegen-segment { flex-shrink: 0; }
+
+  /* Beschikbaarheid: grote aan/uit-schakelaars (de hele rij is aanklikbaar) */
+  .beschik-rij {
+    display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 10px 12px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border); transition: border-color .2s;
+  }
+  .beschik-rij.aan { border-color: var(--success); }
+  .beschik-naam { font-size: 14px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .schakelaar-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .schakelaar { position: relative; flex-shrink: 0; width: 52px; height: 30px; border-radius: 15px; background: var(--border); transition: background .2s; }
+  .schakelaar::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s;
+  }
+  .schakelaar-input:checked + .schakelaar { background: var(--success); }
+  .schakelaar-input:checked + .schakelaar::after { transform: translateX(22px); }
+  .schakelaar-input:focus-visible + .schakelaar { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Onderbalk "niet opgeslagen" */
+  .opstelling-onderbalk {
+    display: none; position: fixed; left: var(--sidebar-w); right: 0; bottom: 0; z-index: 90;
+    align-items: center; justify-content: space-between; gap: 12px; padding: 10px 24px;
+    background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -6px 20px rgba(0,0,0,.25);
+  }
+  .opstelling-onderbalk.zichtbaar { display: flex; }
+  .onderbalk-tekst { font-size: 14px; font-weight: 700; color: var(--accent); }
+  #opstelling-stap2:has(.opstelling-onderbalk.zichtbaar) { padding-bottom: 72px; }
+
+  /* Samenvatting in het Delen-venster */
+  .wa-samenvatting { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--border); font-size: 13px; }
+  .wa-samenvatting:empty { display: none; }
+  .wa-sam-titel { font-weight: 700; margin-bottom: 6px; }
+  .wa-sam-rij { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; color: var(--muted); }
+  .wa-sam-waarschuwing { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--accent); font-weight: 600; }
+
+  @media screen and (max-width: 768px) {
+    #beschikbaarheid-sectie, #ploegen-container, #opstelling-acties { scroll-margin-top: 96px; }
+    .voortgang-stap { flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 10px; }
+    .opstelling-acties > div:first-child { grid-column: 1 / -1; }
+    .aantal-ploegen-segment { grid-column: 1 / -1; width: 100%; }
+    .aantal-ploegen-segment .segment-knop { flex: 1; padding: 9px 8px; }
+    .opstelling-onderbalk { left: 0; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; }
+  }
+  @media print {
+    .opstelling-voortgang, .aantal-ploegen-segment, .opstelling-onderbalk { display: none; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2211,6 +2280,7 @@
   <div class="modal" style="max-width:360px;">
     <div class="modal-title">Welke teams delen?</div>
     <div id="wa-team-geslacht" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+    <div id="wa-team-samenvatting" class="wa-samenvatting"></div>
     <div id="wa-team-checkboxes"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('waTeamModal')">Annuleren</button>
@@ -2388,6 +2458,13 @@
         <button id="opstelling-tab-V" class="btn btn-ghost" onclick="setOpstellingGeslacht('V')">👧 Meisjes</button>
       </div>
 
+      <!-- Voortgang (patch 88): drie stappen met status; een tik scrolt naar het onderdeel -->
+      <div class="opstelling-voortgang bewerk-actie print-hide" id="opstelling-voortgang">
+        <button type="button" class="voortgang-stap" data-voortgang="1" onclick="scrollNaarOpstellingStap(1)"><span class="voortgang-nr">1</span><span class="voortgang-tekst"><b>Beschikbaar</b><small class="voortgang-sub"></small></span></button>
+        <button type="button" class="voortgang-stap" data-voortgang="2" onclick="scrollNaarOpstellingStap(2)"><span class="voortgang-nr">2</span><span class="voortgang-tekst"><b>Ploegen</b><small class="voortgang-sub"></small></span></button>
+        <button type="button" class="voortgang-stap" data-voortgang="3" onclick="scrollNaarOpstellingStap(3)"><span class="voortgang-nr">3</span><span class="voortgang-tekst"><b>Opslaan &amp; delen</b><small class="voortgang-sub"></small></span></button>
+      </div>
+
       <!-- Beschikbaarheid sectie -->
       <div class="detail-panel print-hide" id="beschikbaarheid-sectie" style="margin-bottom:24px;">
         <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
@@ -2401,13 +2478,18 @@
       </div>
 
       <!-- Ploegen sectie -->
-      <div class="opstelling-acties">
+      <div class="opstelling-acties" id="opstelling-acties">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
         <select id="aantal-ploegen-select" class="bewerk-actie" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
           <option value="1">1 ploeg</option>
           <option value="2">2 ploegen</option>
           <option value="3" selected>3 ploegen</option>
         </select>
+        <div class="segment aantal-ploegen-segment bewerk-actie" role="group" aria-label="Aantal ploegen">
+          <button type="button" class="segment-knop" data-aantal="1" onclick="kiesAantalPloegen(1)">1 ploeg</button>
+          <button type="button" class="segment-knop" data-aantal="2" onclick="kiesAantalPloegen(2)">2 ploegen</button>
+          <button type="button" class="segment-knop" data-aantal="3" onclick="kiesAantalPloegen(3)">3 ploegen</button>
+        </div>
         <button class="btn btn-primary bewerk-actie" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
         <button class="btn btn-ghost bewerk-actie" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
         <button class="btn btn-ghost bewerk-actie" onclick="opslaanOpstelling()">💾 Opslaan</button>
@@ -2418,6 +2500,12 @@
 
       <div id="ploegen-container"></div>
       <div id="reserves-container" style="padding-bottom: 32px;"></div>
+
+      <!-- Onderbalk (patch 88): verschijnt zodra er niet-opgeslagen wijzigingen zijn -->
+      <div class="opstelling-onderbalk" id="opstelling-onderbalk" role="status">
+        <span class="onderbalk-tekst">● Niet-opgeslagen wijzigingen</span>
+        <button type="button" class="btn btn-primary btn-sm" onclick="opslaanOpstelling()">💾 Opslaan</button>
+      </div>
     </div>
   </div>
 
@@ -5841,6 +5929,7 @@ async function laadProgrammaEnOpstelling() {
     renderProgrammaOverzicht();
     renderBeschikbaarheid();
     renderPloegen();
+    neemOpstellingSnapshot();
   } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
 }
 
@@ -6628,13 +6717,11 @@ function renderBeschikbaarheid() {
   grid.innerHTML = lijst.map(a => {
     const beschikbaar = isBeschikbaar(a.id);
     return `
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;
-        background:var(--surface2);border:1px solid ${beschikbaar ? "var(--success)" : "var(--border)"};
-        border-radius:8px;padding:8px 12px;transition:all .2s;">
-        <input type="checkbox" ${beschikbaar ? "checked" : ""}
-          onchange="toggleBeschikbaar('${a.id}', this.checked)"
-          style="accent-color:var(--success);width:16px;height:16px;">
-        <span style="font-size:13px;font-weight:600;">${esc(a.naam)}</span>
+      <label class="beschik-rij${beschikbaar ? " aan" : ""}">
+        <input type="checkbox" class="schakelaar-input" ${beschikbaar ? "checked" : ""}
+          onchange="toggleBeschikbaar('${a.id}', this.checked)">
+        <span class="schakelaar" aria-hidden="true"></span>
+        <span class="beschik-naam">${esc(a.naam)}</span>
       </label>`;
   }).join("");
 }
@@ -7064,8 +7151,113 @@ async function opslaanOpstelling() {
       onConflict: "categorie_id,wedstrijd_id,geslacht,ploeg"
     });
     if (error) throw error;
+    neemOpstellingSnapshot();
     toast("Opstelling opgeslagen ✓");
   } catch(e) { toast("Fout: " + e.message, "err"); }
+}
+
+function opstellingToestand() {
+  // De indeling per ploeg (en de reserves) als vaste tekst; lege plekken en lege ploegen tellen niet mee. Het aantal ploegen telt bewust
+  // niet mee: dat is een algemene instelling, geen onderdeel van de opstelling. De sleutel hoort bij de wedstrijd en het geslacht (patch 88).
+  const norm = {};
+  Object.keys(opstellingData).sort().forEach(p => {
+    const rij = opstellingData[p] || {};
+    const sleutels = Object.keys(rij).filter(k => rij[k] != null && String(rij[k]) !== "").sort();
+    if (sleutels.length) { norm[p] = {}; sleutels.forEach(k => { norm[p][k] = String(rij[k]); }); }
+  });
+  return {
+    sleutel: String(actiefWedstrijdId) + "|" + actiefGeslacht,
+    tekst: JSON.stringify(norm)
+  };
+}
+
+function neemOpstellingSnapshot() {
+  // Onthoudt de "opgeslagen" stand (na laden en na opslaan) en zorgt dat de statusbalken bijgewerkt worden (patch 88).
+  // Bijzaak: een fout hier mag het laden of opslaan nooit verstoren.
+  try {
+    window.__opstellingSnapshot = opstellingToestand();
+    if (!window.__opstellingStatusTimer) window.__opstellingStatusTimer = setInterval(werkOpstellingStatusBij, 500);
+    werkOpstellingStatusBij();
+  } catch (e) { console.warn("Opstelling-status:", e.message); }
+}
+
+function werkOpstellingStatusBij() {
+  // Vult de voortgangsbalk, markeert het gekozen aantal ploegen en toont/verbergt de onderbalk "niet opgeslagen" (patch 88).
+  // Draait twee keer per seconde zolang de opstelling in beeld is; bijzaak, dus nooit een fout doorgeven.
+  try {
+    const stap2 = document.getElementById("opstelling-stap2");
+    if (!stap2 || !stap2.checkVisibility()) return;
+    const aantal = aantalPloegenPerGeslacht[actiefGeslacht] || 3;
+    document.querySelectorAll(".aantal-ploegen-segment .segment-knop").forEach(b => b.classList.toggle("active", Number(b.dataset.aantal) === aantal));
+    const balk = document.getElementById("opstelling-onderbalk");
+    if (opstellingAlleenLezen) { if (balk) balk.classList.remove("zichtbaar"); return; }
+
+    const snap = window.__opstellingSnapshot;
+    const nu = opstellingToestand();
+    const geladen = !!snap && snap.sleutel === nu.sleutel;
+    const gewijzigd = geladen && snap.tekst !== nu.tekst;
+    if (balk) balk.classList.toggle("zichtbaar", gewijzigd);
+
+    const atl = atleten.filter(a => a.geslacht === actiefGeslacht);
+    const beschikbaar = atl.filter(a => isBeschikbaar(a.id)).length;
+    let perPloeg = 0;
+    programma.forEach(item => { perPloeg += item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3; });
+    const ploegNamen = ["A", "B", "C"].slice(0, aantal);
+    const totaal = perPloeg * ploegNamen.length;
+    let gevuld = 0;
+    ploegNamen.forEach(p => { gevuld += Object.values(opstellingData[p] || {}).filter(v => v != null && String(v) !== "").length; });
+
+    const stappen = {
+      1: { klaar: atl.length > 0 && beschikbaar > 0, tekst: atl.length ? beschikbaar + " van " + atl.length + " beschikbaar" : "Geen atleten" },
+      2: { klaar: totaal > 0 && gevuld >= totaal, tekst: totaal ? gevuld + " van " + totaal + " plekken gevuld" : "Geen programma" },
+      3: { klaar: geladen && !gewijzigd && gevuld > 0, tekst: !geladen ? "" : gewijzigd ? "Niet opgeslagen" : gevuld ? "Opgeslagen" : "Nog niets ingevuld" }
+    };
+    document.querySelectorAll("#opstelling-voortgang .voortgang-stap").forEach(knop => {
+      const st = stappen[knop.dataset.voortgang];
+      knop.classList.toggle("klaar", st.klaar);
+      knop.querySelector(".voortgang-nr").textContent = st.klaar ? "✓" : knop.dataset.voortgang;
+      knop.querySelector(".voortgang-sub").textContent = st.tekst;
+    });
+  } catch (e) { /* bijzaak */ }
+}
+
+function scrollNaarOpstellingStap(n) {
+  // Scrolt naar het onderdeel bij een stap in de voortgangsbalk (patch 88)
+  const doel = { 1: "beschikbaarheid-sectie", 2: "ploegen-container", 3: "opstelling-acties" }[n];
+  const el = doel && document.getElementById(doel);
+  if (el && el.checkVisibility()) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function kiesAantalPloegen(n) {
+  // Segmentknop 1/2/3 ploegen: zet de (verborgen) dropdown en gebruikt dezelfde functie als die dropdown (patch 88)
+  const sel = document.getElementById("aantal-ploegen-select");
+  if (sel) sel.value = String(n);
+  setAantalPloegen(n);
+  werkOpstellingStatusBij();
+}
+
+function vulDeelSamenvatting() {
+  // Samenvatting bovenaan het Delen-venster: wedstrijd, per team het aantal gevulde plekken, reserves en een waarschuwing (patch 88)
+  const el = document.getElementById("wa-team-samenvatting");
+  if (!el) return;
+  try {
+    const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
+    const aantal = aantalPloegenPerGeslacht[actiefGeslacht] || 3;
+    let perPloeg = 0;
+    programma.forEach(item => { perPloeg += item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3; });
+    let html = `<div class="wa-sam-titel">${esc(w ? w.naam : "")}${w && w.datum ? " · " + esc(formatDate(w.datum)) : ""}</div>`;
+    ["A", "B", "C"].slice(0, aantal).forEach((p, i) => {
+      const gevuld = Object.values(opstellingData[p] || {}).filter(v => v != null && String(v) !== "").length;
+      html += `<div class="wa-sam-rij"><span>Team ${i + 1}</span><span>${gevuld} van ${perPloeg} plekken gevuld</span></div>`;
+    });
+    const nRes = Object.values(opstellingData["RES"] || {}).filter(v => v != null && String(v) !== "").length;
+    html += `<div class="wa-sam-rij"><span>🔁 Reserves</span><span>${nRes}</span></div>`;
+    const snap = window.__opstellingSnapshot, nu = opstellingToestand();
+    if (snap && snap.sleutel === nu.sleutel && snap.tekst !== nu.tekst) {
+      html += `<div class="wa-sam-waarschuwing">⚠️ Er zijn niet-opgeslagen wijzigingen. Je deelt de opstelling zoals die nu op het scherm staat.</div>`;
+    }
+    el.innerHTML = html;
+  } catch (e) { el.innerHTML = ""; }
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
@@ -9198,6 +9390,7 @@ function deelViaWhatsApp() {
     </label>`;
   document.getElementById("wa-team-checkboxes").innerHTML = html;
   document.getElementById("wa-team-geslacht").textContent = "👟 " + geslachtLabel;
+  vulDeelSamenvatting();
   openModal("waTeamModal");
 }
 
