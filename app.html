@@ -2024,6 +2024,27 @@
     .opstelling-voortgang, .aantal-ploegen-segment, .opstelling-onderbalk { display: none; }
   }
 
+  /* ══ Patch 89: Opstelling deel 2 (waarschuwing bij verlaten, stap voor stap op mobiel) ══ */
+  .verlaat-acties { flex-direction: column; align-items: stretch; gap: 8px; }
+  .verlaat-acties .btn { justify-content: center; }
+  .wa-sam-ok { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--success); font-weight: 600; }
+  .voortgang-stap.actief { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .opstelling-samenvatting, .opstelling-stapnav { display: none; }
+  @media screen and (max-width: 768px) {
+    /* Eén stap tegelijk zodra er een stap gekozen is (data-stap op #opstelling-stap2); zonder stap (alleen-lezen) blijft alles zoals het was */
+    #opstelling-stap2[data-stap="1"] :is(#opstelling-acties, #ploegen-container, #reserves-container, #opstelling-samenvatting) { display: none; }
+    #opstelling-stap2[data-stap="2"] :is(#beschikbaarheid-sectie, #opstelling-samenvatting) { display: none; }
+    #opstelling-stap2[data-stap="2"] .opstelling-acties > [data-stap="3"] { display: none; }
+    #opstelling-stap2[data-stap="3"] :is(#beschikbaarheid-sectie, #ploegen-container, #reserves-container) { display: none; }
+    #opstelling-stap2[data-stap="3"] .opstelling-acties > [data-stap="2"] { display: none; }
+    #opstelling-stap2[data-stap="2"] .opstelling-acties > button[data-stap="2"] { grid-column: 1 / -1; }
+    #opstelling-stap2[data-stap="3"] .opstelling-samenvatting { display: block; }
+    #opstelling-stap2[data-stap="3"] .opstelling-acties > button[data-stap="3"][onclick="opslaanOpstelling()"] { grid-column: 1 / -1; background: var(--accent); border-color: var(--accent); color: #000; }
+    #opstelling-stap2[data-stap] .opstelling-stapnav { display: flex; gap: 8px; margin: 8px 0 16px; }
+    .opstelling-stapnav .btn { flex: 1; justify-content: center; }
+    #opstelling-stap2[data-stap="1"] .stapnav-vorige, #opstelling-stap2[data-stap="3"] .stapnav-volgende { display: none; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2289,6 +2310,19 @@
   </div>
 </div>
 
+<!-- ── OPSTELLING VERLATEN MODAL (patch 89) ── -->
+<div class="modal-overlay" id="opstellingVerlaatModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title">Niet-opgeslagen wijzigingen</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Je hebt wijzigingen in de opstelling die nog niet zijn opgeslagen. Wat wil je doen?</div>
+    <div class="modal-actions verlaat-acties">
+      <button class="btn btn-primary" onclick="opstellingVerlaatKeuze('opslaan')">💾 Opslaan en doorgaan</button>
+      <button class="btn btn-ghost btn-gevaar" onclick="opstellingVerlaatKeuze('verwerp')">Niet opslaan</button>
+      <button class="btn btn-ghost" onclick="opstellingVerlaatKeuze('blijf')">Blijven</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── ONDERDEEL MODAL ── -->
 <div class="modal-overlay" id="onderdeelModal">
   <div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto;">
@@ -2479,27 +2513,34 @@
 
       <!-- Ploegen sectie -->
       <div class="opstelling-acties" id="opstelling-acties">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
+        <div data-stap="2" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;">Ploegen</div>
         <select id="aantal-ploegen-select" class="bewerk-actie" onchange="setAantalPloegen(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:14px;">
           <option value="1">1 ploeg</option>
           <option value="2">2 ploegen</option>
           <option value="3" selected>3 ploegen</option>
         </select>
-        <div class="segment aantal-ploegen-segment bewerk-actie" role="group" aria-label="Aantal ploegen">
+        <div class="segment aantal-ploegen-segment bewerk-actie" data-stap="2" role="group" aria-label="Aantal ploegen">
           <button type="button" class="segment-knop" data-aantal="1" onclick="kiesAantalPloegen(1)">1 ploeg</button>
           <button type="button" class="segment-knop" data-aantal="2" onclick="kiesAantalPloegen(2)">2 ploegen</button>
           <button type="button" class="segment-knop" data-aantal="3" onclick="kiesAantalPloegen(3)">3 ploegen</button>
         </div>
-        <button class="btn btn-primary bewerk-actie" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
-        <button class="btn btn-ghost bewerk-actie" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
-        <button class="btn btn-ghost bewerk-actie" onclick="opslaanOpstelling()">💾 Opslaan</button>
-        <button class="btn btn-ghost btn-sm" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
-        <button class="btn btn-ghost btn-sm" onclick="printOpstelling()">🖨️ Afdrukken</button>
-        <button class="btn btn-ghost btn-sm" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
+        <button class="btn btn-primary bewerk-actie" data-stap="2" onclick="genereerOpstelling()">⚡ Automatisch opstellen</button>
+        <button class="btn btn-ghost bewerk-actie" data-stap="2" onclick="aanvullenOpstelling()" title="Behoudt wat je zelf hebt ingevuld en vult lege plekken aan">🧩 Aanvullen</button>
+        <button class="btn btn-ghost bewerk-actie" data-stap="3" onclick="opslaanOpstelling()">💾 Opslaan</button>
+        <button class="btn btn-ghost btn-sm" data-stap="3" onclick="exporteerOpstelling()">📥 Exporteren (.xlsx)</button>
+        <button class="btn btn-ghost btn-sm" data-stap="3" onclick="printOpstelling()">🖨️ Afdrukken</button>
+        <button class="btn btn-ghost btn-sm" data-stap="3" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
       </div>
 
       <div id="ploegen-container"></div>
       <div id="reserves-container" style="padding-bottom: 32px;"></div>
+
+      <!-- Stap voor stap op mobiel (patch 89): samenvatting bij stap 3 en Vorige/Volgende; op desktop verborgen -->
+      <div class="wa-samenvatting opstelling-samenvatting bewerk-actie print-hide" id="opstelling-samenvatting"></div>
+      <div class="opstelling-stapnav bewerk-actie print-hide" id="opstelling-stapnav">
+        <button type="button" class="btn btn-ghost stapnav-vorige" onclick="kiesOpstellingStap('vorige')">‹ Vorige</button>
+        <button type="button" class="btn btn-primary stapnav-volgende" onclick="kiesOpstellingStap('volgende')">Volgende ›</button>
+      </div>
 
       <!-- Onderbalk (patch 88): verschijnt zodra er niet-opgeslagen wijzigingen zijn -->
       <div class="opstelling-onderbalk" id="opstelling-onderbalk" role="status">
@@ -3139,6 +3180,11 @@ function renderCategorieSwitcher() {
 
 async function wisselCategorie(id, naam) {
   if (actieveCategorie?.id === id) return;
+  // Patch 89: een geopende opstelling met niet-opgeslagen wijzigingen wordt bij een categoriewissel weggegooid; eerst vragen
+  if (opstellingHeeftOnopgeslagen()) {
+    const keuze = await vraagOpstellingVerlaten();
+    if (keuze === "blijf") return;
+  }
   actieveCategorie = { id, naam };
   renderCategorieSwitcher();
   // Patch 46: verlaat een eventueel geopende opstelling van de vorige categorie.
@@ -3221,6 +3267,15 @@ function wisselMetOvergang(doeHet){
 }
 
 function showTab(tab) {
+  // Patch 89: verlaat je de opstelling met niet-opgeslagen wijzigingen, dan eerst vragen wat er moet gebeuren
+  if (tab !== "opstelling" && !window.__opstellingVerlaatBevestigd && opstellingHeeftOnopgeslagen()) {
+    vraagOpstellingVerlaten().then(keuze => {
+      if (keuze === "blijf") return;
+      window.__opstellingVerlaatBevestigd = true;
+      try { showTab(tab); } finally { window.__opstellingVerlaatBevestigd = false; }
+    });
+    return;
+  }
   // Alleen de schermwissel (tonen/verbergen + actieve tab) in een zachte
   // overgang (patch 63).
   wisselMetOvergang(() => {   // patch 63: zachte cross-fade rond de schermwissel
@@ -5815,6 +5870,9 @@ function renderOpstellingWedstrijden() {
 }
 
 async function openOpstelling(wedstrijdId, alleenLezen = false) {
+  // Patch 89: elke opening begint opnieuw bij de startstap (de stap van een eerdere opening, ook na een tabwissel, hoort er niet meer bij)
+  const eerdereStap = document.getElementById("opstelling-stap2");
+  if (eerdereStap) delete eerdereStap.dataset.stap;
   actiefWedstrijdId = wedstrijdId;
   opstellingAlleenLezen = alleenLezen;
   const w = wedstrijden.find(x => String(x.id) === String(wedstrijdId));
@@ -5849,6 +5907,16 @@ function pasOpstellingModusToe() {
 }
 
 function terug_naar_wedstrijden() {
+  // Patch 89: eerst vragen als er niet-opgeslagen wijzigingen zijn
+  if (!window.__opstellingVerlaatBevestigd && opstellingHeeftOnopgeslagen()) {
+    vraagOpstellingVerlaten().then(keuze => {
+      if (keuze === "blijf") return;
+      window.__opstellingVerlaatBevestigd = true;
+      try { terug_naar_wedstrijden(); } finally { window.__opstellingVerlaatBevestigd = false; }
+    });
+    return;
+  }
+  delete document.getElementById("opstelling-stap2").dataset.stap;   // patch 89: de volgende keer weer bij de startstap beginnen
   document.getElementById("opstelling-stap1").style.display = "";
   document.getElementById("opstelling-stap2").style.display = "none";
   actiefWedstrijdId = null;
@@ -5856,6 +5924,15 @@ function terug_naar_wedstrijden() {
 }
 
 function setOpstellingGeslacht(g) {
+  // Patch 89: wisselen laadt de opstelling opnieuw uit de database; niet-opgeslagen wijzigingen zouden verdwijnen
+  if (!window.__opstellingVerlaatBevestigd && opstellingHeeftOnopgeslagen()) {
+    vraagOpstellingVerlaten().then(keuze => {
+      if (keuze === "blijf") return;
+      window.__opstellingVerlaatBevestigd = true;
+      try { setOpstellingGeslacht(g); } finally { window.__opstellingVerlaatBevestigd = false; }
+    });
+    return;
+  }
   actiefGeslacht = g;
   document.getElementById("opstelling-tab-M").className = g === "M" ? "btn btn-primary" : "btn btn-ghost";
   document.getElementById("opstelling-tab-V").className = g === "V" ? "btn btn-primary" : "btn btn-ghost";
@@ -5930,6 +6007,7 @@ async function laadProgrammaEnOpstelling() {
     renderBeschikbaarheid();
     renderPloegen();
     neemOpstellingSnapshot();
+    zetOpstellingStartStap();
   } catch(e) { toast("Fout bij laden: " + e.message, "err"); }
 }
 
@@ -7177,6 +7255,11 @@ function neemOpstellingSnapshot() {
   try {
     window.__opstellingSnapshot = opstellingToestand();
     if (!window.__opstellingStatusTimer) window.__opstellingStatusTimer = setInterval(werkOpstellingStatusBij, 500);
+    // Patch 89: de browser waarschuwt bij vernieuwen of sluiten van de pagina zolang er niet-opgeslagen wijzigingen zijn
+    if (!window.__opstellingUnloadLuisteraar) {
+      window.__opstellingUnloadLuisteraar = true;
+      window.addEventListener("beforeunload", e => { if (opstellingHeeftOnopgeslagen()) { e.preventDefault(); e.returnValue = ""; } });
+    }
     werkOpstellingStatusBij();
   } catch (e) { console.warn("Opstelling-status:", e.message); }
 }
@@ -7212,17 +7295,22 @@ function werkOpstellingStatusBij() {
       2: { klaar: totaal > 0 && gevuld >= totaal, tekst: totaal ? gevuld + " van " + totaal + " plekken gevuld" : "Geen programma" },
       3: { klaar: geladen && !gewijzigd && gevuld > 0, tekst: !geladen ? "" : gewijzigd ? "Niet opgeslagen" : gevuld ? "Opgeslagen" : "Nog niets ingevuld" }
     };
+    const mobiel = window.matchMedia("(max-width: 768px)").matches;
+    const actieveStap = mobiel ? (stap2.dataset.stap || "") : "";
     document.querySelectorAll("#opstelling-voortgang .voortgang-stap").forEach(knop => {
       const st = stappen[knop.dataset.voortgang];
+      knop.classList.toggle("actief", actieveStap === knop.dataset.voortgang);
       knop.classList.toggle("klaar", st.klaar);
       knop.querySelector(".voortgang-nr").textContent = st.klaar ? "✓" : knop.dataset.voortgang;
       knop.querySelector(".voortgang-sub").textContent = st.tekst;
     });
+    if (mobiel && actieveStap === "3") vulStapSamenvatting();
   } catch (e) { /* bijzaak */ }
 }
 
 function scrollNaarOpstellingStap(n) {
-  // Scrolt naar het onderdeel bij een stap in de voortgangsbalk (patch 88)
+  // Een stap in de voortgangsbalk: op mobiel naar die stap gaan (één stap tegelijk), op desktop naar het onderdeel scrollen (patch 88/89)
+  if (window.matchMedia("(max-width: 768px)").matches) { kiesOpstellingStap(n); return; }
   const doel = { 1: "beschikbaarheid-sectie", 2: "ploegen-container", 3: "opstelling-acties" }[n];
   const el = doel && document.getElementById(doel);
   if (el && el.checkVisibility()) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -7240,24 +7328,101 @@ function vulDeelSamenvatting() {
   // Samenvatting bovenaan het Delen-venster: wedstrijd, per team het aantal gevulde plekken, reserves en een waarschuwing (patch 88)
   const el = document.getElementById("wa-team-samenvatting");
   if (!el) return;
+  try { el.innerHTML = bouwSamenvattingHtml("delen"); } catch (e) { el.innerHTML = ""; }
+}
+
+function opstellingHeeftOnopgeslagen() {
+  // Waar of onwaar: staat de bewerkbare opstelling in beeld en wijkt de indeling af van het laatst geladen of opgeslagen (patch 89)
   try {
-    const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
-    const aantal = aantalPloegenPerGeslacht[actiefGeslacht] || 3;
-    let perPloeg = 0;
-    programma.forEach(item => { perPloeg += item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3; });
-    let html = `<div class="wa-sam-titel">${esc(w ? w.naam : "")}${w && w.datum ? " · " + esc(formatDate(w.datum)) : ""}</div>`;
-    ["A", "B", "C"].slice(0, aantal).forEach((p, i) => {
-      const gevuld = Object.values(opstellingData[p] || {}).filter(v => v != null && String(v) !== "").length;
-      html += `<div class="wa-sam-rij"><span>Team ${i + 1}</span><span>${gevuld} van ${perPloeg} plekken gevuld</span></div>`;
-    });
-    const nRes = Object.values(opstellingData["RES"] || {}).filter(v => v != null && String(v) !== "").length;
-    html += `<div class="wa-sam-rij"><span>🔁 Reserves</span><span>${nRes}</span></div>`;
-    const snap = window.__opstellingSnapshot, nu = opstellingToestand();
-    if (snap && snap.sleutel === nu.sleutel && snap.tekst !== nu.tekst) {
-      html += `<div class="wa-sam-waarschuwing">⚠️ Er zijn niet-opgeslagen wijzigingen. Je deelt de opstelling zoals die nu op het scherm staat.</div>`;
-    }
-    el.innerHTML = html;
-  } catch (e) { el.innerHTML = ""; }
+    const stap2 = document.getElementById("opstelling-stap2");
+    if (!stap2 || !stap2.checkVisibility() || opstellingAlleenLezen) return false;
+    const snap = window.__opstellingSnapshot;
+    const nu = opstellingToestand();
+    return !!snap && snap.sleutel === nu.sleutel && snap.tekst !== nu.tekst;
+  } catch (e) { return false; }
+}
+
+function vraagOpstellingVerlaten() {
+  // Toont het venster "Niet-opgeslagen wijzigingen" en geeft "opslaan", "verwerp" of "blijf" terug (patch 89)
+  const modal = document.getElementById("opstellingVerlaatModal");
+  if (window.__opstellingVerlaatOplossen) {
+    if (modal && modal.classList.contains("open")) return Promise.resolve("blijf");   // de vraag staat al open
+    window.__opstellingVerlaatOplossen("blijf");   // verouderd: het venster is op een andere manier gesloten
+    window.__opstellingVerlaatOplossen = null;
+  }
+  return new Promise(oplossen => {
+    window.__opstellingVerlaatOplossen = oplossen;
+    openModal("opstellingVerlaatModal");
+  });
+}
+
+async function opstellingVerlaatKeuze(keuze) {
+  // Een van de drie knoppen in het venster. Mislukt het opslaan, dan blijf je staan en gaat er niets verloren (patch 89)
+  const oplossen = window.__opstellingVerlaatOplossen;
+  if (!oplossen) return;
+  closeModal("opstellingVerlaatModal");
+  window.__opstellingVerlaatOplossen = null;
+  if (keuze === "opslaan") {
+    await opslaanOpstelling();
+    oplossen(opstellingHeeftOnopgeslagen() ? "blijf" : "opslaan");
+    return;
+  }
+  oplossen(keuze === "verwerp" ? "verwerp" : "blijf");
+}
+
+function kiesOpstellingStap(n) {
+  // Mobiel: toont één stap van de opstelling (1 Beschikbaar, 2 Ploegen, 3 Opslaan & delen); "vorige"/"volgende" of een nummer (patch 89)
+  const stap2 = document.getElementById("opstelling-stap2");
+  if (!stap2) return;
+  const huidig = Number(stap2.dataset.stap) || 1;
+  let nieuw = n === "vorige" ? huidig - 1 : n === "volgende" ? huidig + 1 : Number(n);
+  nieuw = Math.min(3, Math.max(1, nieuw || 1));
+  stap2.dataset.stap = String(nieuw);
+  window.scrollTo(0, 0);
+  werkOpstellingStatusBij();
+}
+
+function zetOpstellingStartStap() {
+  // Na het laden van een bewerkbare opstelling: begin bij stap 2 als er al iets is ingevuld, anders bij stap 1. Alleen de eerste keer (patch 89)
+  const stap2 = document.getElementById("opstelling-stap2");
+  if (!stap2 || opstellingAlleenLezen || stap2.dataset.stap) return;
+  const ingevuld = Object.keys(opstellingData).some(p => p !== "RES" && Object.values(opstellingData[p] || {}).some(v => v != null && String(v) !== ""));
+  stap2.dataset.stap = ingevuld ? "2" : "1";
+  werkOpstellingStatusBij();
+}
+
+function bouwSamenvattingHtml(variant) {
+  // De samenvatting als HTML: wedstrijd, per team het aantal gevulde plekken en de reserves; daarna bij "delen" een waarschuwing
+  // en bij "stap" de opslagstatus (patch 88/89)
+  const w = wedstrijden.find(x => String(x.id) === String(actiefWedstrijdId));
+  const aantal = aantalPloegenPerGeslacht[actiefGeslacht] || 3;
+  let perPloeg = 0;
+  programma.forEach(item => { perPloeg += item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3; });
+  let html = `<div class="wa-sam-titel">${esc(w ? w.naam : "")}${w && w.datum ? " · " + esc(formatDate(w.datum)) : ""}</div>`;
+  ["A", "B", "C"].slice(0, aantal).forEach((p, i) => {
+    const gevuld = Object.values(opstellingData[p] || {}).filter(v => v != null && String(v) !== "").length;
+    html += `<div class="wa-sam-rij"><span>Team ${i + 1}</span><span>${gevuld} van ${perPloeg} plekken gevuld</span></div>`;
+  });
+  const nRes = Object.values(opstellingData["RES"] || {}).filter(v => v != null && String(v) !== "").length;
+  html += `<div class="wa-sam-rij"><span>🔁 Reserves</span><span>${nRes}</span></div>`;
+  const snap = window.__opstellingSnapshot, nu = opstellingToestand();
+  const gewijzigd = !!snap && snap.sleutel === nu.sleutel && snap.tekst !== nu.tekst;
+  if (variant === "stap") {
+    html += `<div class="${gewijzigd ? "wa-sam-waarschuwing" : "wa-sam-ok"}">${gewijzigd ? "● Niet opgeslagen" : "✓ Opgeslagen"}</div>`;
+  } else if (gewijzigd) {
+    html += `<div class="wa-sam-waarschuwing">⚠️ Er zijn niet-opgeslagen wijzigingen. Je deelt de opstelling zoals die nu op het scherm staat.</div>`;
+  }
+  return html;
+}
+
+function vulStapSamenvatting() {
+  // Vult de samenvattingskaart van stap 3 (mobiel); schrijft alleen als er iets veranderd is (patch 89)
+  const el = document.getElementById("opstelling-samenvatting");
+  if (!el) return;
+  try {
+    const html = bouwSamenvattingHtml("stap");
+    if (el.innerHTML !== html) el.innerHTML = html;
+  } catch (e) { /* bijzaak */ }
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────

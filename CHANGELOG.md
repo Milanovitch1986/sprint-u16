@@ -6,6 +6,33 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 89] — 2026-10-09
+
+### 📋 Opstelling: waarschuwing bij niet-opgeslagen wijzigingen en stap voor stap op mobiel
+
+<!--RELEASENOTE
+versie: Patch 89
+titel: 📋 Opstelling: waarschuwing bij niet-opgeslagen wijzigingen en stap voor stap op mobiel
+type: feature
+tags: opstelling
+beschrijving: Als je de opstelling verlaat met wijzigingen die nog niet zijn opgeslagen, vraagt de app eerst wat je wilt doen: opslaan en doorgaan, niet opslaan of blijven. Op een telefoon werk je nu stap voor stap: eerst beschikbaarheid, dan de ploegen, dan opslaan en delen, met Vorige en Volgende.
+-->
+
+Negentiende stap na het UI-herontwerp: Opstelling deel 2. Het opstellen, het opslaan en het opbouwen van de WhatsApp-tekst zijn niet veranderd; er verandert geen enkele databasevraag. Deel 3 (drie ploegen naast elkaar met zijpaneel op desktop) en het slepen van atleten volgen.
+
+**Waarschuwing bij niet-opgeslagen wijzigingen.** Zodra de indeling van een bewerkbare opstelling afwijkt van wat het laatst is geladen of opgeslagen, vraagt de app wat er moet gebeuren bij: **Terug** naar de wedstrijdlijst, **een andere tab kiezen** (zijbalk, onderbalk, Meer-menu of het logo), **wisselen tussen Jongens en Meisjes** (dat laadt de andere opstelling opnieuw en gooide wijzigingen stilletjes weg), **van categorie wisselen** (idem) en **de pagina vernieuwen of sluiten** (de standaardvraag van de browser). Het venster heeft drie knoppen: *Opslaan en doorgaan*, *Niet opslaan* en *Blijven*. Mislukt het opslaan, dan blijf je op de opstelling en gaat er niets verloren. Zonder wijzigingen, en in alleen-lezen, merk je niets. Niet gedekt: de terugknop of terug-beweging van een telefoon.
+
+**Mobiel: stap voor stap.** Op een telefoon (tot 768 px) zie je één stap tegelijk: **① Beschikbaar** (de schakelaars), **② Ploegen** (keuze 1/2/3 ploegen, Automatisch opstellen, Aanvullen, de teams en de reserves) en **③ Opslaan & delen** (Opslaan, Exporteren, Afdrukken, Delen via WhatsApp en een samenvatting met de opslagstatus). Onderaan staat Vorige/Volgende; een tik op een stap in de voortgangsbalk springt ernaartoe. Je begint bij stap 2 als er al iets is ingevuld, anders bij stap 1; wisselen tussen Jongens en Meisjes houdt je bij je stap. Op desktop blijft alles zichtbaar zoals voorheen.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `opstellingHeeftOnopgeslagen()`, `vraagOpstellingVerlaten()`, `opstellingVerlaatKeuze()`, `kiesOpstellingStap()`, `zetOpstellingStartStap()`, `bouwSamenvattingHtml()` en `vulStapSamenvatting()`. Aangepast: `showTab()`, `terug_naar_wedstrijden()`, `setOpstellingGeslacht()` en `wisselCategorie()` (elk een guard bovenaan), `openOpstelling()` (wist de gekozen stap), `laadProgrammaEnOpstelling()` (kiest de startstap), en uit patch 88 `neemOpstellingSnapshot()` (koppelt `beforeunload`), `werkOpstellingStatusBij()` (markeert de actieve stap en vult de samenvatting), `scrollNaarOpstellingStap()` (op mobiel een stap kiezen) en `vulDeelSamenvatting()` (gebruikt nu `bouwSamenvattingHtml("delen")`; de uitvoer is gelijk). De opstel-, aanvul-, conflict-, opslaan- en WhatsApp-tekstlogica is niet aangeraakt. Alle andere JavaScript is byte-voor-byte gelijk aan patch 88.
+- Guard: alleen als de bewerkbare opstelling in beeld is en `opstellingHeeftOnopgeslagen()` waar is (dezelfde vergelijking als de onderbalk van patch 88). De guard stelt de actie uit tot na de keuze (`showTab`, `terug_naar_wedstrijden` en `setOpstellingGeslacht` roepen zichzelf opnieuw aan met een vlag `window.__opstellingVerlaatBevestigd`); `wisselCategorie()` vraagt vóórdat de categorie wisselt, zodat *Blijven* niets half omzet. Een venster dat op een andere manier wordt gesloten (bijvoorbeeld via de achtergrond) kan de navigatie niet blokkeren: een verouderde vraag wordt bij de volgende poging als *Blijven* afgehandeld.
+- Stappen: `data-stap="1|2|3"` op `#opstelling-stap2` bepaalt via CSS (alleen `@media screen and (max-width: 768px)`) wat zichtbaar is; de onderdelen van de actierij hebben zelf een `data-stap`. Zonder attribuut (alleen-lezen, of tot de eerste keuze) blijft alles zoals het was. `openOpstelling()` wist het attribuut bij elke opening, anders zou een stap van een eerdere opening (na een tabwissel) een alleen-lezen opstelling kunnen verbergen.
+- Nieuwe id's: `opstelling-samenvatting`, `opstelling-stapnav`, `opstellingVerlaatModal`; nieuwe handlers `kiesOpstellingStap` en `opstellingVerlaatKeuze`. Contract-check: 0 id's, handlers of functies verdwenen; 3 id's, 2 handlers en 7 functies nieuw.
+- Gecontroleerd (oud tegen nieuw, nep-backend met een spy op alle schrijfaanroepen, desktop en mobiel): voor Terug, tabwissel, geslachtswissel en categoriewissel, elk met *Blijven*, *Niet opslaan*, *Opslaan* en een mislukte opslag: zonder wijzigingen geen vraag en dezelfde uitkomst als voorheen; met wijzigingen verschijnt de vraag zonder dat de actie al gebeurt; *Blijven* laat de indeling intact zonder schrijfactie; *Niet opslaan* geeft dezelfde eindstand als de vorige versie; *Opslaan* geeft dezelfde `upsert` als de bestaande knop; bij een mislukte opslag blijf je staan met een foutmelding. De `beforeunload`-vraag verschijnt alleen bij niet-opgeslagen wijzigingen op de opstelling. Mobiele stappen: zichtbare onderdelen per stap, Vorige/Volgende, startstap (stap 2 bij een gevulde, stap 1 bij een lege opstelling), behoud van de stap bij een geslachtswissel, en alleen-lezen identiek aan de vorige versie, ook na een tabwissel vanuit stap 3. Regressie op desktop tegen patch 88: gelijk. Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek; op desktop is ook het Opstelling-detail pixel-identiek aan patch 88; op mobiel verschilt alleen het Opstelling-detail (door de stappen).
+- Niet getest: een echte telefoon, de terugknop van een telefoon, en een echte schrijffout bij Supabase (die is gesimuleerd).
+
 ## [oktober 2026 — patch 88] — 2026-10-09
 
 ### 📋 Opstelling: voortgangsbalk, ploegkeuze, grote schakelaars, onderbalk en samenvatting bij Delen
