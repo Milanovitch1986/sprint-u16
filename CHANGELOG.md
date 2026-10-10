@@ -6,6 +6,37 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 96] — 2026-10-10
+
+### 🏟️ Wedstrijddag: voortgangskaart en nu bezig
+
+<!--RELEASENOTE
+versie: Patch 96
+titel: 🏟️ Wedstrijddag: voortgangskaart en nu bezig
+type: feature
+tags: wedstrijddag
+beschrijving: Op de Wedstrijddag staat onder de scorebalk een voortgangskaart: hoeveel resultaten al zijn ingevoerd, per onderdeel een regel met klaar, nu bezig, volgende of wacht, en een tik op een regel scrolt naar dat onderdeel. Het is alleen een weergave; er wordt niets extra opgeslagen.
+-->
+
+Zesentwintigste stap na het UI-herontwerp: Wedstrijddag deel 2. Alleen lezen: **geen databasewijziging, geen SQL en geen extra schrijfactie**. Het invoeren, opslaan, de wachtrij, de rondes en het afronden zijn niet veranderd.
+
+**De kaart.** Onder de scorebalk staat "Voortgang ploeg A" (in de individuele modus "Voortgang"): een balk met "5 van 8 ingevoerd · 63%" en per onderdeel een regel met de starttijd, de naam, een kleine balk, "2 / 3" en een chip: **✓ klaar**, **▶ nu bezig**, **▶ volgende** of **wacht**. Een tik op een regel scrolt naar de kaart van dat onderdeel, die even oplicht. De kaart wisselt mee met Jongens/Meisjes en Ploeg A/B/C en ververst op dezelfde momenten als de scorebalk en de lijst.
+
+**Wat meetelt.** Dezelfde telling als de scorebalk: een geldig resultaat (ook in een ronde of poging) of DNS telt als ingevoerd; een estafette is één onderdeel per ploeg. In de individuele modus telt de kaart de atleten (en ploegen bij een estafette) die je per onderdeel hebt toegevoegd. Een resultaat dat nog niet is verstuurd (geen verbinding) telt wel mee.
+
+**Hoe "nu bezig" werkt.** Het is het eerste onderdeel, in programmavolgorde, dat nog niet helemaal is ingevoerd: heeft het al een resultaat dan staat er "nu bezig", anders "volgende" (aan het begin van een wedstrijd zegt de kaart dus niet ten onrechte dat er al iets bezig is). De klok wordt niet gebruikt; de starttijd staat alleen ter informatie. Zijn alle onderdelen ingevoerd, dan staat er "Alles ingevoerd". Elk onderdeel erna heet "wacht". De markering volgt wat er is ingevoerd, dus bij een schema dat schuift klopt hij nog steeds, maar hij verschijnt per telefoon pas na Vernieuwen als iemand anders heeft ingevoerd (net als de resultaten zelf).
+
+**Op een telefoon** toont de kaart alleen de balk en een regel "▶ Nu bezig: 200m · 2/3"; de rijen zijn daar verborgen omdat de kaartjes eronder ze al tonen. In print is de kaart verborgen.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `wdVoortgangModel()` (rekent per onderdeel `totaal` en `klaar` uit, in beide modi), `renderWdVoortgang()` (tekent de kaart in `#wd-voortgang`, in een `try/catch`) en `wdScrollNaarOnderdeel(el)` (scrollt naar `#wd-lijst .wd-kaart[data-onderdeel]` en voegt kort de klasse `wd-kaart-flits` toe). Aangepast met één regel: `renderWdScore()` en `renderWdIndividueel()` roepen `renderWdVoortgang()` aan het begin aan (alle plekken die de lijst verversen doen dat samen met een van beide; de kaart blijft dus gelijk met de lijst, ook als er geen opstelling is). Aangepast met een attribuut `data-onderdeel` (de index in het programma, of in de individuele modus de naam in kleine letters): de kaartjes in `renderWdLijst()` (twee), `renderWdIndividueel()` en `wdIndivEstafetteKaartHtml()`. Alle andere JavaScript is byte-voor-byte gelijk aan patch 95; de opslag-, wachtrij-, synchronisatie-, ronde- en afrondfuncties zijn niet aangeraakt. Nieuw vast blok `#wd-voortgang` onder `#wd-scorebalk`. Contract-check: 0 verdwenen; 1 id, 1 handler en 3 functies nieuw.
+- Telling: `telt(res) = (status "ok" met resultaat) of status "dns"`, op `wdEffectief()` (dezelfde functie als de scorebalk). Status per onderdeel: "klaar" als `klaar >= totaal`; het eerste onderdeel met `klaar < totaal` is "nu bezig" (als `klaar > 0`) of "volgende" (anders); de rest is "wacht". De voortgang in procenten en het tellen per onderdeel zijn dus uit dezelfde gegevens afgeleid als de rest van het scherm; er wordt niets bewaard.
+- CSS: nieuwe klassen `.wd-voortgang`, `.wd-vg-*`, `.wd-chip-nu` en `.wd-kaart-flits`, op scherm; op een telefoon (≤ 768 px) zijn de rijen verborgen en staat alleen de regel `.wd-vg-nu`; in print is de kaart verborgen.
+- Gecontroleerd: de kaart is in elke stap vergeleken met een **onafhankelijke berekening in Python** uit de ruwe gegevens (`wdProgramma`, opstelling, `wdResultaten`, `wdPogingen`): bij de start, invullen, een onderdeel volledig invullen, DNS aan en uit, een technisch onderdeel, een estafette, alles ingevoerd, een resultaat wissen, een resultaat dat naar een ronde verhuist, een resultaat zonder verbinding, wisselen tussen Ploeg A/B en Jongens/Meisjes, en in de individuele modus (toevoegen met en zonder resultaat, een tweede onderdeel, invullen, verwijderen, een estafetteploeg); de tik op een regel scrolt naar het juiste kaartje; mobiel toont alleen de balk en de regel; op 1280 px staat de kaart onder de scorebalk en boven de lijst. Regressie tegen patch 95: elke stap (rijen, id's, invoer, punten, PR's, resultaten, pogingen, scorebalk, meldingen en alle schrijfaanroepen) en de layout van twee kolommen en de zwevende knop zijn gelijk. Pixelvergelijking van alle schermen op 1024, 1280, 1920, 390 en 360 px, licht en donker, scherm en print: identiek, behalve de Wedstrijddag-detail op het scherm.
+- Gevonden tijdens het testen (geen fouten in de app, wel in de testaannames): het weer uitzetten van een DNS verwijdert het resultaat van die atleet (bestaand gedrag); de sleutel van een resultaat is `discipline in kleine letters|sleutel`; het verwijderen van een atleet in de individuele modus vraagt om bevestiging via het eigen venster van de app (`#confirmJa`).
+- Niet getest: echte wedstrijden met meerdere trainers tegelijk en een echte telefoon.
+
 ## [oktober 2026 — patch 95] — 2026-10-10
 
 ### 🏟️ Wedstrijddag: avatars, statuschips, twee kolommen en een zwevende Afronden-knop

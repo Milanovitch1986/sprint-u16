@@ -2188,6 +2188,38 @@
     #view-wedstrijddag:has(> #wd-detail:not([style*="none"])) { max-width: 1500px; }
   }
 
+  /* ══ Patch 96: Wedstrijddag deel 2, voortgangskaart en "nu bezig" ══ */
+  .wd-voortgang { margin-bottom: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .wd-voortgang:empty { display: none; }
+  .wd-vg-kop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+  .wd-vg-kop b { font-size: 14px; }
+  .wd-vg-tekst { font-size: 12px; color: var(--muted); }
+  .wd-vg-balk { height: 8px; overflow: hidden; border-radius: 4px; background: var(--surface2); }
+  .wd-vg-balk > span, .wd-vg-mini > span { display: block; height: 100%; background: var(--success); }
+  .wd-vg-nu { display: none; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--accent); }
+  .wd-vg-lijst { margin-top: 10px; }
+  .wd-vg-rij {
+    display: grid; grid-template-columns: 52px minmax(0, 1fr) 110px 48px 100px; gap: 12px; align-items: center; width: 100%;
+    padding: 8px 4px; font: inherit; text-align: left; color: inherit; background: none; border: 0; border-top: 1px solid var(--border); cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .wd-vg-rij:hover { background: var(--surface2); }
+  .wd-vg-bezig, .wd-vg-volgende { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .wd-vg-tijd { font-size: 12px; color: var(--muted); }
+  .wd-vg-naam { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+  .wd-vg-mini { height: 6px; overflow: hidden; border-radius: 3px; background: var(--surface2); }
+  .wd-vg-tel { font-size: 12px; text-align: right; white-space: nowrap; }
+  .wd-vg-rij .wd-chip { justify-self: end; }
+  .wd-chip-nu { color: #000; background: var(--accent); border-color: var(--accent); }
+  #wd-lijst .wd-kaart[data-onderdeel] { scroll-margin-top: 12px; }
+  .wd-kaart-flits { animation: wd-flits 1.2s ease; }
+  @keyframes wd-flits { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px var(--accent); } }
+  @media (max-width: 768px) {
+    .wd-vg-lijst { display: none; }
+    .wd-vg-nu { display: block; }
+  }
+  @media print { .wd-voortgang { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2551,6 +2583,7 @@
       <div class="wd-tabs" id="wd-geslacht-tabs"></div>
       <div class="wd-tabs" id="wd-ploeg-tabs"></div>
       <div class="wd-scorebalk" id="wd-scorebalk"></div>
+      <div class="wd-voortgang" id="wd-voortgang"></div>
       <!-- Snelinvoer (alleen individuele modus) -->
       <div class="wd-quickadd" id="wd-quickadd" style="display:none;">
         <div class="qa-label">Snel toevoegen</div>
@@ -7983,6 +8016,92 @@ function wdVerversWachtChips() {
   } catch (e) { /* bijzaak */ }
 }
 
+function wdVoortgangModel() {
+  // Per onderdeel: hoeveel resultaten er al zijn ingevoerd. Dezelfde telling als de scorebalk: een geldig resultaat of DNS telt mee,
+  // een estafette is één onderdeel per ploeg (patch 96). Alleen rekenen; er wordt niets opgeslagen of gewijzigd.
+  const rijen = [];
+  const telt = res => !!(res && ((res.status === "ok" && res.resultaat) || res.status === "dns"));
+  if (wdModus === "individueel") {
+    const perDisc = {};
+    Object.values(wdResultaten).forEach(res => {
+      if (!res.atleetId || String(res.sleutel).startsWith("ploeg-")) return;
+      const k = String(res.discipline).trim().toLowerCase();
+      (perDisc[k] = perDisc[k] || []).push(res);
+    });
+    wdIndivDisciplines().forEach(d => {
+      const sleutel = d.naam.trim().toLowerCase();
+      let totaal = 0, klaar = 0;
+      if (d.type === "estafette") {
+        wdIndivEstafettePloegen(d.naam).forEach(sl => { totaal++; if (telt(wdEffectief(d.naam, sl))) klaar++; });
+      } else {
+        (perDisc[sleutel] || []).forEach(r => { totaal++; if (telt(wdEffectief(d.naam, String(r.atleetId)))) klaar++; });
+      }
+      if (totaal) rijen.push({ sleutel, naam: d.naam, tijd: "", totaal, klaar });
+    });
+    return { titel: "Voortgang", rijen };
+  }
+  if (!wdPloegen.length) return { titel: "", rijen };
+  const opst = wdOpstellingPerPloeg[wdPloeg] || {};
+  wdProgramma.forEach((item, idx) => {
+    const slots = item.type === "technisch" ? 1 : item.type === "estafette" ? 4 : 3;
+    let totaal = 0, klaar = 0;
+    if (item.type === "estafette") {
+      if (![0, 1, 2, 3].some(s => opst[`${wdPloeg}_${idx}_${s}`])) return;
+      totaal = 1;
+      if (telt(wdEffectief(item.discipline, `ploeg-${wdPloeg}`))) klaar = 1;
+    } else {
+      for (let s = 0; s < slots; s++) {
+        const aid = opst[`${wdPloeg}_${idx}_${s}`];
+        if (!aid) continue;
+        totaal++;
+        if (telt(wdEffectief(item.discipline, String(aid)))) klaar++;
+      }
+    }
+    if (totaal) rijen.push({ sleutel: String(idx), naam: item.discipline + (item.type === "technisch" && item.startgroep ? " · groep " + item.startgroep : ""), tijd: item.starttijd || "", totaal, klaar });
+  });
+  return { titel: "Voortgang ploeg " + wdPloeg, rijen };
+}
+
+function renderWdVoortgang() {
+  // De voortgangskaart onder de scorebalk: een balk met het totaal en per onderdeel een regel. "Nu bezig" is het eerste onderdeel
+  // (in programmavolgorde) dat nog niet helemaal is ingevoerd: heeft het al een resultaat dan "nu bezig", anders "volgende" (patch 96).
+  // Bijzaak: een fout hier mag het scherm nooit verstoren.
+  try {
+    const el = document.getElementById("wd-voortgang");
+    if (!el) return;
+    const m = wdVoortgangModel();
+    if (!m.rijen.length) { el.innerHTML = ""; return; }
+    const totaal = m.rijen.reduce((som, r) => som + r.totaal, 0);
+    const klaar = m.rijen.reduce((som, r) => som + r.klaar, 0);
+    const pct = totaal ? Math.round(100 * klaar / totaal) : 0;
+    const actief = m.rijen.findIndex(r => r.klaar < r.totaal);
+    m.rijen.forEach((r, i) => { r.status = r.klaar >= r.totaal ? "klaar" : i === actief ? (r.klaar > 0 ? "bezig" : "volgende") : "wacht"; });
+    const label = { klaar: "✓ klaar", bezig: "▶ nu bezig", volgende: "▶ volgende", wacht: "wacht" };
+    const chip = { klaar: "wd-chip wd-chip-klaar", bezig: "wd-chip wd-chip-nu", volgende: "wd-chip wd-chip-nu", wacht: "wd-chip" };
+    const act = actief >= 0 ? m.rijen[actief] : null;
+    const nu = act ? `${act.status === "bezig" ? "▶ Nu bezig" : "▶ Volgende"}: ${esc(act.naam)} · ${act.klaar}/${act.totaal}` : "✓ Alles ingevoerd";
+    el.innerHTML = `<div class="wd-vg-kop"><b>${esc(m.titel)}</b><span class="wd-vg-tekst">${klaar} van ${totaal} ingevoerd · ${pct}%</span></div>`
+      + `<div class="wd-vg-balk" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>`
+      + `<div class="wd-vg-nu">${nu}</div>`
+      + `<div class="wd-vg-lijst">` + m.rijen.map(r => `<button type="button" class="wd-vg-rij wd-vg-${r.status}" data-onderdeel="${esc(r.sleutel)}" onclick="wdScrollNaarOnderdeel(this)">`
+        + `<span class="wd-vg-tijd">${esc(r.tijd)}</span><span class="wd-vg-naam">${esc(r.naam)}</span>`
+        + `<span class="wd-vg-mini"><span style="width:${Math.round(100 * r.klaar / r.totaal)}%"></span></span>`
+        + `<span class="wd-vg-tel">${r.klaar} / ${r.totaal}</span><span class="${chip[r.status]}">${label[r.status]}</span></button>`).join("") + `</div>`;
+  } catch (e) { /* bijzaak */ }
+}
+
+function wdScrollNaarOnderdeel(el) {
+  // Een tik op een regel van de voortgangskaart scrolt naar de kaart van dat onderdeel en laat die even oplichten (patch 96)
+  try {
+    const sleutel = el && el.dataset ? el.dataset.onderdeel : "";
+    const kaart = [...document.querySelectorAll("#wd-lijst .wd-kaart[data-onderdeel]")].find(k => k.dataset.onderdeel === sleutel);
+    if (!kaart) return;
+    kaart.scrollIntoView({ behavior: "smooth", block: "start" });
+    kaart.classList.add("wd-kaart-flits");
+    setTimeout(() => kaart.classList.remove("wd-kaart-flits"), 1200);
+  } catch (e) { /* bijzaak */ }
+}
+
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
 // Live resultaten invoeren op de wedstrijddag. Elke invoer wordt direct
 // per veld opgeslagen (upsert), zodat meerdere trainers tegelijk kunnen
@@ -8412,7 +8531,7 @@ function renderWdLijst() {
       const pts = eff && eff.status === "ok" && eff.resultaat
         ? berekenPunten(item.discipline, eff.resultaat, wdGeslacht) : null;
       kaarten += `
-        <div class="wd-kaart">
+        <div class="wd-kaart" data-onderdeel="${idx}">
           <div class="wd-kaart-kop">
             <b>${item.starttijd ? esc(item.starttijd) + " — " : ""}${esc(item.discipline)}</b>
             <span class="wd-telregel">${wdTelregelLabel(item.type)}</span>
@@ -8463,7 +8582,7 @@ function renderWdLijst() {
     if (!rijen) return; // niets opgesteld voor dit onderdeel → kaart overslaan
 
     kaarten += `
-      <div class="wd-kaart">
+      <div class="wd-kaart" data-onderdeel="${idx}">
         <div class="wd-kaart-kop">
           <b>${item.starttijd ? esc(item.starttijd) + " — " : ""}${esc(item.discipline)}${groepLabel}</b>
           <span class="wd-telregel">${wdTelregelLabel(item.type)}</span>
@@ -8922,6 +9041,7 @@ function filterWdQaAtleten() {
 }
 
 function renderWdIndividueel() {
+  renderWdVoortgang();   // patch 96
   vulWdQuickAdd();
   const cont = document.getElementById("wd-lijst");
   if (!cont) return;
@@ -8955,7 +9075,7 @@ function renderWdIndividueel() {
       return na.localeCompare(nb);
     });
     kaarten += `
-      <div class="wd-kaart">
+      <div class="wd-kaart" data-onderdeel="${esc(d.naam.trim().toLowerCase())}">
         <div class="wd-kaart-kop"><b>${esc(d.naam)}</b></div>
         ${rijen.map(r => wdIndivRijHtml(d.naam, r, d.type)).join("")}
         <button class="wd-sectie-add" onclick="wdIndivAddPrompt('${esc(d.naam)}')">＋ atleet toevoegen bij ${esc(d.naam)}</button>
@@ -9033,7 +9153,7 @@ function wdIndivEstafetteKaartHtml(discipline) {
       </div>`;
   }).join("");
   return `
-    <div class="wd-kaart">
+    <div class="wd-kaart" data-onderdeel="${esc(discipline.trim().toLowerCase())}">
       <div class="wd-kaart-kop"><b>${esc(discipline)}</b>
         <span class="wd-telregel">estafette · teamtijd (geen PR)</span></div>
       ${rijen || `<div style="font-size:12px;color:var(--muted);padding:4px 0 8px;">Nog geen ploeg toegevoegd.</div>`}
@@ -9565,6 +9685,7 @@ async function wdToggleDNS(idx, s) {
 
 // ── Live teamscore (telregels zoals in de opstellingstab) ─────
 function renderWdScore() {
+  renderWdVoortgang();   // patch 96: de voortgangskaart ververst samen met de scorebalk
   const el = document.getElementById("wd-scorebalk");
   if (!wdPloegen.length) { el.innerHTML = ""; return; }
   const opst = wdOpstellingPerPloeg[wdPloeg] || {};

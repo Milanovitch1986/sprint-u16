@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 95)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 96)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 96: Wedstrijddag deel 2 (patch 96, okt 2026)
+Tweede patch op het live-kritieke scherm Wedstrijddag: alleen lezen, geen SQL. Tag `ui-V` staat op de commit van patch 95. Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Open daarna: slepen met een vinger.
+- **Keuze en achtergrond:** de werkinstructie noemt voortgangskaart en "Nu bezig" een [data]-onderdeel. Onderzoek: de scorebalk telt al per ploeg het aantal ingevoerde resultaten (`totaalUnits`, `ingevoerd`), dus de voortgang is afleidbaar zonder SQL. Voor "nu bezig" legde ik drie manieren voor (uit de klok, eerstvolgende te doen, handmatig markeren met een nieuwe kolom op `wedstrijden`); Milanovitch koos na een mockup variant B: het eerste onderdeel in programmavolgorde dat nog niet helemaal is ingevoerd. De klok wordt niet gebruikt (het schema schuift op een wedstrijddag vaak). Variant C (gedeelde handmatige markering) blijft mogelijk met één SQL-regel, maar voegt een schrijfactie toe aan de wedstrijddag.
+- **Opbouw:** `wdVoortgangModel()` rekent per onderdeel `{ sleutel, naam, tijd, totaal, klaar }` uit (competitiemodus: dezelfde telling als `renderWdScore()` voor de gekozen ploeg en het gekozen geslacht; individuele modus: per onderdeel de atleten uit `wdResultaten` (zonder `ploeg-`) en bij een estafette de ploegen uit `wdIndivEstafettePloegen()`); `renderWdVoortgang()` bepaalt de status en tekent `#wd-voortgang`; `wdScrollNaarOnderdeel(this)` scrolt naar `#wd-lijst .wd-kaart[data-onderdeel=<sleutel>]`. De aanroep staat aan het begin van `renderWdScore()` en `renderWdIndividueel()`; gecontroleerd dat elke plek in de code die de lijst ververst (`renderWdLijst()`, `renderWdIndividueel()`) dat samen met een van beide doet, zodat de kaart nooit verouderd is en ook leeg wordt als er geen ploegen zijn.
+- **Volgorde van commits:** patch 96 is gebouwd op de stand van patch 95 (nog niet gecommit toen 96 klaar was). Momentopname van 95 staat in `/home/claude/werk/p95/` (app.html, CHANGELOG.md, PROJECTNOTITIES.md, commit_sjabloon.py). Commit eerst 95 met de configuratie in `p95/commit_sjabloon.py`; zet daarna de 96-bestanden terug, zet in `commit_sjabloon.py` de `HEAD_PREFIX` op de nieuwe commit van 95 (eerste 7 tekens), en commit 96 met tag `ui-V`.
+- **Testmethode (nieuw geleerd):** (1) bereken de verwachting onafhankelijk (hier in Python) uit de ruwe toestand van de app (programma, opstelling, resultaten en pogingen) en vergelijk met wat er op het scherm staat, stap voor stap door alle handelingen; dat vond twee aannames in de test, niet in de app. (2) Reconstrueer sleutels van de app niet op de gok: controleer eerst het formaat in de browser (`wdResKey('100m','a0')` geeft `'100m|a0'`). (3) Een wijziging in een testscript die een `assert` raakt, schrijft niets weg; lees de uitkomst dus pas als je gecontroleerd hebt dat het script is aangepast. (4) Weer uitzetten van DNS verwijdert het resultaat van die atleet; houd daar rekening mee in een scenario. (5) De bevestigingsvraag bij verwijderen in de individuele modus is het eigen venster `#confirmOverlay` (knop `#confirmJa`), geen browserdialoog.
+- **Terugdraaien:** Revert op de commit van patch 96, of terug naar tag `ui-V`.
 
 ### Patch 95: Wedstrijddag deel 1 (patch 95, okt 2026)
 Eerste patch op het live-kritieke scherm Wedstrijddag (de buitenkant); deel 2 (voortgangskaart en "Nu bezig") volgt apart en moet eerst op bestaande gegevens worden onderzocht. Tag `ui-U` staat op de commit vóór deze patch (patch 94, `a4c54ef`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Open daarna: Wedstrijddag deel 2 en slepen met een vinger.
