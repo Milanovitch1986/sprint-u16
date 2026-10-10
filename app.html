@@ -1181,11 +1181,6 @@
   .wd-sync-badge.ok      { background:rgba(34,197,94,.12);  color:var(--success); border-color:var(--success); }
   .wd-sync-badge.offline { background:rgba(245,166,35,.12); color:var(--accent);  border-color:var(--accent);  }
   .wd-sync-badge.bezig   { background:var(--surface2);      color:var(--muted);   border-color:var(--border);  }
-  .wd-wacht-label {
-    display:inline-block; margin-top:4px; font-size:10px; font-weight:700;
-    padding:2px 7px; border-radius:6px; letter-spacing:.3px;
-    background:rgba(245,166,35,.10); color:var(--accent); border:1px solid var(--accent);
-  }
   .wd-afrond-waarschuwing {
     display:flex; gap:10px; align-items:flex-start;
     background:rgba(245,166,35,.10); border:1px solid var(--accent);
@@ -2140,6 +2135,59 @@
   .backup-laatste.backup-oud { color: var(--accent); font-weight: 600; }
   @media print { .backup-laatste { display: none; } }
 
+  /* ══ Patch 95: Wedstrijddag deel 1 (avatars en chips, twee kolommen, zwevende Afronden-knop) ══ */
+  .wd-atleet { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .wd-avatar {
+    width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--accent); color: #000; font-size: 12px; font-weight: 700;
+  }
+  .wd-atleet-tekst { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+  .wd-atleet-naam { font-weight: 600; overflow-wrap: anywhere; }
+  .wd-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+  .wd-chip {
+    padding: 2px 8px; font-size: 11px; font-weight: 700; line-height: 1.4; white-space: nowrap; border-radius: 20px;
+    color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
+  }
+  .wd-chip-klaar { color: var(--success); background: color-mix(in srgb, var(--success) 15%, transparent); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
+  .wd-chip-dns   { color: var(--accent2); background: color-mix(in srgb, var(--accent2) 15%, transparent); border-color: color-mix(in srgb, var(--accent2) 40%, transparent); }
+  .wd-chip-sync  { color: var(--accent);  background: color-mix(in srgb, var(--accent) 15%, transparent);  border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+  /* De Afronden-knop blijft in beeld onderaan terwijl je door de lijst loopt (op een telefoon boven de onderbalk) */
+  #view-wedstrijddag .wd-afrond-actie { position: sticky; bottom: 16px; z-index: 60; display: flex; justify-content: flex-end; pointer-events: none; }
+  #view-wedstrijddag .wd-afrond-actie .btn { pointer-events: auto; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+  .wd-afrond-kort { display: none; }
+  @media (max-width: 768px) {
+    #view-wedstrijddag .wd-afrond-actie { bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 12px); }
+    #view-wedstrijddag .wd-afrond-actie .btn { padding: 10px 18px; }
+    .wd-afrond-lang { display: none; }
+    .wd-afrond-kort { display: inline; }
+  }
+  /* Typ je in een invoerveld, dan staat de knop weer op zijn gewone plek onderaan: hij mag een veld of het toetsenbord nooit afdekken */
+  #view-wedstrijddag:has(#wd-detail input:focus, #wd-detail select:focus) .wd-afrond-actie { position: static; }
+  @media print {
+    #view-wedstrijddag .wd-afrond-actie { position: static; }
+    .wd-avatar, .wd-chips { display: none; }
+    .wd-atleet, .wd-atleet-tekst { display: inline; }
+    .wd-atleet-naam { font-weight: inherit; }
+  }
+
+  /* Twee kolommen met onderdeelkaartjes op een computer (vanaf 1240 px; elk kaartje krijgt dan minstens 500 px).
+     De rij wordt twee regels: bovenaan de naam met chips en rechts de PR, eronder de invoer, de punten en de knop. */
+  @media screen and (min-width: 1240px) {
+    #view-wedstrijddag #wd-lijst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; align-items: start; }
+    #view-wedstrijddag #wd-lijst > .empty-state { grid-column: 1 / -1; }
+    #view-wedstrijddag #wd-lijst > .wd-kaart { margin-bottom: 0; min-width: 0; }
+    #view-wedstrijddag #wd-lijst .wd-rij { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; row-gap: 6px; }
+    #view-wedstrijddag #wd-lijst .wd-rij > :nth-child(1) { grid-column: 1 / 3; grid-row: 1; padding-bottom: 0; }
+    #view-wedstrijddag #wd-lijst .wd-rij > :nth-child(3) { grid-column: 3; grid-row: 1; justify-self: end; padding-bottom: 0; white-space: nowrap; }
+    #view-wedstrijddag #wd-lijst .wd-rij > :nth-child(2) { grid-column: 1; grid-row: 2; }
+    #view-wedstrijddag #wd-lijst .wd-rij > :nth-child(4) { grid-column: 2; grid-row: 2; padding-bottom: 0; }
+    #view-wedstrijddag #wd-lijst .wd-rij > :nth-child(5) { grid-column: 3; grid-row: 2; padding-bottom: 0; }
+  }
+  @media screen and (min-width: 1560px) {
+    #view-wedstrijddag:has(> #wd-detail:not([style*="none"])) { max-width: 1500px; }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2519,7 +2567,7 @@
       </div>
       <div id="wd-lijst"></div>
       <div class="wd-afrond-actie">
-        <button class="btn btn-primary" onclick="openWdAfronden()">✅ Afronden &amp; nieuwe PR's opslaan</button>
+        <button class="btn btn-primary" onclick="openWdAfronden()" title="Afronden &amp; nieuwe PR's opslaan">✅ <span class="wd-afrond-lang">Afronden &amp; nieuwe PR's opslaan</span><span class="wd-afrond-kort">Afronden</span></button>
       </div>
     </div>
   </div>
@@ -7913,6 +7961,28 @@ function toonLaatsteBackup() {
   } catch (e) { /* bijzaak */ }
 }
 
+function wdAtleetCelHtml(naam, discipline, sleutel) {
+  // De cel met de atleet op de wedstrijddag: avatar met initialen, naam en chips (patch 95).
+  // Statuschip, afgeleid uit wat het scherm al heeft: "DNS" (niet gestart), "klaar" (er staat een geldig resultaat) of "wacht" (nog niets).
+  // Daarnaast "niet verstuurd" als het resultaat nog in de wachtrij staat. Alleen weergave; er wordt niets opgeslagen of gewijzigd.
+  const initialen = String(naam || "?").split(" ").filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+  const hoofd = wdResultaten[wdResKey(discipline, sleutel)];
+  const eff = wdEffectief(discipline, sleutel);
+  const klaar = !!(eff && eff.status === "ok" && eff.resultaat);
+  const status = hoofd && hoofd.status === "dns" ? ["dns", "DNS"] : klaar ? ["klaar", "✓ klaar"] : ["wacht", "wacht"];
+  return `<span class="wd-atleet"><span class="wd-avatar" aria-hidden="true">${esc(initialen)}</span>`
+    + `<span class="wd-atleet-tekst"><span class="wd-atleet-naam">${esc(naam)}</span>`
+    + `<span class="wd-chips"><span class="wd-chip wd-chip-${status[0]}">${status[1]}</span>${wdWachtLabelHtml(discipline, sleutel)}</span></span></span>`;
+}
+
+function wdVerversWachtChips() {
+  // Haalt de chips "niet verstuurd" weg bij regels die inmiddels zijn verstuurd. Alleen weghalen, nooit opnieuw tekenen:
+  // een volledige herteken zou het typen in een invoerveld verstoren (patch 95). Bijzaak: een fout hier doet niets.
+  try {
+    document.querySelectorAll(".wd-chip-sync[data-wacht]").forEach(c => { if (!wdWachtSet.has(c.dataset.wacht)) c.remove(); });
+  } catch (e) { /* bijzaak */ }
+}
+
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
 // Live resultaten invoeren op de wedstrijddag. Elke invoer wordt direct
 // per veld opgeslagen (upsert), zodat meerdere trainers tegelijk kunnen
@@ -8379,7 +8449,7 @@ function renderWdLijst() {
       const wdType = wdOnderdeelType(item.discipline, item.type);
       rijen += `
         <div class="wd-rij">
-          <span>${esc(a.naam)}${wdWachtLabelHtml(item.discipline, String(aid))}</span>
+          <span>${wdAtleetCelHtml(a.naam, item.discipline, String(aid))}</span>
           ${wdVeldenHtml(item.discipline, String(aid), aid, wdType, !!isDns)}
           <span class="wd-pr">${prTekst}${wdBesteTekst(item.discipline, String(aid))}</span>
           <span><b id="wd-pts-${idx}-${s}">${pts !== null ? pts : "—"}</b>
@@ -8914,7 +8984,7 @@ function wdIndivRijHtml(discipline, res, type) {
   const wdType = wdOnderdeelType(discipline, type);
   return `
     <div class="wd-rij">
-      <span>${esc(naam)}${wdWachtLabelHtml(discipline, aid)}</span>
+      <span>${wdAtleetCelHtml(naam, discipline, aid)}</span>
       ${wdVeldenHtml(discipline, aid, aid, wdType, false)}
       <span class="wd-pr">${prTekst}${wdBesteTekst(discipline, aid)}</span>
       <span><b>${pts !== null ? pts : "—"}</b>
@@ -9350,6 +9420,7 @@ function wdStopSyncTimer() {
 // De statusbadge rechtsboven bijwerken. Drie toestanden:
 //  groen "Alles opgeslagen" · oranje "Offline · N wachten" · grijs "Synchroniseren…".
 function wdRenderSyncBadge(gedaan, totaal) {
+  wdVerversWachtChips();   // patch 95: chips "niet verstuurd" die niet meer wachten verdwijnen zonder de lijst opnieuw te tekenen
   const el = document.getElementById("wd-sync-badge");
   if (!el) return;
   el.classList.remove("ok", "offline", "bezig");
@@ -9369,8 +9440,9 @@ function wdRenderSyncBadge(gedaan, totaal) {
 
 // Klein oranje label onder een regel die nog op verbinding wacht.
 function wdWachtLabelHtml(discipline, sleutel) {
+  // Patch 95: een chip "niet verstuurd" naast de naam (voorheen een label eronder)
   if (!wdWachtSet.has(wdResKey(discipline, sleutel))) return "";
-  return `<br><span class="wd-wacht-label">⏳ wacht op verbinding</span>`;
+  return `<span class="wd-chip wd-chip-sync" data-wacht="${esc(wdResKey(discipline, sleutel))}" title="Dit resultaat is nog niet naar de server gestuurd en gaat vanzelf mee zodra er verbinding is">📴 niet verstuurd</span>`;
 }
 
 // Bij openen van een wedstrijddag: status laden, badge tekenen, proberen te syncen.

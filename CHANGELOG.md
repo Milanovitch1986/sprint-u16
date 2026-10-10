@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 95] — 2026-10-10
+
+### 🏟️ Wedstrijddag: avatars, statuschips, twee kolommen en een zwevende Afronden-knop
+
+<!--RELEASENOTE
+versie: Patch 95
+titel: 🏟️ Wedstrijddag: avatars, statuschips, twee kolommen en een zwevende Afronden-knop
+type: update
+tags: wedstrijddag
+beschrijving: Op de Wedstrijddag staat bij elke atleet een rondje met initialen en een chip die laat zien of hij klaar is, nog moet lopen of niet gestart is. Een resultaat dat nog niet is verstuurd krijgt een oranje chip. Op een computer staan de onderdelen in twee kolommen, en de Afronden-knop blijft in beeld terwijl je door de lijst loopt.
+-->
+
+Vijfentwintigste stap na het UI-herontwerp: Wedstrijddag deel 1 (de buitenkant). Het invoeren, opslaan, de wachtrij bij weinig verbinding, DNS, rondes, pogingen, de PR-regels, de scorebalk en het afronden zijn niet veranderd. Er is **geen databasewijziging**.
+
+**Avatars en chips.** Voor elke atleetnaam staat een rondje met de initialen, zoals in de atletenlijst. Daarachter een statuschip die uit de resultaten wordt afgeleid die het scherm al heeft: **✓ klaar** (er staat een geldig resultaat, ook als dat in een ronde of poging staat), **wacht** (nog niets ingevuld) of **DNS** (niet gestart). Staat een resultaat nog in de wachtrij omdat er geen verbinding was, dan staat daarnaast een oranje chip **📴 niet verstuurd** (voorheen een klein label "wacht op verbinding" onder de naam). Zodra de wachtrij is verstuurd, verdwijnt die chip vanzelf, ook als je niets opnieuw invult (in de vorige versie bleef het label tot de lijst opnieuw werd getekend staan).
+
+**Twee kolommen op een computer (vanaf 1240 px).** De onderdeelkaartjes staan in twee kolommen; elk kaartje is dan minstens 500 px breed. De rij wordt twee regels: bovenaan de naam met chips en rechts de PR, eronder de invoer, de punten en de knop. Vanaf 1560 px is het scherm bij een geopende wedstrijd breder (maximaal 1500 px); het overzicht van wedstrijden blijft 1100 px. Onder 1240 px, op tablet en op telefoon blijft de indeling zoals voorheen.
+
+**Zwevende Afronden-knop.** De knop "Afronden & nieuwe PR's opslaan" blijft onderaan in beeld terwijl je door een lange lijst scrolt (op een telefoon boven de onderbalk, als compacte pil "✅ Afronden" met de volledige tekst als tooltip). Typ je in een invoerveld, dan staat de knop weer op zijn gewone plek onderaan de lijst, zodat hij een veld of het schermtoetsenbord nooit kan afdekken. Helemaal onderaan staat de knop onder de lijst en dekt niets af. Wat de knop doet is niet veranderd.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `wdAtleetCelHtml(naam, discipline, sleutel)` (avatar, naam en chips; alleen weergave) en `wdVerversWachtChips()`. Aangepast: `renderWdLijst()` en `wdIndivRijHtml()` (de atleetcel gebruikt nu `wdAtleetCelHtml()`; de rij, `id`'s en handlers zijn letterlijk gelijk), `wdWachtLabelHtml()` (levert nu de chip `.wd-chip-sync` met `data-wacht`) en `wdRenderSyncBadge()` (roept `wdVerversWachtChips()` aan). Alle andere JavaScript is byte-voor-byte gelijk aan patch 94; de opslag-, wachtrij-, synchronisatie-, ronde- en afrondfuncties zijn niet aangeraakt. Contract-check: 0 id's, handlers of functies verdwenen; 2 functies nieuw. De HTML van de Afronden-knop kreeg twee spans (lange en korte tekst) en een `title`; `onclick` is gelijk.
+- De status gebruikt `wdResultaten`, `wdEffectief()` en `wdResKey()`: DNS als de hoofdrij status `dns` heeft, anders "klaar" als het effectieve resultaat status `ok` en een waarde heeft, anders "wacht". `wdVerversWachtChips()` haalt alleen chips weg waarvan de sleutel niet meer in `wdWachtSet` staat; er wordt nooit opnieuw getekend (een volledige herteken tijdens het synchroniseren zou het typen in een invoerveld verstoren).
+- CSS: nieuwe klassen `.wd-atleet`, `.wd-avatar`, `.wd-atleet-tekst`, `.wd-atleet-naam`, `.wd-chips`, `.wd-chip` (+ `-klaar`, `-dns`, `-sync`); de oude stijl `.wd-wacht-label` is vervallen. Zwevende knop met `position: sticky` (en `#view-wedstrijddag:has(#wd-detail input:focus, #wd-detail select:focus)` zet hem tijdens het typen terug naar `static`); twee kolommen en de tweeregelige rij in `@media screen (min-width: 1240px)`; de bredere weergave in `@media (min-width: 1560px)` met `:has(> #wd-detail:not([style*="none"]))`. In print zijn de avatar en chips verborgen en is de naam weer gewoon tekst.
+- Gecontroleerd (nep-backend met een spy op alle schrijfaanroepen), oud tegen nieuw, in de competitiemodus en de individuele modus: invullen, ongeldig resultaat, DNS aan en uit, ronde toevoegen en invullen, technisch onderdeel, wissen, **geen verbinding** (`__failWrites`), synchroniseren, vernieuwen, snel toevoegen, verwijderen en het afrondvenster. Elke stap geeft dezelfde rijen, `id`'s, invoer, punten, PR's, `wdResultaten`, `wdPogingen`, scorebalk, melding en schrijfaanroepen als de vorige versie (het tijdstempel `ingevoerd_op` en de kloktijd in de melding "Vernieuwd" tellen niet mee). Nieuw: de chips kloppen bij de start, na invullen, wissen, DNS, een ongeldig resultaat, een resultaat in een ronde, zonder verbinding en na synchroniseren; de avatar toont de initialen van de eerste twee woorden. Layout op 1024, 1100, 1239, 1240, 1280, 1560 en 1920 px (aantal kolommen, naam leesbaar op één regel, geen horizontaal scrollen, de zwevende knop onderin beeld, onderaan onder de lijst, opent het afrondvenster) en op 390 px (boven de onderbalk, niet zwevend tijdens het typen, compacte pil). Pixelvergelijking van alle schermen op 1024, 1280, 1920, 390 en 360 px, licht en donker, scherm en print: identiek, behalve de Wedstrijddag-detail op het scherm.
+- Gevonden tijdens het testen: op 1100 px werd de naam in de compacte rij 9 px breed omdat de kaartjes te smal waren; de twee kolommen beginnen daarom pas op 1240 px. En: een brede zwevende knop kon een invoerveld afdekken; vandaar de compacte pil en het niet zwevend zijn tijdens het typen.
+- Niet getest: echt live resultaten invoeren door meerdere trainers tegelijk, een echt netwerk dat wegvalt en terugkomt (de wachtrij is gesimuleerd) en het schermtoetsenbord op een echte telefoon.
+
 ## [oktober 2026 — patch 94] — 2026-10-10
 
 ### ⚙️ Admin: laatste back-up

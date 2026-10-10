@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 94)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 95)*
 
 ---
 
@@ -43,6 +43,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 95: Wedstrijddag deel 1 (patch 95, okt 2026)
+Eerste patch op het live-kritieke scherm Wedstrijddag (de buitenkant); deel 2 (voortgangskaart en "Nu bezig") volgt apart en moet eerst op bestaande gegevens worden onderzocht. Tag `ui-U` staat op de commit vóór deze patch (patch 94, `a4c54ef`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Open daarna: Wedstrijddag deel 2 en slepen met een vinger.
+- **Keuze:** na twee mockups (Visualizer) koos Milanovitch voor beide soorten chips: statuschips per atleet (klaar, wacht, DNS) én een chip "niet verstuurd" voor een resultaat in de offline-wachtrij (de tekst "wacht op verbinding" is bewust vervangen, omdat "wacht" en "wacht op verbinding" verwarren).
+- **Opbouw:** `wdAtleetCelHtml(naam, discipline, sleutel)` bouwt de eerste cel van `.wd-rij` (avatar, naam, chips) en vervangt in `renderWdLijst()` en `wdIndivRijHtml()` de oude tekst; de cel blijft het eerste kind van `.wd-rij`, dus het grid en de overige kinderen (velden, PR, punten, knop) zijn niet veranderd. Het estafetterij ("Teamtijd Ploeg X") krijgt alleen de sync-chip. De status volgt uit `wdResultaten`, `wdEffectief()` en `wdResKey()`; een rij wordt na elke invoer opnieuw getekend (`wdHerteken()` of `renderWdLijst()`), dus de chip kan niet verouderen. `wdWachtLabelHtml()` levert `.wd-chip-sync` met `data-wacht=<resKey>`; `wdVerversWachtChips()` (aangeroepen vanuit `wdRenderSyncBadge()`) haalt na het synchroniseren alleen de chips weg waarvan de sleutel niet meer in `wdWachtSet` staat. **Nooit opnieuw tekenen vanuit de synchronisatie:** dat zou het typen in een invoerveld verstoren.
+- **Bevinding over het oude gedrag:** het label "wacht op verbinding" bleef na het synchroniseren staan tot de lijst opnieuw werd getekend (de oude versie deed dat ook). Met een chip naast "✓ klaar" was dat misleidend; daarom `wdVerversWachtChips()`.
+- **Indeling:** twee kolommen pas vanaf 1240 px (een eerste versie begon bij 1100 px; daar werd de naam 9 px breed). Onder 1240 px blijft de rij van 5 kolommen. In de tweekolomsmodus is de rij een grid met drie kolommen en twee regels (naam over kolom 1–2 en PR rechts; invoer, punten, knop eronder), uitgedrukt met `nth-child` omdat de volgorde van de kinderen vast is (1 naam, 2 velden, 3 PR, 4 punten, 5 knop). `#view-wedstrijddag` hoort bij de views buiten `<main>` met `max-width: 1100px`; vanaf 1560 px alleen 1500 px als `#wd-detail` zichtbaar is.
+- **Zwevende knop:** `.wd-afrond-actie` is `position: sticky` met `bottom: 16px` (mobiel `calc(60px + env(safe-area-inset-bottom) + 12px)`, boven de onderbalk); tijdens het typen (`#wd-detail input:focus, select:focus`, via `:has()`) is hij `static`, zodat hij een veld of het toetsenbord nooit afdekt. Op een telefoon een compacte pil: de HTML van de knop heeft twee spans (`.wd-afrond-lang` en `.wd-afrond-kort`) en een `title`.
+- **Testmethode (nieuw geleerd):** (1) vergelijk oud en nieuw stap voor stap op de data (rijen, `id`'s, `wdResultaten`, `wdPogingen`, scorebalk, melding, schrijfaanroepen), niet op de HTML, en laat bewust nieuwe elementen weg; normaliseer tijdstempels in schrijfaanroepen (`ingevoerd_op`) en kloktijden in meldingen. (2) Laat de test een verbetering expliciet toestaan en formuleer wat dan mag (hier: de nieuwe versie mag nergens een extra chip hebben en mag een verouderde chip missen). (3) Meet bij een layout ook de leesbaarheid, niet alleen dat er geen overloop is: een naam van 9 px breed haalde alle andere controles. (4) Een bewust opgewekte netwerkfout (`__failWrites`) en daarna `synchroniseerWachtrij()` test de wachtrij zonder echt netwerk. (5) Neem bij een zwevend element altijd het typen en het toetsenbord mee. (6) De bedieningselementen in de DOM verschillen per onderdeel: voor loopnummers vervangt een ronde het losse veld op dezelfde regel (geen `.wd-ronde-blok`).
+- **Terugdraaien:** Revert op de commit van patch 95, of terug naar tag `ui-U`.
 
 ### Patch 94: Admin, laatste back-up (patch 94, okt 2026)
 Derde [data]-onderdeel, opnieuw zonder databasewijziging. Tag `ui-T` staat op de commit vóór deze patch (patch 93, `63dcb54`). Admin is niet live-kritiek: direct na de tests gecommit. Open: Wedstrijddag (deel 1 en voortgang/"Nu bezig") en slepen met een vinger.
