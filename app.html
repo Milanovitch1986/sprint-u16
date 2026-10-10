@@ -2045,6 +2045,33 @@
     #opstelling-stap2[data-stap="1"] .stapnav-vorige, #opstelling-stap2[data-stap="3"] .stapnav-volgende { display: none; }
   }
 
+  /* ══ Patch 90: Opstelling deel 3 (drie ploegen naast elkaar, zijpaneel op brede schermen) ══ */
+  /* Alleen CSS en alleen op scherm: telefoon, tablet (< 1100 px) en print blijven ongewijzigd. */
+  @media screen and (min-width: 1100px) {
+    /* Ploegen naast elkaar (zo veel als er passen, minimaal 320 px per ploeg); alle ploegen staan open */
+    #ploegen-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
+    #ploegen-container > .empty-state { grid-column: 1 / -1; }
+    #ploegen-container .ploeg-container { margin-bottom: 0; min-width: 0; }
+    #ploegen-container .ploeg-body { display: block; }
+    #ploegen-container .ploeg-header, #ploegen-container .ploeg-header.open { border-radius: var(--radius) var(--radius) 0 0; cursor: default; padding: 12px 16px; }
+    #ploegen-container .ploeg-header:hover { filter: none; }
+    #ploegen-container .ploeg-naam { flex-basis: 100%; }   /* de naam krijgt een eigen regel; punten en knoppen eronder, in elke ploeg gelijk */
+    #ploegen-container .ploeg-chevron { display: none; }
+    /* De rij had vier kolommen waarvan de laatste twee leeg zijn; hier alleen onderdeel en atleten */
+    #ploegen-container .onderdeel-rij { grid-template-columns: 96px minmax(0, 1fr); padding: 10px 16px; }
+    #ploegen-container .onderdeel-rij > div:nth-child(n+3) { display: none; }
+  }
+  @media screen and (min-width: 1560px) {
+    /* Breder opstelscherm met rechts een vast zijpaneel "Beschikbare atleten" (alleen als stap 2 in beeld is, niet bij de wedstrijdlijst) */
+    #view-opstelling:has(> #opstelling-stap2:not([style*="none"])) { max-width: 1500px; }
+    #opstelling-stap2 { display: grid; grid-template-columns: minmax(0, 1fr) 300px; column-gap: 24px; align-items: start; }
+    #opstelling-stap2 > * { grid-column: 1 / -1; }
+    #opstelling-stap2 > #beschikbaarheid-sectie { grid-column: 2; grid-row: 4 / span 3; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; margin-bottom: 0; }
+    #opstelling-stap2 > #opstelling-acties, #opstelling-stap2 > #ploegen-container, #opstelling-stap2 > #reserves-container { grid-column: 1; }
+    /* Alleen-lezen heeft geen beschikbaarheid: dan geen zijpaneel en de volle breedte voor de ploegen */
+    #opstelling-stap2:has(> #beschikbaarheid-sectie[style*="none"]) { grid-template-columns: minmax(0, 1fr); }
+  }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }

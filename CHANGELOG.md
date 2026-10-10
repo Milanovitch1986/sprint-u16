@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 90] — 2026-10-09
+
+### 📋 Opstelling op een computer: drie ploegen naast elkaar en een zijpaneel
+
+<!--RELEASENOTE
+versie: Patch 90
+titel: 📋 Opstelling op een computer: drie ploegen naast elkaar en een zijpaneel
+type: update
+tags: opstelling
+beschrijving: Op een computerscherm staan de ploegen van een opstelling nu naast elkaar (op een gewone laptop alle drie), allemaal open. Op een breed scherm staat rechts bovendien een vast zijpaneel met de beschikbare atleten, dat in beeld blijft terwijl je scrolt. Op een telefoon of tablet verandert er niets.
+-->
+
+Twintigste stap na het UI-herontwerp: Opstelling deel 3 (de indeling op desktop). Alleen CSS: geen JavaScript, geen HTML en geen databasewijziging. Het slepen van atleten volgt in patch 91.
+
+**Drie ploegen naast elkaar (vanaf 1100 px).** De ploegen staan naast elkaar, zo veel als er passen (minimaal ± 320 px per ploeg): twee op 1100 px, drie vanaf ± 1230 px, dus op een gewone laptop (1280 px) alle drie. Alle ploegen staan open, het pijltje is weg en de naam van elke ploeg heeft een eigen regel met de punten en knoppen eronder. De rijen zijn compacter: de onderdeelnaam links en de atleten ernaast (de rij had vier kolommen waarvan de laatste twee leeg waren).
+
+**Zijpaneel (vanaf 1560 px).** Rechts staat "Beschikbare atleten" als vast paneel van 300 px dat meescrolt; het opstelscherm is dan maximaal 1500 px breed (anders 1100 px) zodat er drie ploegen naast het paneel passen. De wedstrijdlijst (stap 1) wordt niet breder. In alleen-lezen is er geen beschikbaarheid, dus geen zijpaneel en krijgen de ploegen de volle breedte. De reserves blijven onder de teams.
+
+**Ongewijzigd.** Telefoon en tablet (< 1100 px, inclusief de stappen van patch 89) en alles in print.
+
+#### Technisch
+
+- Alleen een CSS-blok in `@media screen` (`min-width: 1100px` en `min-width: 1560px`). De inline scripts en alle HTML buiten `<style>` zijn byte-voor-byte gelijk aan patch 89; contract-check 0/0/0.
+- Ploegen: `#ploegen-container` wordt een grid met `repeat(auto-fit, minmax(320px, 1fr))`; `.ploeg-body` is altijd zichtbaar (de `open`-klasse doet er niet meer toe), `.ploeg-chevron` verborgen, `.onderdeel-rij` krijgt `grid-template-columns: 96px minmax(0, 1fr)` en de twee lege plaatshouders (`> div:nth-child(n+3)`) vallen weg. De reservekaart zit in `#reserves-container` en wordt niet geraakt. `.empty-state` spant alle kolommen.
+- Zijpaneel: `#opstelling-stap2` wordt een grid (`minmax(0, 1fr) 300px`); `#beschikbaarheid-sectie` staat in kolom 2 vanaf rij 4 (`grid-row: 4 / span 3`), `position: sticky; top: 16px; max-height: calc(100vh - 32px)`. De acties, ploegen en reserves staan in kolom 1. De bredere view geldt alleen als stap 2 zichtbaar is: `#view-opstelling:has(> #opstelling-stap2:not([style*="none"]))`; alleen-lezen (beschikbaarheid inline verborgen) krijgt één kolom via `:has(> #beschikbaarheid-sectie[style*="none"])`.
+- Gecontroleerd: layout op 1024, 1100, 1280, 1440, 1560 en 1920 px (aantal ploegen naast elkaar, geen horizontaal scrollen, atleten ≥ 180 px breed, zijpaneel 300 px en blijft op `top: 16px` bij scrollen, wedstrijdlijst ≤ 1100 px, alleen-lezen zonder zijpaneel). Gedrag oud tegen nieuw op 1280 en 1920 px: atleten kiezen in ploeg A, B, C en de reserves en een slot wissen geven dezelfde kandidaten, dezelfde keuze en dezelfde indeling; de keuzelijst (`.slot-select`) is zichtbaar, binnen beeld en niet afgedekt, ook in de derde kolom; de HTML van ploegen en reserves is identiek. Pixelvergelijking van alle andere schermen op 1024, 390, 360, 1280 en 1920 px, licht en donker, scherm en print: identiek; op 1024, 390 en 360 px is ook het Opstelling-detail pixel-identiek aan patch 89, op 1280 en 1920 px verschilt alleen dat scherm.
+- Niet getest: een echte monitor of laptop (alleen 1024 tot 1920 px nagebootst) en echte atleetdata.
+
 ## [oktober 2026 — patch 89] — 2026-10-09
 
 ### 📋 Opstelling: waarschuwing bij niet-opgeslagen wijzigingen en stap voor stap op mobiel

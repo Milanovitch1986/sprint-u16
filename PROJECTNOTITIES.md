@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 89)*
+*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 90)*
 
 ---
 
@@ -43,6 +43,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 90: Opstelling deel 3, indeling op desktop (patch 90, okt 2026)
+Derde patch op het live-kritieke scherm Opstelling (reeks patch 83–96, zonder Home). Alleen CSS, geen JavaScript of HTML, geen databasewijziging. Tag `ui-P` staat op de commit vóór deze patch (patch 89, `8df58eb`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu", en eerst vragen of er een wedstrijd loopt of iemand een opstelling maakt. Daarna: patch 91 = slepen van atleten, daarna Wedstrijddag en de [data]-patches.
+- **Maten die hierbij bleken te gelden:** `main` en de views buiten `<main>` (waaronder `#view-opstelling`) hebben `max-width: 1100px` met `padding: 24px`; de bruikbare breedte is dus 1052 px, óók op een scherm van 1920 px. Drie ploegen van ± 340 px passen daar precies in; een zijpaneel past er niet náást. Daarom wordt alleen `#view-opstelling` vanaf 1560 px maximaal 1500 px breed (met `:has(> #opstelling-stap2:not([style*="none"]))`, zodat de wedstrijdlijst van stap 1 niet meebreedt).
+- **Rijen:** `.onderdeel-rij` is een grid `140px 1fr 1fr auto`, maar `renderPloeg()` maakt maar twee gevulde kinderen (onderdeel + atleten) en twee lege plaatshouders; daardoor stonden de atleten tot nu toe in één derde van de breedte. Bij de kolomindeling: `96px minmax(0, 1fr)` en de plaatshouders verborgen (`> div:nth-child(n+3)`). De reservekaart gebruikt dezelfde klasse maar zit in `#reserves-container` en heeft een inline `grid-template-columns:1fr`, dus de regels (die op `#ploegen-container` zijn afgebakend) raken haar niet.
+- **Ploegen:** `#ploegen-container` is op ≥ 1100 px een grid `repeat(auto-fit, minmax(320px, 1fr))`; alle `.ploeg-body` zijn zichtbaar (de `open`-klasse blijft bestaan en wisselt nog mee via `togglePloeg`, maar heeft op desktop geen effect), het pijltje is verborgen en de naam krijgt `flex-basis: 100%` zodat de kopjes in elke ploeg gelijk zijn.
+- **Zijpaneel:** `#opstelling-stap2` wordt op ≥ 1560 px een grid met kolommen `minmax(0, 1fr) 300px`; elk kind spant standaard beide kolommen; `#beschikbaarheid-sectie` staat in kolom 2 vanaf rij 4 en is sticky; de actierij, ploegen en reserves staan in kolom 1. Auto-plaatsing zet de eerste drie kinderen (kop, geslachtstabs, voortgangsbalk) in rij 1–3. Alleen-lezen verbergt de beschikbaarheid inline (`style="display:none"`) en krijgt via `:has(> #beschikbaarheid-sectie[style*="none"])` één kolom.
+- **Testmethode (nieuw geleerd):** (1) meet de layout eerst met een snel prototype via `page.add_style_tag()` voordat je het in `app.html` zet; zo bleek dat de maximale breedte het zijpaneel beperkte. (2) Meet per breedte de posities (`getBoundingClientRect`) van de ploegen, het zijpaneel en de view, en controleer `scrollWidth > innerWidth` voor horizontaal scrollen. (3) Test een sticky paneel door de pagina scrollbaar te maken (`documentElement.style.minHeight`) en na `scrollTo` de `top` te meten. (4) Een open `.slot-select` controleer je met `elementFromPoint` op zijn middelpunt (niet afgedekt) en met `left >= 0 && right <= innerWidth` (binnen beeld). (5) Bij oud-nieuw-vergelijkingen van HTML kan de `class`-attribuutwaarde van een dichtgeklapte ploeg `"ploeg-header "` (met spatie) zijn; normaliseer dat.
+- **Terugdraaien:** Revert op de commit van patch 90, of terug naar tag `ui-P`.
 
 ### Patch 89: Opstelling deel 2 (patch 89, okt 2026)
 Tweede patch op het live-kritieke scherm Opstelling (reeks patch 83–96, zonder Home). Geen databasewijziging. Tag `ui-O` staat op de commit vóór deze patch (patch 88, `202cabd`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu", en eerst vragen of er een wedstrijd loopt of iemand een opstelling maakt. Bijgestelde planning: patch 90 = drie ploegen naast elkaar met zijpaneel op desktop (alleen CSS), patch 91 = slepen van atleten, daarna Wedstrijddag en de [data]-patches.
