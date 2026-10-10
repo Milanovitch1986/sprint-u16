@@ -6,6 +6,37 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 91] — 2026-10-10
+
+### 📋 Opstelling: atleten slepen
+
+<!--RELEASENOTE
+versie: Patch 91
+titel: 📋 Opstelling: atleten slepen
+type: feature
+tags: opstelling
+beschrijving: Op een computer kun je atleten in de opstelling nu slepen met de muis: van het ene slot naar het andere (verplaatsen of wisselen, ook tussen ploegen) en, op een breed scherm, vanuit de lijst met beschikbare atleten naar een slot. De plek kleurt groen, oranje of rood en je ziet waarom iets niet mag. De keuzelijst blijft gewoon werken, en op een telefoon of tablet verandert er niets.
+-->
+
+Eenentwintigste stap na het UI-herontwerp: Opstelling deel 4. Slepen is een extra weg naast de keuzelijst; het opstellen, de keuzelijst, opslaan en delen zijn niet veranderd en er verandert geen enkele databasevraag.
+
+**Van slot naar slot.** Pak een atleet in een slot en laat hem los op een ander slot, ook in een andere ploeg of een ander onderdeel. Is het doelslot leeg, dan wordt de atleet **verplaatst**; staat er al iemand, dan **wisselen** ze van plek. Verplaatsen naar een andere ploeg kan alleen als de atleet in de oude ploeg verder nergens staat (een atleet staat maar in één ploeg); wisselen tussen twee ploegen kan als beiden daarna op hun nieuwe plek mogen.
+
+**Van de lijst naar een slot (vanaf 1560 px).** In het zijpaneel "Beschikbare atleten" heeft elke rij links een greepje (⋮⋮). Sleep daaraan een atleet naar een slot; op een gevuld slot vervangt hij de atleet daar, net als in de keuzelijst. Een atleet die niet beschikbaar is, kun je niet slepen. Klikken op het greepje zonder slepen schakelt de rij om, net als overal in de rij.
+
+**Dezelfde regels als de keuzelijst.** Geblokkeerd (de plek kleurt rood en het zwevende label noemt de reden, bij het loslaten krijg je dezelfde melding en verandert er niets): al in de andere startgroep van dat onderdeel, al in een andere ploeg, of dan meer dan 3 onderdelen. Een tijdconflict is een waarschuwing en mag (oranje, en het slot toont daarna de waarschuwing). Een zwevend label volgt de muis; het slot waar je vandaan komt wordt vaag; Escape annuleert; loslaten buiten een slot of op het eigen slot doet niets. Gewoon klikken opent nog de keuzelijst, ook na een klein trillertje (< 5 px).
+
+**Alleen muis en pen.** Aanrakingen worden volledig genegeerd, zodat scrollen en tikken op een telefoon of tablet precies werken als voorheen. De reserves blijven met de keuzelijst. Na een sleepactie staat de opstelling als "niet opgeslagen" (onderbalk en waarschuwing bij weggaan werken mee).
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `sleepStart()`, `sleepBeweeg()`, `sleepLos()`, `sleepAnnuleer()`, `sleepToets()`, `sleepOpruimen()`, `sleepBeoordeel()` en `sleepVoerUit()`. Aangepast: alleen de opmaak van `renderBeschikbaarheid()` (een greepje en `data-atleet` per rij; de `onchange`-handler is letterlijk gelijk). Alle andere JavaScript is byte-voor-byte gelijk aan patch 90. Twee nieuwe attributen in de HTML: `onpointerdown="sleepStart(event)"` op `#ploegen-container` en op `#beschikbaarheid-grid` (delegatie: de inhoud wordt telkens opnieuw gebouwd, de containers blijven).
+- Pointer-events met alleen `pointerType` muis of pen; `pointerType === "touch"` keert direct terug. Een sleepactie begint na 5 px bewegen. De luisteraars (`pointermove`, `pointerup`, `pointercancel`, `keydown`, `blur`) worden pas bij een mogelijke sleepactie gekoppeld en in `sleepOpruimen()` altijd weer losgekoppeld; de toestand zit in `window.__sleep`. Verlies van de muisknop buiten het venster (`buttons === 0`) en `blur` breken de sleepactie af. Een eenmalige `click`-onderdrukking in de capture-fase voorkomt dat het loslaten het slot onder de muis aanklikt of een rij omschakelt.
+- `sleepBeoordeel()` rekent op een **kopie** van de betrokken ploegen (de originele objecten worden nooit gewijzigd en daarna teruggezet), zodat hoveren de indeling en de volgorde van de sleutels nooit verandert. Een eerdere versie zette gewiste sleutels terug achteraan in het object; dat bleek in de test (de JSON van `opstellingData` veranderde alleen van volgorde) en is hersteld. Het oordeel gebruikt dezelfde hulpfuncties als de keuzelijst: `zitInAndereStartgroep`, `zitInAnderePloeg`, `telOnderdelenAtleet` (blokkade bij meer dan 3 na plaatsing, gelijk aan "al 3" in de keuzelijst) en `checkConflict` (waarschuwing). Een atleet uit de lijst wordt via `kiesAtleet()` ingedeeld (dezelfde route als de keuzelijst, inclusief het van de reservebank halen); verplaatsen en wisselen tussen slots schrijft rechtstreeks in `opstellingData` en roept één keer `renderPloegen()` aan.
+- CSS: `.sleep-spook` (zwevend label, `pointer-events: none`), `.sleep-ok`, `.sleep-conflict`, `.sleep-nee`, `.sleep-bron`, een `grab`-cursor op gevulde slots met een muis (`@media (hover: hover)`), en het greepje alleen vanaf 1560 px; in print verborgen.
+- Gecontroleerd met een echte muis (Playwright), oud tegen nieuw, nep-backend: verplaatsen, wisselen, tussen ploegen (toegestaan en geblokkeerd), lijst naar slot (leeg en gevuld), elke blokkaderegel en het tijdconflict, de uitkomst gelijk aan die van de keuzelijst, loslaten buiten een slot, op het eigen slot, Escape, klik en trillertje, slepen op de ✕, een aanraking, alleen-lezen, het greepje (zichtbaarheid, niet-beschikbaar, klik) en de waarschuwing van patch 89 na slepen. Systematisch: voor 180 combinaties van atleet en leeg slot is het oordeel van het slepen gelijk aan dat van de keuzelijst (31 toegestaan, 6 met waarschuwing, 68 geblokkeerd, in twee scenario's). Regressie op de Opstelling, de keuzelijst en de beschikbaarheid: gelijk aan patch 90. Pixelvergelijking van alle andere schermen op 1024, 1280, 390 en 1920 px, licht en donker, scherm en print: identiek; onder 1560 px is ook het Opstelling-detail pixel-identiek aan patch 90, op 1920 px verschilt alleen dat scherm (het greepje).
+- Niet getest: een echte computermuis of touchpad op jouw computer, een echt aanraakscherm (aanraking wordt genegeerd en met een gesimuleerd aanraakevenement gecontroleerd) en slepen over een heel lange pagina (geen automatisch scrollen; het muiswiel werkt tijdens het slepen).
+
 ## [oktober 2026 — patch 90] — 2026-10-09
 
 ### 📋 Opstelling op een computer: drie ploegen naast elkaar en een zijpaneel

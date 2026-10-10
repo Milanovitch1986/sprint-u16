@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 9 oktober 2026 (patch 90)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 91)*
 
 ---
 
@@ -43,6 +43,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 91: Opstelling deel 4, atleten slepen (patch 91, okt 2026)
+Vierde patch op het live-kritieke scherm Opstelling (reeks patch 83–97, zonder Home). Geen databasewijziging. Tag `ui-Q` staat op de commit vóór deze patch (patch 90, `27c217f`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu". Daarna: slepen met een vinger (aanraking, lang indrukken; apart voorgesteld), Wedstrijddag en de [data]-patches.
+- **Bewust beperkt:** alleen muis en pen; `pointerType === "touch"` keert direct terug uit `sleepStart()`, dus scrollen en tikken op telefoon en tablet zijn onveranderd. Reserves doen niet mee (eigen regels: alleen atleten die in geen team staan). Geen automatisch scrollen tijdens het slepen.
+- **Delegatie:** `onpointerdown="sleepStart(event)"` op `#ploegen-container` en `#beschikbaarheid-grid`; de containers blijven bestaan terwijl hun inhoud met `innerHTML` wordt vervangen. Een slot wordt herkend aan het id `slot_<ploeg>_<idx>_<nr>` (regex `^slot_([ABC])_(\d+)_(\d+)$`; reserveslots heten `slot_RES_n` en doen dus niet mee); een lijstrij aan `.beschik-rij[data-atleet]` met een `.sleep-greep`. Niet-gevulde slots, `.slot-remove`, een open `.slot-select` en alleen-lezen starten niets.
+- **Levenscyclus:** `sleepStart` zet `window.__sleep` en koppelt `pointermove`/`pointerup`/`pointercancel`/`keydown`/`blur`; `sleepBeweeg` start de sleepactie na 5 px (label `.sleep-spook`, `body.sleept`, bron `.sleep-bron`), zoekt met `elementFromPoint` het slot onder de muis en zet `.sleep-ok|conflict|nee`; `sleepLos` voert uit en onderdrukt de volgende klik (capture, eenmalig, opgeruimd na 0 ms); `sleepAnnuleer` (Escape, blur, `pointercancel`, `buttons === 0`) onderdrukt de klik 800 ms; `sleepOpruimen` haalt alles weg.
+- **Regels:** `sleepBeoordeel(bron, doel)` geeft `{ok, conflict, reden, naam, wissel, wijz, doel}` of `null` (zelfde slot, of dezelfde atleet op het slot). Volgorde van de redenen zoals in de keuzelijst: andere startgroep (alleen technisch) → andere ploeg → meer dan 3 onderdelen; `checkConflict` alleen als waarschuwing. De proefstand rekent op een **kopie** van de betrokken ploegobjecten (`Object.assign({}, orig)`) en zet de originelen terug; de eerste versie wiste en zette sleutels terug, waardoor de volgorde van de sleutels veranderde (de test vergeleek de JSON-string en zag dat). Cross-ploeg-verplaatsing valt vanzelf goed uit: na het weghalen uit de bron kijkt `zitInAnderePloeg` of de atleet nog in de bronploeg staat. Een wissel valideert beide plaatsingen. Uitvoeren: lijst naar slot via `kiesAtleet()` (zelfde route als de keuzelijst, inclusief `verwijderVanReservebank`), slot naar slot direct in `opstellingData` plus één `renderPloegen()`.
+- **Testmethode (nieuw geleerd):** (1) simuleer echte muisacties met `page.mouse.move/down/move(steps)/up`; lees tijdens het slepen met een `evaluate` de klasse van het doel en de tekst van het label voordat je loslaat. (2) Vergelijk niet alleen de uitkomst maar ook de JSON-string van de gegevens voor en na het hoveren; zo viel de sleutelvolgorde op. (3) Een systematische vergelijking met de bestaande route (voor elke atleet en elk leeg slot het oordeel van het slepen tegenover de gedimde of klikbare items van `openSlotKeuze`) bewijst dat de regels gelijk zijn; maak daarvoor een scenario met veel varianten (vijf onderdelen, twee startgroepen, tijdconflicten). (4) Een aanraking test je met een gesimuleerd `PointerEvent` met `pointerType: "touch"`. (5) Test het zijpaneel op 1920 px; het greepje is er pas vanaf 1560 px.
+- **Terugdraaien:** Revert op de commit van patch 91, of terug naar tag `ui-Q`.
 
 ### Patch 90: Opstelling deel 3, indeling op desktop (patch 90, okt 2026)
 Derde patch op het live-kritieke scherm Opstelling (reeks patch 83–96, zonder Home). Alleen CSS, geen JavaScript of HTML, geen databasewijziging. Tag `ui-P` staat op de commit vóór deze patch (patch 89, `8df58eb`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu", en eerst vragen of er een wedstrijd loopt of iemand een opstelling maakt. Daarna: patch 91 = slepen van atleten, daarna Wedstrijddag en de [data]-patches.

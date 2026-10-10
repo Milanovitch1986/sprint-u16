@@ -2072,6 +2072,30 @@
     #opstelling-stap2:has(> #beschikbaarheid-sectie[style*="none"]) { grid-template-columns: minmax(0, 1fr); }
   }
 
+  /* ══ Patch 91: slepen van atleten in de opstelling (alleen muis of pen; aanrakingen worden genegeerd) ══ */
+  .sleep-greep { display: none; }
+  @media screen and (hover: hover) {
+    #ploegen-container .atleet-slot.bezet:not(.readonly) { cursor: grab; }
+    #ploegen-container .atleet-slot.bezet .slot-remove { cursor: pointer; }
+  }
+  /* Het greepje in de lijst "Beschikbare atleten" alleen waar die lijst als zijpaneel naast de ploegen staat */
+  @media screen and (min-width: 1560px) and (hover: hover) {
+    .sleep-greep { display: inline-flex; align-items: center; flex-shrink: 0; margin-right: -4px; padding: 4px 2px; color: var(--muted); font-size: 16px; line-height: 1; letter-spacing: -2px; cursor: grab; user-select: none; }
+    .beschik-rij:not(.aan) .sleep-greep { opacity: .3; cursor: not-allowed; }
+  }
+  body.sleept, body.sleept * { cursor: grabbing !important; user-select: none !important; }
+  .sleep-spook {
+    position: fixed; z-index: 400; pointer-events: none; max-width: 280px; padding: 8px 12px; border-radius: 8px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,.35); font-size: 14px;
+  }
+  .sleep-spook small { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .sleep-spook small:empty { display: none; }
+  .atleet-slot.sleep-bron { opacity: .35; }
+  .atleet-slot.sleep-ok { outline: 2px solid var(--success); background: color-mix(in srgb, var(--success) 15%, transparent); }
+  .atleet-slot.sleep-conflict { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .atleet-slot.sleep-nee { outline: 2px solid var(--accent2); background: color-mix(in srgb, var(--accent2) 15%, transparent); }
+  @media print { .sleep-greep, .sleep-spook { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2535,7 +2559,7 @@
             <button class="btn btn-ghost btn-sm" onclick="alleenBeschikbaar(false)">Alles uit</button>
           </div>
         </div>
-        <div id="beschikbaarheid-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
+        <div id="beschikbaarheid-grid" onpointerdown="sleepStart(event)" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
       </div>
 
       <!-- Ploegen sectie -->
@@ -2559,7 +2583,7 @@
         <button class="btn btn-ghost btn-sm" data-stap="3" onclick="deelViaWhatsApp()" title="Stuur de opstelling als tekst via WhatsApp">📲 Delen via WhatsApp</button>
       </div>
 
-      <div id="ploegen-container"></div>
+      <div id="ploegen-container" onpointerdown="sleepStart(event)"></div>
       <div id="reserves-container" style="padding-bottom: 32px;"></div>
 
       <!-- Stap voor stap op mobiel (patch 89): samenvatting bij stap 3 en Vorige/Volgende; op desktop verborgen -->
@@ -6822,7 +6846,8 @@ function renderBeschikbaarheid() {
   grid.innerHTML = lijst.map(a => {
     const beschikbaar = isBeschikbaar(a.id);
     return `
-      <label class="beschik-rij${beschikbaar ? " aan" : ""}">
+      <label class="beschik-rij${beschikbaar ? " aan" : ""}" data-atleet="${a.id}">
+        <span class="sleep-greep" title="Sleep naar een slot" aria-hidden="true">⋮⋮</span>
         <input type="checkbox" class="schakelaar-input" ${beschikbaar ? "checked" : ""}
           onchange="toggleBeschikbaar('${a.id}', this.checked)">
         <span class="schakelaar" aria-hidden="true"></span>
@@ -7450,6 +7475,184 @@ function vulStapSamenvatting() {
     const html = bouwSamenvattingHtml("stap");
     if (el.innerHTML !== html) el.innerHTML = html;
   } catch (e) { /* bijzaak */ }
+}
+
+function sleepStart(e) {
+  // Begin van een mogelijke sleepactie in de opstelling (patch 91). Alleen muis of pen; aanrakingen worden genegeerd, zodat scrollen en tikken
+  // op een telefoon of tablet precies werken als voorheen. Een sleepactie begint pas na 5 px bewegen; een gewone klik opent nog de keuzelijst.
+  try {
+    if (e.pointerType === "touch" || e.button !== 0 || opstellingAlleenLezen || window.__sleep) return;
+    if (e.target.closest(".slot-remove, .slot-select")) return;
+    let bron = null;
+    const slotEl = e.target.closest(".atleet-slot.bezet");
+    if (slotEl) {
+      const m = /^slot_([ABC])_(\d+)_(\d+)$/.exec(slotEl.id);
+      if (!m) return;
+      const sleutel = `${m[1]}_${m[2]}_${m[3]}`;
+      const atleetId = (opstellingData[m[1]] || {})[sleutel];
+      if (!atleetId) return;
+      bron = { type: "slot", ploeg: m[1], idx: Number(m[2]), nr: Number(m[3]), sleutel, atleetId, el: slotEl };
+    } else {
+      const greep = e.target.closest(".sleep-greep");
+      const rij = greep && greep.closest(".beschik-rij");
+      if (!rij || !rij.dataset.atleet || !isBeschikbaar(rij.dataset.atleet)) return;
+      bron = { type: "lijst", atleetId: rij.dataset.atleet, el: rij };
+    }
+    const atleet = atleten.find(a => String(a.id) === String(bron.atleetId));
+    window.__sleep = { bron, naam: atleet ? atleet.naam : "", x0: e.clientX, y0: e.clientY, actief: false, doelEl: null, doelSleutel: null, oordeel: null, spook: null };
+    document.addEventListener("pointermove", sleepBeweeg);
+    document.addEventListener("pointerup", sleepLos);
+    document.addEventListener("pointercancel", sleepAnnuleer);
+    document.addEventListener("keydown", sleepToets);
+    window.addEventListener("blur", sleepAnnuleer);
+  } catch (err) { sleepOpruimen(); }
+}
+
+function sleepBeweeg(e) {
+  // Tijdens het slepen: zwevend label, en het slot onder de muis kleurt groen (mag), oranje (mag, tijdconflict) of rood (mag niet) (patch 91)
+  const s = window.__sleep;
+  if (!s) return;
+  try {
+    if (e.buttons === 0) { sleepAnnuleer(); return; }   // de knop is buiten het venster losgelaten
+    if (!s.actief) {
+      if (Math.hypot(e.clientX - s.x0, e.clientY - s.y0) < 5) return;
+      s.actief = true;
+      document.querySelectorAll(".slot-select").forEach(d => d.remove());
+      const spook = document.createElement("div");
+      spook.className = "sleep-spook";
+      spook.innerHTML = "<b></b><small></small>";
+      spook.firstChild.textContent = s.naam;
+      document.body.appendChild(spook);
+      s.spook = spook;
+      document.body.classList.add("sleept");
+      if (s.bron.el) s.bron.el.classList.add("sleep-bron");
+      if (window.getSelection) window.getSelection().removeAllRanges();
+    }
+    s.spook.style.left = (e.clientX + 14) + "px";
+    s.spook.style.top = (e.clientY + 14) + "px";
+    const onder = document.elementFromPoint(e.clientX, e.clientY);   // het zwevende label heeft pointer-events: none
+    const slotEl = onder && onder.closest("#ploegen-container .atleet-slot");
+    const m = slotEl && /^slot_([ABC])_(\d+)_(\d+)$/.exec(slotEl.id);
+    const sleutel = m ? slotEl.id : null;
+    if (sleutel !== s.doelSleutel) {
+      if (s.doelEl) s.doelEl.classList.remove("sleep-ok", "sleep-conflict", "sleep-nee");
+      s.doelSleutel = sleutel;
+      s.doelEl = m ? slotEl : null;
+      s.oordeel = m ? sleepBeoordeel(s.bron, { ploeg: m[1], idx: Number(m[2]), nr: Number(m[3]), sleutel: `${m[1]}_${m[2]}_${m[3]}` }) : null;
+      const o = s.oordeel;
+      if (s.doelEl && o) s.doelEl.classList.add(!o.ok ? "sleep-nee" : o.conflict ? "sleep-conflict" : "sleep-ok");
+      s.spook.lastChild.textContent = !o ? "" : !o.ok ? "✕ " + (o.gewisseld ? o.naam + " " : "") + o.reden : o.conflict ? "⚠️ tijdconflict (toegestaan)" : o.wissel ? "⇄ wisselen" : "✓";
+    }
+  } catch (err) { sleepAnnuleer(); }
+}
+
+function sleepLos(e) {
+  // Muisknop los: voer de sleepactie uit als dat mag. Zonder sleepactie (gewoon een klik) gebeurt er niets bijzonders (patch 91)
+  const s = window.__sleep;
+  if (!s) return;
+  const { actief, oordeel, doelEl, bron } = s;
+  sleepOpruimen();
+  if (!actief) return;
+  // De klik die op het loslaten volgt onderdrukken: anders opent het slot onder de muis de keuzelijst of schakelt een rij om
+  const blokkeer = ev => { ev.stopPropagation(); ev.preventDefault(); };
+  document.addEventListener("click", blokkeer, { capture: true, once: true });
+  setTimeout(() => document.removeEventListener("click", blokkeer, true), 0);
+  if (!oordeel || !doelEl) return;   // losgelaten buiten een slot of op het eigen slot
+  sleepVoerUit(bron, oordeel);
+}
+
+function sleepAnnuleer() {
+  // Afbreken (Escape, venster kwijt, aanraking overgenomen); een actieve sleepactie laat niets achter (patch 91)
+  const s = window.__sleep;
+  const actief = !!(s && s.actief);
+  sleepOpruimen();
+  if (actief) {
+    const blokkeer = ev => { ev.stopPropagation(); ev.preventDefault(); };
+    document.addEventListener("click", blokkeer, { capture: true, once: true });
+    setTimeout(() => document.removeEventListener("click", blokkeer, true), 800);
+  }
+}
+
+function sleepToets(e) {
+  if (e.key === "Escape") { e.preventDefault(); sleepAnnuleer(); }
+}
+
+function sleepOpruimen() {
+  const s = window.__sleep;
+  window.__sleep = null;
+  document.removeEventListener("pointermove", sleepBeweeg);
+  document.removeEventListener("pointerup", sleepLos);
+  document.removeEventListener("pointercancel", sleepAnnuleer);
+  document.removeEventListener("keydown", sleepToets);
+  window.removeEventListener("blur", sleepAnnuleer);
+  document.body.classList.remove("sleept");
+  if (s) {
+    if (s.spook) s.spook.remove();
+    if (s.doelEl) s.doelEl.classList.remove("sleep-ok", "sleep-conflict", "sleep-nee");
+    if (s.bron && s.bron.el) s.bron.el.classList.remove("sleep-bron");
+  }
+}
+
+function sleepBeoordeel(bron, doel) {
+  // Mag deze atleet daar staan? Dezelfde regels als de keuzelijst: geblokkeerd bij een andere startgroep, een andere ploeg of meer dan
+  // 3 onderdelen; een tijdconflict is alleen een waarschuwing. Er wordt op een proefstand gerekend (die daarna wordt teruggezet) (patch 91)
+  if (bron.type === "slot" && bron.sleutel === doel.sleutel) return null;
+  const bezetter = (opstellingData[doel.ploeg] || {})[doel.sleutel] || null;
+  if (bron.type === "lijst" && bezetter && String(bezetter) === String(bron.atleetId)) return null;
+  const wijz = [{ ploeg: doel.ploeg, sleutel: doel.sleutel, waarde: bron.atleetId }];
+  const plaatsingen = [{ id: bron.atleetId, ploeg: doel.ploeg, idx: doel.idx }];
+  let wissel = false;
+  if (bron.type === "slot") {
+    if (bezetter) {
+      wijz.push({ ploeg: bron.ploeg, sleutel: bron.sleutel, waarde: bezetter });
+      plaatsingen.push({ id: bezetter, ploeg: bron.ploeg, idx: bron.idx });
+      wissel = true;
+    } else {
+      wijz.push({ ploeg: bron.ploeg, sleutel: bron.sleutel, waarde: null });
+    }
+  }
+  const uitkomst = { ok: true, conflict: false, reden: "", naam: "", gewisseld: wissel, wissel, wijz, doel };
+  // Proefstand: reken op een kopie van de betrokken ploegen en zet daarna de originele objecten terug; het origineel wordt nooit gewijzigd
+  const orig = {};
+  wijz.forEach(w => {
+    if (!(w.ploeg in orig)) { orig[w.ploeg] = opstellingData[w.ploeg]; opstellingData[w.ploeg] = Object.assign({}, orig[w.ploeg] || {}); }
+  });
+  try {
+    wijz.forEach(w => { if (w.waarde == null) delete opstellingData[w.ploeg][w.sleutel]; else opstellingData[w.ploeg][w.sleutel] = w.waarde; });
+    for (const p of plaatsingen) {
+      const item = programma[p.idx];
+      const opst = opstellingData[p.ploeg];
+      const reden = item && item.type === "technisch" && zitInAndereStartgroep(p.ploeg, opst, p.idx, String(p.id)) ? "staat al in de andere startgroep van dit onderdeel"
+        : zitInAnderePloeg(p.ploeg, p.id) ? "staat al in een andere ploeg"
+        : telOnderdelenAtleet(p.ploeg, opst, p.id) > 3 ? "zou in meer dan 3 onderdelen staan" : "";
+      if (reden) {
+        uitkomst.ok = false;
+        uitkomst.reden = reden;
+        uitkomst.naam = (atleten.find(a => String(a.id) === String(p.id)) || {}).naam || "Deze atleet";
+        break;
+      }
+      if (item && checkConflict(p.ploeg, opst, p.idx, p.id, item)) uitkomst.conflict = true;
+    }
+  } finally {
+    Object.keys(orig).forEach(p => { if (orig[p] === undefined) delete opstellingData[p]; else opstellingData[p] = orig[p]; });
+  }
+  return uitkomst;
+}
+
+function sleepVoerUit(bron, oordeel) {
+  // Voert een toegestane sleepactie uit; een afgekeurde laat de indeling ongemoeid en noemt de reden (patch 91)
+  if (!oordeel.ok) { toast(oordeel.naam + " " + oordeel.reden, "err"); return; }
+  if (bron.type === "lijst") {
+    // Dezelfde route als de keuzelijst (haalt een reserve van de bank en toont de melding)
+    kiesAtleet(oordeel.doel.ploeg, oordeel.doel.idx, oordeel.doel.nr, bron.atleetId);
+    return;
+  }
+  oordeel.wijz.forEach(w => {
+    if (!opstellingData[w.ploeg]) opstellingData[w.ploeg] = {};
+    if (w.waarde == null) delete opstellingData[w.ploeg][w.sleutel]; else opstellingData[w.ploeg][w.sleutel] = w.waarde;
+  });
+  renderPloegen();
+  toast(oordeel.wissel ? "Gewisseld ✓" : "Verplaatst ✓");
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
