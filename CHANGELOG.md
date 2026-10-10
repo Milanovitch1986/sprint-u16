@@ -6,6 +6,28 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 97] — 2026-10-10
+
+### 💾 Excel-back-up: geboortedatum zonder tijd
+
+<!--RELEASENOTE
+versie: Patch 97
+titel: 💾 Excel-back-up: geboortedatum zonder tijd
+type: update
+tags: administratie
+beschrijving: In de Excel-back-up staat bij elke atleet nu alleen de geboortedatum (bijvoorbeeld 2011-11-30). Voorheen stond er bij de meeste atleten ook een tijd (00:00:00) achter en bij enkele niet.
+-->
+
+Zevenentwintigste stap na het UI-herontwerp: een kleine verbetering van de Excel-back-up op verzoek van Milanovitch. **Geen databasewijziging**; alleen de back-up is aangepast.
+
+**Wat je ziet.** Op het tabblad Atleten van de back-up staat bij elke atleet alleen de datum, in de vorm `JJJJ-MM-DD`. Eerder stond bij de meeste atleten `2011-11-30 00:00:00` en bij enkele alleen `2011-05-27`, omdat de database bij sommige atleten een datum met tijd bewaart. Ontbreekt de datum, dan blijft de cel leeg; staat er iets wat geen datum is, dan blijft dat ongewijzigd staan.
+
+#### Technisch
+
+- Nieuwe functie `backupDatum(waarde)` (herkent `JJJJ-MM-DD` gevolgd door niets, een spatie of een `T`, ook met tijdzone, en geeft alleen het datumdeel terug); in `backupNaarExcel()` is één regel aangepast (`backupDatum(a.geboortedatum)`). De gegevens in de app zelf worden niet gewijzigd. Alle andere JavaScript is byte-voor-byte gelijk aan patch 96.
+- Gecontroleerd met een nagebootste SheetJS, oud tegen nieuw: tien soorten datums (met tijd met spatie of `T`, met tijdzone, een echte tijd, zonder tijd, leeg, onleesbaar, een ander formaat, met spaties eromheen); koprij, naam, geslacht en bondsnummer, de tabbladen PR's en Wedstrijden, de bestandsnaam en de melding zijn gelijk; de gegevens in de app zijn niet gewijzigd.
+- **Bevinding (nog niet opgelost):** bij een atleet waarvan de opgeslagen datum een tijd bevat, is het veld Geboortedatum in het bewerkvenster leeg (een `<input type="date">` accepteert alleen `JJJJ-MM-DD`); opslaan schrijft dan `null`. Zie de voorstellen na deze patch.
+
 ## [oktober 2026 — patch 96] — 2026-10-10
 
 ### 🏟️ Wedstrijddag: voortgangskaart en nu bezig

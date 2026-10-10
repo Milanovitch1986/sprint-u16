@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 96)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 97)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 97: Excel-back-up, geboortedatum zonder tijd (patch 97, okt 2026)
+Kleine fix op verzoek (Milanovitch toonde een screenshot van de back-up). Tag `ui-W` staat op de commit vóór deze patch (patch 96, `28d1e9f`). Admin is niet live-kritiek: direct na de tests gecommit.
+- **Oorzaak:** `backupNaarExcel()` schreef `a.geboortedatum` ongewijzigd naar de cel. Bij een deel van de atleten bewaart de database een datum met tijd (`2011-11-30 00:00:00`, mogelijk door de Excel-import of de kolomsoort), bij de rest `2011-05-27`. Hoe die waarden precies in de database terechtkwamen is niet onderzocht.
+- **Fix:** `backupDatum(waarde)` geeft alleen `JJJJ-MM-DD` terug (regex `^(\d{4}-\d{2}-\d{2})(?:[T ]|$)`, na `trim`); iets anders blijft ongewijzigd. De gegevens in de app worden niet aangepast.
+- **Bevinding (nog open):** `openAtleetModal()` zet `a.geboortedatum` rechtstreeks in `#f-geboortedatum` (een `<input type="date">`). Bevat de waarde een tijd, dan blijft het veld leeg, en `slaAtleetOp()` schrijft `geboortedatum: value || null`, dus opslaan wist de datum van zo'n atleet. Oplossing zou zijn: bij het vullen van het veld alleen het datumdeel gebruiken (en eventueel de gegevens in de database opschonen met een SQL-opdracht). Voorgesteld, niet gebouwd.
+- **Testmethode (nieuw geleerd):** laat een nagebootste `aoa_to_sheet` de rijen bewaren (niet alleen tellen), dan kun je de cellen van de back-up vergelijken. Test een lijst met alle soorten invoer (met tijd met spatie of `T`, tijdzone, zonder tijd, leeg, onleesbaar, ander formaat).
+- **Terugdraaien:** Revert op de commit van patch 97, of terug naar tag `ui-W`.
 
 ### Patch 96: Wedstrijddag deel 2 (patch 96, okt 2026)
 Tweede patch op het live-kritieke scherm Wedstrijddag: alleen lezen, geen SQL. Tag `ui-V` staat op de commit van patch 95. Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Open daarna: slepen met een vinger.

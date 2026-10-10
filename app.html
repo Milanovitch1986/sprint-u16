@@ -4689,7 +4689,7 @@ async function backupNaarExcel() {
   // ── Tabblad 1: Atleten ──
   const atlRijen = [["Naam", "Geslacht", "Geboortedatum", "Bondsnr"]];
   for (const a of atletenGesorteerd) {
-    atlRijen.push([a.naam || "", a.geslacht || "", a.geboortedatum || "", a.bondsnr || ""]);
+    atlRijen.push([a.naam || "", a.geslacht || "", backupDatum(a.geboortedatum), a.bondsnr || ""]);
   }
   const wsAtl = XLSX.utils.aoa_to_sheet(atlRijen);
   wsAtl["!cols"] = [{ wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 12 }];
@@ -8100,6 +8100,14 @@ function wdScrollNaarOnderdeel(el) {
     kaart.classList.add("wd-kaart-flits");
     setTimeout(() => kaart.classList.remove("wd-kaart-flits"), 1200);
   } catch (e) { /* bijzaak */ }
+}
+
+function backupDatum(waarde) {
+  // De geboortedatum voor de back-up als alleen een datum (JJJJ-MM-DD), zonder tijd. Sommige atleten hebben in de database een datum met
+  // tijd ("2012-11-30 00:00:00" of "2012-11-30T00:00:00"); die tijd is voor de back-up niet nodig. Iets anders blijft ongewijzigd (patch 97).
+  const tekst = String(waarde == null ? "" : waarde).trim();
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(tekst);
+  return m ? m[1] : tekst;
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
