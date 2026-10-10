@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 93)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 94)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 94: Admin, laatste back-up (patch 94, okt 2026)
+Derde [data]-onderdeel, opnieuw zonder databasewijziging. Tag `ui-T` staat op de commit vóór deze patch (patch 93, `63dcb54`). Admin is niet live-kritiek: direct na de tests gecommit. Open: Wedstrijddag (deel 1 en voortgang/"Nu bezig") en slepen met een vinger.
+- **Achtergrond:** `backupNaarExcel()` maakt een Excel-bestand met `XLSX.writeFile` (een download op het apparaat); de app legde nergens vast wanneer. `categorieen` wordt in de app alleen aangemaakt en verwijderd, nooit gewijzigd, dus een kolom daar zou ook de rechten (RLS) voor een update vragen. Milanovitch koos daarom optie A: het moment in de browser bewaren (`localStorage`, zoals het thema). Optie B (een kolom in de database, dezelfde stand op elk apparaat) kan later erbovenop; dat vraagt één SQL-regel en een controle van de update-rechten.
+- **Opslag:** sleutel `sprint_laatste_backup_<categorie-id>`, waarde JSON `{ tijd, atleten, prs, wedstrijden }`. `bewaarBackupMoment()` wordt in `backupNaarExcel()` pas ná `XLSX.writeFile` aangeroepen, dus een mislukte download bewaart niets; een fout bij het bewaren zelf (privé-venster, `Storage` die faalt) wordt genegeerd. `toonLaatsteBackup()` leest de waarde met een eigen `try/catch` en vult `#backup-laatste` (onder de knop) en `#admin-menu-backup-sub` (mobiele lijst); aangeroepen vanuit `laadAdmin()`, `kiesAdminSectie()` en `bewaarBackupMoment()`.
+- **Tekst:** "Laatste back-up: <datum>, <tijd> (<vandaag|gisteren|n dagen geleden>) · <aantallen>"; vanaf 30 dagen oranje met "Maak een nieuwe back-up."; zonder moment "Nog geen back-up gemaakt op dit apparaat." (mobiele lijst: "Laatste: …" of "Nog geen back-up op dit apparaat"). Dagen = verschil in kalenderdagen via lokale middernacht (`Math.round` over 86400000 ms, tegen zomertijd), nooit negatief.
+- **Testmethode (nieuw geleerd):** (1) vervang `window.XLSX` door een nagebootste versie (`utils.book_new`, `aoa_to_sheet`, `book_append_sheet`, `writeFile`) zodat de back-up draait zonder de CDN en je bestandsnaam en tabbladen kunt controleren. (2) Zet met een init-script een vaste datum en schrijf oudere momenten rechtstreeks in `localStorage`; test de grenzen (29 en 30 dagen, middernacht, de toekomst). (3) Een bewust opgewekte fout (`writeFile` die gooit) geeft een `pageerror` in het testlog; dat is verwacht en geen fout van de app. (4) Een globale variabele bestaat soms onder een andere naam dan je denkt (`categorieen` bestaat niet); zet in een test de actieve categorie rechtstreeks. (5) `Storage.prototype.setItem` overschrijven simuleert een browser die niets kan bewaren.
+- **Terugdraaien:** Revert op de commit van patch 94, of terug naar tag `ui-T`.
 
 ### Patch 93: Atleten, geboortejaar en onderdelen (patch 93, okt 2026)
 Tweede van de [data]-onderdelen, opnieuw zonder databasewijziging. Tag `ui-S` staat op de commit vóór deze patch (patch 92, `ac958f6`). Atleten is niet live-kritiek: direct na de tests gecommit. Open: de [data]-patch Admin ("Laatste back-up"), Wedstrijddag (deel 1 en voortgang/"Nu bezig") en slepen met een vinger.

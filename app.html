@@ -2134,6 +2134,12 @@
   .atleet-chip-meer { color: var(--muted); background: var(--surface2); border-color: var(--border); cursor: help; }
   @media print { .atleet-chips { display: none; } }
 
+  /* ══ Patch 94: Admin, laatste back-up (op dit apparaat) ══ */
+  .backup-laatste { margin-top: 12px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .backup-laatste:empty { display: none; }
+  .backup-laatste.backup-oud { color: var(--accent); font-weight: 600; }
+  @media print { .backup-laatste { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2792,7 +2798,7 @@
       <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('gebruikers')"><span class="admin-menu-icoon">👥</span><span class="admin-menu-tekst"><b>Geregistreerde gebruikers</b><small>Wie heeft een account en welke rol</small></span><span class="admin-menu-pijl">›</span></button>
       <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('categorieen')"><span class="admin-menu-icoon">📂</span><span class="admin-menu-tekst"><b>Categorieën</b><small>Categorieën beheren</small></span><span class="admin-menu-pijl">›</span></button>
       <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('toegang')"><span class="admin-menu-icoon">🔗</span><span class="admin-menu-tekst"><b>Toegang per trainer</b><small>Welke trainer ziet welke categorie</small></span><span class="admin-menu-pijl">›</span></button>
-      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('backup')"><span class="admin-menu-icoon">💾</span><span class="admin-menu-tekst"><b>Back-up &amp; export</b><small>Excel-back-up van deze categorie</small></span><span class="admin-menu-pijl">›</span></button>
+      <button type="button" class="admin-menu-rij" onclick="kiesAdminSectie('backup')"><span class="admin-menu-icoon">💾</span><span class="admin-menu-tekst"><b>Back-up &amp; export</b><small id="admin-menu-backup-sub">Excel-back-up van deze categorie</small></span><span class="admin-menu-pijl">›</span></button>
     </div>
     <button type="button" class="admin-terug" onclick="kiesAdminSectie('')">‹ Admin</button>
 
@@ -2842,6 +2848,7 @@
           Download in één klik alle gegevens van de actieve categorie als Excel-bestand — een vangnet dat je lokaal kunt bewaren. Er wordt niets in de database gewijzigd.
         </p>
         <button class="btn btn-primary" onclick="backupNaarExcel()">📥 Back-up naar Excel</button>
+        <div class="backup-laatste" id="backup-laatste"></div>
       </div>
     </div>
   </div>
@@ -4638,6 +4645,7 @@ async function backupNaarExcel() {
   const veiligeNaam = catNaam().replace(/[^A-Za-z0-9]+/g, "-");
   const datum = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `sprint-${veiligeNaam}-backup-${datum}.xlsx`);
+  bewaarBackupMoment();   // patch 94: onthoud in deze browser wanneer de back-up is gemaakt
   toast(`Back-up van ${catNaam()} gedownload ✓`);
 }
 
@@ -7861,6 +7869,50 @@ function atleetChipsHtml(atleetId, geboortedatum) {
   return chips.length ? `<div class="atleet-chips">${chips.join("")}</div>` : "";
 }
 
+function bewaarBackupMoment() {
+  // Onthoudt in deze browser wanneer de laatste back-up van de actieve categorie is gemaakt, met de aantallen (patch 94).
+  // Bijzaak: lukt het bewaren niet (bijvoorbeeld in een privé-venster), dan gaat de back-up zelf gewoon door.
+  try {
+    if (actieveCategorie?.id) {
+      localStorage.setItem("sprint_laatste_backup_" + actieveCategorie.id, JSON.stringify({
+        tijd: new Date().toISOString(), atleten: atleten.length, prs: prestaties.length, wedstrijden: wedstrijden.length
+      }));
+    }
+  } catch (e) { /* bijzaak */ }
+  toonLaatsteBackup();
+}
+
+function toonLaatsteBackup() {
+  // Toont onder de back-upknop (en in de mobiele Admin-lijst) wanneer de laatste back-up op dit apparaat is gemaakt (patch 94).
+  try {
+    const el = document.getElementById("backup-laatste");
+    const sub = document.getElementById("admin-menu-backup-sub");
+    if (!el && !sub) return;
+    let gegevens = null;
+    try { gegevens = JSON.parse(localStorage.getItem("sprint_laatste_backup_" + (actieveCategorie?.id || "")) || "null"); } catch (e) { gegevens = null; }
+    const tijd = gegevens && gegevens.tijd ? new Date(gegevens.tijd) : null;
+    if (!tijd || isNaN(tijd.getTime())) {
+      if (el) { el.textContent = "Nog geen back-up gemaakt op dit apparaat."; el.classList.remove("backup-oud"); }
+      if (sub) sub.textContent = "Nog geen back-up op dit apparaat";
+      return;
+    }
+    const nu = new Date();
+    const dagStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dagen = Math.max(0, Math.round((dagStart(nu) - dagStart(tijd)) / 86400000));
+    const wanneer = dagen === 0 ? "vandaag" : dagen === 1 ? "gisteren" : dagen + " dagen geleden";
+    const datumTekst = tijd.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }) + ", " + tijd.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+    const meervoud = (n, een, meer) => n + " " + (n === 1 ? een : meer);
+    const aantallen = [gegevens.atleten, gegevens.prs, gegevens.wedstrijden].every(n => Number.isFinite(n))
+      ? " · " + meervoud(gegevens.atleten, "atleet", "atleten") + ", " + meervoud(gegevens.prs, "PR", "PR's") + ", " + meervoud(gegevens.wedstrijden, "wedstrijd", "wedstrijden") : "";
+    const oud = dagen >= 30;
+    if (el) {
+      el.textContent = "Laatste back-up: " + datumTekst + " (" + wanneer + ")" + aantallen + (oud ? ". Maak een nieuwe back-up." : "");
+      el.classList.toggle("backup-oud", oud);
+    }
+    if (sub) sub.textContent = "Laatste: " + wanneer;
+  } catch (e) { /* bijzaak */ }
+}
+
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────
 // Live resultaten invoeren op de wedstrijddag. Elke invoer wordt direct
 // per veld opgeslagen (upsert), zodat meerdere trainers tegelijk kunnen
@@ -10306,12 +10358,14 @@ function kiesAdminSectie(naam) {
   const view = document.getElementById("view-admin");
   if (!view) return;
   view.setAttribute("data-actief", naam || "");
+  toonLaatsteBackup();   // patch 94: ook na het wisselen van categorie weer actueel
   if (window.matchMedia("(max-width: 768px)").matches) window.scrollTo(0, 0);
 }
 
 // ── Admin panel ───────────────────────────────────────────────
 async function laadAdmin() {
   if (!huidigeProfiel || huidigeProfiel.rol !== "admin") return;
+  toonLaatsteBackup();   // patch 94
   await Promise.all([
     laadAdminUitnodigingen(),
     laadAdminGebruikers(),

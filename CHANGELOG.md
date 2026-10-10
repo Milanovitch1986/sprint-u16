@@ -6,6 +6,32 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 94] — 2026-10-10
+
+### ⚙️ Admin: laatste back-up
+
+<!--RELEASENOTE
+versie: Patch 94
+titel: ⚙️ Admin: laatste back-up
+type: feature
+tags: administratie
+beschrijving: Onder de knop Back-up naar Excel staat nu wanneer je op dit apparaat voor het laatst een back-up hebt gemaakt, met de aantallen erbij. Is het langer dan 30 dagen geleden, dan krijg je een herinnering. In de Admin-lijst op een telefoon staat een korte versie bij Back-up en export.
+-->
+
+Vierentwintigste stap na het UI-herontwerp: Admin, het [data]-onderdeel "Laatste back-up". **Geen databasewijziging en geen SQL**: het moment wordt in de browser bewaard.
+
+**Wat je ziet.** Onder de knop "Back-up naar Excel" staat: "Laatste back-up: 10 okt 2026, 14:32 (vandaag) · 8 atleten, 12 PR's, 4 wedstrijden". Zonder eerdere back-up staat er "Nog geen back-up gemaakt op dit apparaat." Is de back-up 30 dagen of langer geleden, dan staat de regel in oranje met "Maak een nieuwe back-up." In de Admin-lijst op een telefoon staat bij "Back-up & export" een korte versie ("Laatste: 3 dagen geleden" of "Nog geen back-up op dit apparaat"). De regel geldt per categorie.
+
+**Wat je moet weten.** De back-up is een download op je eigen apparaat; de app weet daarom alleen van back-ups die met **dit apparaat en deze browser** zijn gemaakt. Maak je er ook op een andere computer of op je telefoon een, dan houdt elk apparaat zijn eigen moment bij. Wis je de sitegegevens in de browser, dan is het moment weg. De back-up zelf (de drie tabbladen, de bestandsnaam en de melding) is niet veranderd.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `bewaarBackupMoment()` en `toonLaatsteBackup()`. Aangepast, elk met één regel: `backupNaarExcel()` (roept `bewaarBackupMoment()` aan nádat `XLSX.writeFile` is gelukt en vóór de melding; mislukt het schrijven, dan wordt er niets bewaard), `laadAdmin()` en `kiesAdminSectie()` (roepen `toonLaatsteBackup()` aan). Alle andere JavaScript is byte-voor-byte gelijk aan patch 93. Contract-check: 0 verdwenen; 2 id's (`backup-laatste`, `admin-menu-backup-sub`) en 2 functies nieuw.
+- Opslag in `localStorage` onder de sleutel `sprint_laatste_backup_<categorie-id>` als JSON `{ tijd, atleten, prs, wedstrijden }` (`tijd` als ISO-tekst). Het tonen leest de waarde zelf in een eigen `try/catch`: ontbrekende, ongeldige of onvolledige gegevens geven "Nog geen back-up…" of alleen het moment zonder aantallen; een toekomstig moment telt als "vandaag". "Dagen geleden" is het verschil in kalenderdagen (lokale middernacht), niet in uren. Kan de browser niets bewaren (bijvoorbeeld een privé-venster), dan gaat de back-up gewoon door.
+- CSS: `.backup-laatste` (met `:empty` verborgen) en `.backup-oud` (oranje), op scherm; in print verborgen.
+- Gecontroleerd (met een nagebootste SheetJS en een vaste datum): bestandsnaam `sprint-U16-backup-2026-10-10.xlsx`, de drie tabbladen en de melding zijn zoals voorheen; direct na de back-up staat het moment, "vandaag" en de aantallen (gelijk aan de lengte van `atleten`, `prestaties` en `wedstrijden`); het blijft staan na een tabwissel; "gisteren", "5 dagen geleden", 29 dagen (geen waarschuwing) en 30 en 45 dagen (wel een waarschuwing); enkelvoud; zes soorten ongeldige gegevens; een andere categorie heeft een eigen moment; een mislukte `writeFile` bewaart niets; een browser die niets kan bewaren laat de back-up slagen; de mobiele lijst; de lijsten in Admin zijn identiek aan patch 93. Pixelvergelijking van alle schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek, behalve de mobiele Admin-lijst op het scherm (het nieuwe stukje tekst).
+- Niet getest: een echte Excel-download in jouw browser (de aanroep is gecontroleerd) en het gedrag met strenge privacy-instellingen.
+
 ## [oktober 2026 — patch 93] — 2026-10-10
 
 ### 🏃 Atleten: geboortejaar en onderdelen in de lijst
