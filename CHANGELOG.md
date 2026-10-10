@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 93] — 2026-10-10
+
+### 🏃 Atleten: geboortejaar en onderdelen in de lijst
+
+<!--RELEASENOTE
+versie: Patch 93
+titel: 🏃 Atleten: geboortejaar en onderdelen in de lijst
+type: feature
+tags: atleten
+beschrijving: In de atletenlijst staat onder elke naam nu een regel met het geboortejaar en de onderdelen waarvoor de atleet een PR heeft (bijvoorbeeld 2011, 100m, 200m, Verspringen). Je hoeft niets in te stellen; het volgt vanzelf de PR's.
+-->
+
+Drieëntwintigste stap na het UI-herontwerp: Atleten, de [data]-onderdelen "geboortejaar-chip" en "onderdelen per atleet" uit de lijst met open mockup-onderdelen. Alleen lezen: **geen databasewijziging en geen SQL**, en er komt geen extra leesvraag bij (de PR's staan al in het geheugen van de app).
+
+**Wat je ziet.** Onder de regel "AV Sprint · 1031577 · 4 prestaties" staat een regel chips: het **geboortejaar** (neutrale chip, uit de geboortedatum; zonder geboortedatum geen chip) en de **onderdelen** (gekleurde chips) waarvoor de atleet een PR heeft. Een onderdeel komt één keer voor, ook bij meerdere PR-rijen of een ander hoofdlettergebruik. Bij meer dan 4 onderdelen zie je er 4 en een chip `+2`; als je erover beweegt, zie je welke onderdelen er verder zijn. Een atleet zonder PR's krijgt alleen het geboortejaar; zonder jaar en zonder PR's is er geen chipregel.
+
+**Volgorde van de onderdelen.** Eerst de loopnummers (kort naar lang), dan de middellange afstanden, dan estafettes, dan springen, dan werpen en stoten, en daarna de rest. Zelf toegevoegde onderdelen doen mee op basis van hun type (tijd, middellang of afstand).
+
+**Later.** Een zelf in te stellen lijst met onderdelen per atleet (met een nieuw veld en een keuze in het bewerkvenster) kan erbovenop gebouwd worden; dit wordt dan niet weggegooid.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `atleetChipsHtml(atleetId, geboortedatum)` en `onderdeelVolgorde(a, b)`. Aangepast: alleen de opmaak van `renderAtleten()` (één regel `${atleetChipsHtml(...)}` in `.atleet-info`; alle handlers zijn letterlijk gelijk). Alle andere JavaScript is byte-voor-byte gelijk aan patch 92. Contract-check: 0 id's, handlers of functies verdwenen; 2 functies nieuw.
+- Het geboortejaar komt uit de tekst van de geboortedatum (`/^(\d{4})-\d{2}-\d{2}/`), niet uit een `Date`, zodat de tijdzone het jaar nooit kan verschuiven (31 december blijft in hetzelfde jaar). Onderdelen komen uit `prestaties` (alle PR-rijen van de atleet, op naam ontdubbeld zonder hoofdlettergevoeligheid). De volgorde gebruikt `isSprintDiscipline()`, `isMiddellangeAfstandDiscipline()`, `isVeldDiscipline()` en `vindCustomOnderdeel()`; estafettes worden herkend aan `^\d+\s*x` en op het getal na de x gesorteerd, andere onderdelen op het eerste getal en daarna op naam.
+- CSS: alleen nieuwe klassen `.atleet-chips`, `.atleet-chip`, `.atleet-chip-jaar` en `.atleet-chip-meer`, op scherm; in print verborgen. Op een telefoon kan een atleet met veel onderdelen een hogere rij geven (de kolom naast de categoriebadge is smal; de chips breken af).
+- Gecontroleerd (nep-backend met acht atleten en bewust lastige gegevens: geen PR's, dubbele PR-rijen en hoofdletterverschil, een zelf toegevoegd onderdeel, acht onderdelen, een ontbrekende en een ongeldige geboortedatum, 31 december): geboortejaar, onderdelen, volgorde en de `+N`-chip met tooltip zijn vergeleken met een onafhankelijke berekening in Python. De rest van de rij (naam, club, bondsnr, aantal prestaties, `onclick`, ⋯-knop), zoeken, filteren, selectiemodus, het ⋯-menu en het bewerkvenster zijn gelijk aan patch 92. Pixelvergelijking van alle andere schermen op 1280, 390 en 360 px, licht en donker, scherm en print: identiek; op het scherm verschilt alleen de Atleten-lijst en de print daarvan is identiek.
+- Niet getest: je echte atleten en PR's (nagebootst) en een echte telefoon.
+
 ## [oktober 2026 — patch 92] — 2026-10-10
 
 ### 📈 Prestaties: het verloop van een atleet uit de wedstrijdresultaten

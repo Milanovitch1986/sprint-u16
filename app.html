@@ -2124,6 +2124,16 @@
   }
   @media print { .verloop { display: none; } }
 
+  /* ══ Patch 93: Atleten, chipregel met geboortejaar en onderdelen (uit de PR's) ══ */
+  .atleet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .atleet-chip {
+    padding: 2px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; border-radius: 20px; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .atleet-chip-jaar { color: var(--muted); background: transparent; border-color: var(--border); }
+  .atleet-chip-meer { color: var(--muted); background: var(--surface2); border-color: var(--border); cursor: help; }
+  @media print { .atleet-chips { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -3666,6 +3676,7 @@ function renderAtleten() {
         <div class="atleet-info">
           <div class="card-name">${esc(a.naam || "")}</div>
           <div class="card-meta">${club}${club && bondsnr ? " · " : ""}${bondsnr} · <span class="atleet-aantal">${cnt} prestatie${cnt !== 1 ? "s" : ""}</span></div>
+          ${atleetChipsHtml(a.id, a.geboortedatum)}
         </div>
         <div class="card-badge ${gBadge}">${gLabel}</div>
         ${selecteerModus ? "" : `<button type="button" class="atleet-menu-knop" aria-label="Meer acties voor ${esc(a.naam || "")}" aria-haspopup="menu" onclick="toggleAtleetMenu('${a.id}', event)">⋯</button>`}
@@ -7807,6 +7818,47 @@ function verloopHtml(atleetId, rijen, discFilter) {
       + `<span class="verloop-mark">${pt.nieuwBeste ? "▲ " + esc(verloopDeltaTekst(pt.verbetering, m.disc)) : (m.pr && Math.abs(pt.waarde - m.pr.waarde) < 1e-9 ? "= PR" : "")}</span></div>`).join("");
     return `<div class="verloop-kaart"><div class="verloop-kaartkop"><b>${esc(m.disc)}</b>${chips}</div>${verloopGrafiek(m)}<div class="verloop-lijst">${rijenHtml}</div></div>`;
   }).join("");
+}
+
+function onderdeelVolgorde(a, b) {
+  // Volgorde van onderdelen: loopnummers (kort naar lang), middellang, estafette, springen, werpen en stoten, de rest; daarbinnen op afstand en naam (patch 93)
+  const rang = n => {
+    if (/^\d+\s*x/i.test(n)) return 2;
+    const c = vindCustomOnderdeel(n);
+    if (c) return c.type === "tijd_min" ? 1 : c.type === "afstand" ? 4 : 0;
+    if (isMiddellangeAfstandDiscipline(n)) return 1;
+    if (isSprintDiscipline(n)) return 0;
+    if (/springen/i.test(n)) return 3;
+    if (isVeldDiscipline(n)) return 4;
+    return 5;
+  };
+  const getal = n => {
+    const m = /^\d+\s*x\s*(\d+)/i.exec(n) || /(\d+(?:[.,]\d+)?)/.exec(n);
+    return m ? parseFloat(m[1].replace(",", ".")) : 1e9;
+  };
+  const ra = rang(a), rb = rang(b);
+  if (ra !== rb) return ra - rb;
+  const ga = getal(a), gb = getal(b);
+  if (ga !== gb) return ga - gb;
+  return a.localeCompare(b, "nl");
+}
+
+function atleetChipsHtml(atleetId, geboortedatum) {
+  // De chipregel onder de metaregel van een atletenrij: het geboortejaar en de onderdelen waarvoor de atleet een PR heeft (patch 93).
+  // Het jaar komt uit de tekst van de geboortedatum (geen datumberekening, dus geen tijdzoneverschuiving).
+  const chips = [];
+  const jaar = /^(\d{4})-\d{2}-\d{2}/.exec(String(geboortedatum || ""));
+  if (jaar) chips.push(`<span class="atleet-chip atleet-chip-jaar" title="Geboortejaar">${jaar[1]}</span>`);
+  const namen = new Map();
+  prestaties.forEach(p => {
+    if (String(p.atleetId) !== String(atleetId) || !p.discipline) return;
+    const naam = String(p.discipline).trim();
+    if (naam && !namen.has(naam.toLowerCase())) namen.set(naam.toLowerCase(), naam);
+  });
+  const lijst = [...namen.values()].sort(onderdeelVolgorde);
+  lijst.slice(0, 4).forEach(n => chips.push(`<span class="atleet-chip">${esc(n)}</span>`));
+  if (lijst.length > 4) chips.push(`<span class="atleet-chip atleet-chip-meer" title="${esc(lijst.slice(4).join(", "))}">+${lijst.length - 4}</span>`);
+  return chips.length ? `<div class="atleet-chips">${chips.join("")}</div>` : "";
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 92)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 93)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 93: Atleten, geboortejaar en onderdelen (patch 93, okt 2026)
+Tweede van de [data]-onderdelen, opnieuw zonder databasewijziging. Tag `ui-S` staat op de commit vóór deze patch (patch 92, `ac958f6`). Atleten is niet live-kritiek: direct na de tests gecommit. Open: de [data]-patch Admin ("Laatste back-up"), Wedstrijddag (deel 1 en voortgang/"Nu bezig") en slepen met een vinger.
+- **Keuze en achtergrond:** "onderdelen per atleet" kon twee dingen betekenen: afgeleid uit de PR's (gekozen, geen SQL) of zelf per atleet in te stellen (nieuw veld en een keuze in het bewerkvenster, één SQL-regel). Milanovitch koos na een mockup van beide voor het eerste. Het tweede kan erbovenop. De `geboortedatum` bestond al (`<input type="date">`, tekst `YYYY-MM-DD` of `null`), dus de geboortejaar-chip vroeg nooit om SQL.
+- **Opbouw:** `renderAtleten()` zet onder `.card-meta` in `.atleet-info` het resultaat van `atleetChipsHtml(a.id, a.geboortedatum)`: een `div.atleet-chips` met een jaar-chip, maximaal 4 onderdeel-chips en een `+N`-chip (`title` met de rest), of een lege tekst als er niets te tonen is. Onderdelen komen uit de globale array `prestaties` (`atleetId`, `discipline`), ontdubbeld op naam in kleine letters. De volgorde is `onderdeelVolgorde()`: rang 0 loopnummers (sprint en zelf toegevoegd van type `tijd_sec`), 1 middellang (en `tijd_min`), 2 estafette (`^\d+\s*x`), 3 springen, 4 werpen en stoten (en `afstand`), 5 de rest; daarbinnen het getal (voor estafettes het getal na de x) en dan de naam (`localeCompare(..., "nl")`).
+- **Het jaar:** altijd uit de tekst van de geboortedatum, nooit uit een `Date` (die kan in een andere tijdzone een dag of jaar opschuiven).
+- **Testmethode (nieuw geleerd):** (1) een mockup van twee opties (via de Visualizer, zonder emoji en in zinsvorm) maakt een keuze voor een beginner veel makkelijker dan een beschrijving. (2) Controleer de verwachting zelf bij een afwijking: hier telde mijn test 8 chipregels, maar twee atleten hadden geen jaar en geen PR's en dus terecht geen regel; bereken zulke aantallen uit de gegevens in plaats van ze te raden. (3) Zet bewust lastige invoer in de testdata (ontbrekende en ongeldige datum, 31 december, dubbele en hoofdletter-afwijkende PR-rijen, acht onderdelen, een zelf toegevoegd onderdeel).
+- **Terugdraaien:** Revert op de commit van patch 93, of terug naar tag `ui-S`.
 
 ### Patch 92: Prestaties, verloop uit de wedstrijdresultaten (patch 92, okt 2026)
 Eerste van de [data]-onderdelen, maar zonder databasewijziging. Tag `ui-R` staat op de commit vóór deze patch (patch 91, `1d6dd98`). Prestaties is niet live-kritiek: direct na de tests gecommit. Open [data]-patches: Atleten (onderdelen per atleet, geboortejaar-chip), Admin ("Laatste back-up"), Wedstrijddag deel 2 (voortgang, "Nu bezig").
