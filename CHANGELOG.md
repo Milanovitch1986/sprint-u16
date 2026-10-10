@@ -6,6 +6,41 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 92] — 2026-10-10
+
+### 📈 Prestaties: het verloop van een atleet uit de wedstrijdresultaten
+
+<!--RELEASENOTE
+versie: Patch 92
+titel: 📈 Prestaties: het verloop van een atleet uit de wedstrijdresultaten
+type: feature
+tags: prestaties
+beschrijving: Kies je op het scherm Prestaties een atleet, dan zie je onder de tabel per onderdeel het verloop van zijn wedstrijdresultaten: PR, seizoensbeste, de laatste verbetering, een grafiekje en een lijst met datum en wedstrijd. Het gebruikt de resultaten die je op de Wedstrijddag invult en verandert niets aan je opgeslagen PR's.
+-->
+
+Tweeëntwintigste stap na het UI-herontwerp: Prestaties, het onderdeel "Verloop" uit de lijst met open mockup-onderdelen. Alleen lezen: er is **geen databasewijziging en geen SQL nodig**, en de manier waarop PR's worden opgeslagen is niet veranderd.
+
+**Waarom uit de wedstrijdresultaten.** Een PR wordt bij elke verbetering vervangen (de oude PR wordt verwijderd), dus er is geen geschiedenis van PR's. De kolom `datum` in `prestaties` bestond al, maar is meestal de dag van invoer en niet de dag waarop het resultaat gelopen is. De wedstrijdresultaten (tabel `resultaten`, gevuld door de Wedstrijddag) hebben wél een datum per wedstrijd en vormen dus een echt verloop.
+
+**Wat je ziet.** Bij een gekozen atleet staat onder de bestaande tabel het blok "📈 Verloop", met per onderdeel waar die atleet wedstrijdresultaten voor heeft een kaartje:
+- **PR** (de opgeslagen PR) en **Seizoen** (het beste resultaat van dit kalenderjaar);
+- **Laatste ▲ −0,2 s** (tijden) of **+0,15 m** (afstanden): de laatste verbetering ten opzichte van het beste resultaat daarvoor;
+- een **grafiek** per wedstrijddatum (beter = hoger, ook bij tijden), met de PR als stippellijn en nieuwe besten in groen; met de muis zie je datum, wedstrijd en resultaat. Een grafiek komt pas vanaf twee resultaten;
+- een **lijst** (nieuwste bovenaan) met datum, wedstrijd en resultaat, met ▲ en het verschil bij een nieuw beste en "= PR" bij een resultaat gelijk aan de PR.
+
+Zonder gekozen atleet (de ranglijst of alle atleten) zie je het blok niet; zonder wedstrijdresultaten staat er een rustige melding. De onderdeelkeuze filtert ook het verloop.
+
+**Keuzes.** Eén punt per wedstrijd: het beste geldige resultaat van die wedstrijd over alle pogingen en rondes (dezelfde regel als op de Wedstrijddag; ongeldige pogingen, niet gestart en lege of onleesbare resultaten tellen niet mee). Het seizoen is het kalenderjaar. De PR-datum wordt niet gebruikt. Estafetteploegen tellen niet mee. Je ziet alleen wat als wedstrijdresultaat in de app staat; oudere PR's hebben geen verleden.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `werkVerloopBij()`, `laadVerloopRijen()`, `verloopModel()`, `verloopDeltaTekst()`, `verloopGrafiek()` en `verloopHtml()`. Aangepast: alleen `renderPrestaties()` (één regel `werkVerloopBij();` bovenaan). Alle andere JavaScript is byte-voor-byte gelijk aan patch 91. Nieuw vast blok `#prestaties-verloop` onder `#prestaties-content`; contract-check: 0 verdwenen, 1 nieuw id en 6 nieuwe functies.
+- Eén leesvraag per atleet: `resultaten` met `categorie_id` en `atleet_id` (velden `discipline, resultaat, status, ronde, poging_nr, wedstrijd_id, atleet_id, sleutel`). De uitkomst blijft een minuut in `window.__verloop.cache` (sleutel `categorie:atleet`); een lopende vraag wordt hergebruikt (`bezig`), een telkens verhoogde `token` zorgt dat een traag antwoord een nieuwere keuze niet overschrijft, en een laat antwoord wordt wel bewaard. Een laadfout geeft een melding. Alle code zit in `try/catch`.
+- Het model filtert zelf nog eens op `atleet_id`, status `ok`, een ingevuld en leesbaar resultaat (> 0) en een bekende wedstrijd met datum; rijen met een `sleutel` die met `ploeg-` begint (estafette) vallen af. Het beste resultaat per wedstrijd gebruikt `isLagerBeter()` en `parseResultaat()`; de PR komt uit `bestePrestatie()`; de opmaak uit `formateerResultaatWeergave()`, `getPREenheid()` en `formatDate()`.
+- CSS: alleen nieuwe klassen `verloop-*`, op scherm; het blok is leeg verborgen (`:empty`) en in print verborgen.
+- Gecontroleerd (nep-backend met meerdere wedstrijden en bewust lastige gegevens: pogingen en rondes, ongeldige pogingen, `dns`, een lege en een onleesbare waarde, een andere atleet, een onbekende en een datumloze wedstrijd, een estafetteploeg, vorig jaar, geen PR): de uitkomst is vergeleken met een onafhankelijke berekening in Python (rijen, volgorde, ▲ en het verschil, Seizoen, PR, laatste verbetering en de grafiek); het filter, de lege toestand, de geheugenkopie, één leesvraag bij snel wisselen, een traag antwoord, een laadfout en de opmaak van het verschil. De bestaande inhoud van Prestaties (tabel, ranglijst, groepen) is identiek aan patch 91. Pixelvergelijking van alle schermen op 1280, 390 en 1920 px, licht en donker, scherm en print: identiek (het blok is zonder gekozen atleet verborgen).
+- Niet getest: echte wedstrijdresultaten uit de database (nagebootst) en een echte telefoon.
+
 ## [oktober 2026 — patch 91] — 2026-10-10
 
 ### 📋 Opstelling: atleten slepen

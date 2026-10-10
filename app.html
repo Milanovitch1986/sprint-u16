@@ -2096,6 +2096,34 @@
   .atleet-slot.sleep-nee { outline: 2px solid var(--accent2); background: color-mix(in srgb, var(--accent2) 15%, transparent); }
   @media print { .sleep-greep, .sleep-spook { display: none; } }
 
+  /* ══ Patch 92: Prestaties, verloop uit de wedstrijdresultaten (alleen bij een gekozen atleet) ══ */
+  .verloop { margin-top: 16px; }
+  .verloop:empty { display: none; }
+  .verloop-kop { margin-bottom: 10px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; text-transform: uppercase; }
+  .verloop-kop small { margin-left: 6px; font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 12px; text-transform: none; color: var(--muted); }
+  .verloop-melding { padding: 12px 14px; font-size: 13px; color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
+  .verloop-kaart { margin-bottom: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .verloop-kaartkop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .verloop-kaartkop b { margin-right: 4px; font-size: 16px; }
+  .verloop-chip { padding: 3px 10px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; }
+  .verloop-beter { color: var(--success); background: color-mix(in srgb, var(--success) 15%, transparent); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
+  .verloop-grafiek { display: block; width: 100%; max-width: 560px; height: auto; margin: 4px 0 8px; }
+  .verloop-lijn { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  .verloop-pr { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+  .verloop-punt { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+  .verloop-punt.beste { fill: var(--success); stroke: var(--success); }
+  .verloop-rij { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto 96px; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .verloop-datum { color: var(--muted); }
+  .verloop-wed { overflow-wrap: anywhere; }
+  .verloop-res { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 16px; }
+  .verloop-mark { text-align: right; font-size: 12px; font-weight: 700; color: var(--success); }
+  @media (max-width: 768px) {
+    .verloop-rij { grid-template-columns: 92px minmax(0, 1fr) auto; }
+    .verloop-mark { grid-column: 2 / -1; text-align: left; }
+    .verloop-mark:empty { display: none; }
+  }
+  @media print { .verloop { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2291,6 +2319,7 @@
     </div>
 
     <div id="prestaties-content"></div>
+    <div id="prestaties-verloop" class="verloop print-hide"></div>
   </div>
 </main>
 
@@ -3700,6 +3729,7 @@ function atleetMenuActie(actie, id) {
 
 // ── Prestaties render ─────────────────────────────────────────
 function renderPrestaties() {
+  werkVerloopBij();   // patch 92: het blok "Verloop" onder de tabel (alleen bij een gekozen atleet)
   const atleetId = document.getElementById("prestatie-atleet-filter").value;
   const geslacht = document.getElementById("prestatie-geslacht-filter").value; // "", "M" of "V"
 
@@ -7653,6 +7683,130 @@ function sleepVoerUit(bron, oordeel) {
   });
   renderPloegen();
   toast(oordeel.wissel ? "Gewisseld ✓" : "Verplaatst ✓");
+}
+
+function werkVerloopBij() {
+  // Toont of verbergt het blok "Verloop" onder de prestaties van een gekozen atleet; haalt de wedstrijdresultaten op (één lopende vraag per atleet)
+  // en bewaart ze een minuut (patch 92). Bijzaak: een fout hier mag het scherm Prestaties nooit verstoren.
+  try {
+    const cont = document.getElementById("prestaties-verloop");
+    if (!cont) return;
+    const atleetId = document.getElementById("prestatie-atleet-filter")?.value || "";
+    if (!atleetId) { cont.innerHTML = ""; return; }
+    const disc = document.getElementById("prestatie-disc-filter")?.value || "";
+    const v = (window.__verloop = window.__verloop || { cache: {}, bezig: {}, token: 0 });
+    const token = ++v.token;
+    const sleutel = (actieveCategorie?.id || "") + ":" + atleetId;
+    const hit = v.cache[sleutel];
+    if (hit && Date.now() - hit.tijd < 60000) { cont.innerHTML = verloopHtml(atleetId, hit.rijen, disc); return; }
+    if (!cont.innerHTML) cont.innerHTML = '<div class="verloop-melding">Verloop laden…</div>';
+    let belofte = v.bezig[sleutel];
+    if (!belofte) {
+      belofte = laadVerloopRijen(atleetId).then(rijen => { v.cache[sleutel] = { tijd: Date.now(), rijen }; return rijen; });
+      v.bezig[sleutel] = belofte;
+      const klaar = () => { if (v.bezig[sleutel] === belofte) delete v.bezig[sleutel]; };
+      belofte.then(klaar, klaar);
+    }
+    belofte.then(rijen => {
+      if (v.token === token) cont.innerHTML = verloopHtml(atleetId, rijen, disc);   // alleen als dit nog de laatste keuze is
+    }).catch(() => {
+      if (v.token === token) cont.innerHTML = '<div class="verloop-melding">Het verloop kon niet worden geladen.</div>';
+    });
+  } catch (e) { /* bijzaak */ }
+}
+
+async function laadVerloopRijen(atleetId) {
+  // Alle wedstrijdresultaten van één atleet in de actieve categorie (alleen lezen) (patch 92)
+  const cid = actieveCategorie?.id;
+  if (!cid) return [];
+  const { data, error } = await sb.from("resultaten")
+    .select("discipline,resultaat,status,ronde,poging_nr,wedstrijd_id,atleet_id,sleutel")
+    .eq("categorie_id", cid).eq("atleet_id", atleetId);
+  if (error) throw error;
+  return data || [];
+}
+
+function verloopModel(atleetId, rijen) {
+  // Per onderdeel: één punt per wedstrijd (het beste geldige resultaat over alle pogingen en rondes, net als op de Wedstrijddag),
+  // op datum gesorteerd, met nieuwe besten, het seizoensbeste (kalenderjaar) en de opgeslagen PR (patch 92)
+  const perDisc = {};
+  (rijen || []).forEach(r => {
+    if (String(r.atleet_id) !== String(atleetId)) return;
+    if (String(r.sleutel || "").startsWith("ploeg-")) return;            // estafetteploegen horen niet bij één atleet
+    if ((r.status || "ok") !== "ok" || !r.resultaat || !r.discipline) return;
+    const w = wedstrijden.find(x => String(x.id) === String(r.wedstrijd_id));
+    if (!w || !w.datum) return;
+    const waarde = parseResultaat(r.resultaat);
+    if (waarde === null || waarde <= 0) return;
+    const lager = isLagerBeter(r.discipline);
+    const d = perDisc[r.discipline] = perDisc[r.discipline] || {};
+    const huidig = d[w.id];
+    if (!huidig || (lager ? waarde < huidig.waarde : waarde > huidig.waarde)) {
+      d[w.id] = { datum: String(w.datum).slice(0, 10), wedstrijdId: w.id, naam: w.naam || "", resultaat: String(r.resultaat), waarde };
+    }
+  });
+  const jaar = String(new Date().getFullYear());
+  return Object.keys(perDisc).sort((a, b) => a.localeCompare(b, "nl")).map(disc => {
+    const lager = isLagerBeter(disc);
+    const punten = Object.values(perDisc[disc]).sort((a, b) => a.datum.localeCompare(b.datum) || String(a.naam).localeCompare(String(b.naam), "nl"));
+    let besteTot = null, laatsteVerbetering = null;
+    punten.forEach(pt => {
+      pt.nieuwBeste = false; pt.verbetering = null;
+      if (besteTot === null) { besteTot = pt.waarde; return; }
+      if (lager ? pt.waarde < besteTot : pt.waarde > besteTot) {
+        pt.nieuwBeste = true; pt.verbetering = Math.abs(besteTot - pt.waarde); laatsteVerbetering = pt; besteTot = pt.waarde;
+      }
+    });
+    const dezeJaar = punten.filter(pt => pt.datum.slice(0, 4) === jaar);
+    const sb = dezeJaar.length ? dezeJaar.reduce((b, pt) => ((lager ? pt.waarde < b.waarde : pt.waarde > b.waarde) ? pt : b)) : null;
+    const prRij = bestePrestatie(atleetId, disc);
+    const prWaarde = prRij ? parseResultaat(prRij.resultaat) : null;
+    return { disc, lager, punten, sb, laatsteVerbetering, pr: prRij && prWaarde !== null ? { resultaat: String(prRij.resultaat), waarde: prWaarde } : null };
+  });
+}
+
+function verloopDeltaTekst(verschil, disc) {
+  // "−0,2 s" (tijd: lager is beter) of "+0,15 m" (afstand: hoger is beter) (patch 92)
+  const getal = String(Math.round(verschil * 100) / 100).replace(".", ",");
+  return (isLagerBeter(disc) ? "−" : "+") + getal + (getPREenheid(disc) === "m" ? " m" : " s");
+}
+
+function verloopGrafiek(m) {
+  // Eenvoudige SVG: de punten per datum (beter = hoger), de PR als stippellijn en nieuwe besten gekleurd (patch 92)
+  if (m.punten.length < 2) return "";   // een grafiek met één punt zegt niets; de lijst eronder toont het resultaat
+  const B = 300, H = 72, pad = 12;
+  const waarden = m.punten.map(p => p.waarde).concat(m.pr ? [m.pr.waarde] : []);
+  let min = Math.min(...waarden), max = Math.max(...waarden);
+  if (max === min) { min -= 1; max += 1; }
+  const t = m.punten.map(p => new Date(p.datum + "T00:00:00").getTime());
+  const t0 = Math.min(...t), t1 = Math.max(...t);
+  const x = i => (t1 === t0 ? B / 2 : pad + (t[i] - t0) / (t1 - t0) * (B - 2 * pad));
+  const y = w => (m.lager ? pad + (w - min) / (max - min) * (H - 2 * pad) : pad + (max - w) / (max - min) * (H - 2 * pad));
+  const lijn = m.punten.length > 1 ? `<polyline class="verloop-lijn" points="${m.punten.map((p, i) => x(i).toFixed(1) + "," + y(p.waarde).toFixed(1)).join(" ")}"/>` : "";
+  const prLijn = m.pr ? `<line class="verloop-pr" x1="${pad}" x2="${B - pad}" y1="${y(m.pr.waarde).toFixed(1)}" y2="${y(m.pr.waarde).toFixed(1)}"/>` : "";
+  const stippen = m.punten.map((p, i) => `<circle class="verloop-punt${p.nieuwBeste ? " beste" : ""}" cx="${x(i).toFixed(1)}" cy="${y(p.waarde).toFixed(1)}" r="4"><title>${esc(formatDate(p.datum))} · ${esc(p.naam)} · ${esc(formateerResultaatWeergave(p.resultaat, m.disc))}</title></circle>`).join("");
+  return `<svg class="verloop-grafiek" viewBox="0 0 ${B} ${H}" role="img" aria-label="Verloop van ${esc(m.disc)}">${prLijn}${lijn}${stippen}</svg>`;
+}
+
+function verloopHtml(atleetId, rijen, discFilter) {
+  // Het hele blok "Verloop": een kaartje per onderdeel met PR, Seizoen, laatste verbetering, grafiek en de lijst met resultaten (patch 92)
+  let modellen = verloopModel(atleetId, rijen);
+  if (discFilter) modellen = modellen.filter(m => m.disc === discFilter);
+  const kop = '<div class="verloop-kop">📈 Verloop <small>uit de wedstrijdresultaten</small></div>';
+  if (!modellen.length) {
+    return kop + `<div class="verloop-melding">${discFilter ? "Geen wedstrijdresultaten voor dit onderdeel." : "Nog geen wedstrijdresultaten voor deze atleet. Het verloop gebruikt de resultaten die je op de Wedstrijddag invult."}</div>`;
+  }
+  return kop + modellen.map(m => {
+    const fmt = r => esc(formateerResultaatWeergave(r, m.disc));
+    const chips = `<span class="verloop-chip">PR ${m.pr ? fmt(m.pr.resultaat) : "–"}</span>`
+      + `<span class="verloop-chip">Seizoen ${m.sb ? fmt(m.sb.resultaat) : "–"}</span>`
+      + (m.laatsteVerbetering ? `<span class="verloop-chip verloop-beter" title="Laatste verbetering op ${esc(formatDate(m.laatsteVerbetering.datum))}">Laatste ▲ ${esc(verloopDeltaTekst(m.laatsteVerbetering.verbetering, m.disc))}</span>` : "");
+    const rijenHtml = m.punten.slice().reverse().map(pt => `<div class="verloop-rij">`
+      + `<span class="verloop-datum">${esc(formatDate(pt.datum))}</span><span class="verloop-wed">${esc(pt.naam)}</span>`
+      + `<span class="verloop-res">${fmt(pt.resultaat)}</span>`
+      + `<span class="verloop-mark">${pt.nieuwBeste ? "▲ " + esc(verloopDeltaTekst(pt.verbetering, m.disc)) : (m.pr && Math.abs(pt.waarde - m.pr.waarde) < 1e-9 ? "= PR" : "")}</span></div>`).join("");
+    return `<div class="verloop-kaart"><div class="verloop-kaartkop"><b>${esc(m.disc)}</b>${chips}</div>${verloopGrafiek(m)}<div class="verloop-lijst">${rijenHtml}</div></div>`;
+  }).join("");
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────

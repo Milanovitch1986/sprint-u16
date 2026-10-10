@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 91)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 92)*
 
 ---
 
@@ -43,6 +43,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 92: Prestaties, verloop uit de wedstrijdresultaten (patch 92, okt 2026)
+Eerste van de [data]-onderdelen, maar zonder databasewijziging. Tag `ui-R` staat op de commit vóór deze patch (patch 91, `1d6dd98`). Prestaties is niet live-kritiek: direct na de tests gecommit. Open [data]-patches: Atleten (onderdelen per atleet, geboortejaar-chip), Admin ("Laatste back-up"), Wedstrijddag deel 2 (voortgang, "Nu bezig").
+- **Correctie op het plan:** het plan ging uit van een nieuwe kolom `datum` op `prestaties` (SQL door Milanovitch). Dat klopt niet: de kolom bestaat al (`datum`, `locatie`, `notities`; de code vult hem bij elke nieuwe PR, maar de UI toont hem nergens). Het echte gat is dat `prestaties` **één rij per atleet en onderdeel** is: bij een nieuwe PR (venster, Excel-import, wedstrijd afronden) wordt de oude PR verwijderd, dus er is geen geschiedenis. En de `datum` van een handmatig ingevoerde PR is de invoerdatum (`vandaag`), niet de loopdatum; daarom wordt de PR-datum niet gebruikt.
+- **Bron van het verloop:** de tabel `resultaten` (wedstrijdresultaten; kolommen `atleet_id`, `discipline`, `sleutel`, `resultaat`, `status`, `ronde`, `poging_nr`, `wedstrijd_id`, `categorie_id`) plus de datum en naam uit `wedstrijden`. Individuele resultaten hebben `sleutel = atleet-id`; estafetteploegen `ploeg-X` met `atleet_id` leeg en tellen niet mee. Het Prestaties-scherm laadde `resultaten` nog niet; nu per gekozen atleet één leesvraag (alleen lezen) met een minuut geheugenkopie. Optie 2 (PR-geschiedenis gaan bewaren, oude PR's niet meer verwijderen) is bewust niet gedaan: die wijzigt de zes plaatsen waar PR's worden opgeslagen en alles wat uitgaat van één PR per onderdeel.
+- **Rekenregels:** één punt per wedstrijd = het beste geldige resultaat over snelle invoer, pogingen en rondes (zoals `wdBesteResultaat()`: status `ok`, ingevuld, `parseResultaat() > 0`, `isLagerBeter()` bepaalt wat beter is); op datum gesorteerd; "nieuw beste" = strikt beter dan het beste tot dan toe; "Laatste ▲" = de laatste zo'n verbetering; Seizoen = beste punt van het huidige kalenderjaar; "= PR" bij een niet-verbeterend resultaat gelijk aan de PR. Het verschil wordt als `−0,2 s` (tijden, ook voor minutenonderdelen) of `+0,15 m` (afstanden) getoond.
+- **Opbouw:** `renderPrestaties()` roept bovenaan `werkVerloopBij()` aan; dat leest zelf de filters (`#prestatie-atleet-filter`, `#prestatie-disc-filter`) en schrijft in het aparte blok `#prestaties-verloop` (buiten `#prestaties-content`, dus de bestaande `innerHTML`-vervangingen raken het niet). Een atleet gekozen = blok zichtbaar; geen atleet = blok leeg (`:empty` verbergt het).
+- **Testmethode (nieuw geleerd):** (1) controleer een berekening met een **onafhankelijke** implementatie in de test (hier Python) en lastige gegevens in plaats van de code naar zichzelf te laten kijken. (2) Zet met een init-script een vaste datum zodat "dit jaar" voorspelbaar is. (3) Een trage leesvraag nabootsen: herdefinieer de globale functie (`laadVerloopRijen = async ...`) in `page.evaluate` met een vertraging voor één atleet; dat bewijst dat een laat antwoord een nieuwere keuze niet overschrijft. (4) Tel leesvragen met een teller in diezelfde herdefinitie. (5) Een verwachting in de test kan door een terechte ontwerpwijziging verouderen (een laat antwoord wordt nu wel gecachet); pas dan de verwachting aan en leg uit waarom. (6) Een grafiek met één punt is nutteloos en neemt veel ruimte in: tonen vanaf twee punten.
+- **Terugdraaien:** Revert op de commit van patch 92, of terug naar tag `ui-R`.
 
 ### Patch 91: Opstelling deel 4, atleten slepen (patch 91, okt 2026)
 Vierde patch op het live-kritieke scherm Opstelling (reeks patch 83–97, zonder Home). Geen databasewijziging. Tag `ui-Q` staat op de commit vóór deze patch (patch 90, `27c217f`). Afspraak voor dit scherm: eerst bouwen en testen, dan wachten op "commit nu". Daarna: slepen met een vinger (aanraking, lang indrukken; apart voorgesteld), Wedstrijddag en de [data]-patches.
