@@ -2220,6 +2220,12 @@
   }
   @media print { .wd-voortgang { display: none; } }
 
+  /* ══ Patch 99: slepen met een vinger (alleen als de schakelaar in Profiel aanstaat; <body> krijgt dan de klasse slepen-aanraking) ══ */
+  body.slepen-aanraking #ploegen-container .atleet-slot.bezet:not(.readonly) {
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  }
+  @media print { #profiel-slepen-kaart { display: none; } }
+
   @media print {
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
@@ -2761,6 +2767,16 @@
           <button class="btn btn-ghost" onclick="wijzigWachtwoord()">Wachtwoord wijzigen</button>
         </div>
       </div>
+      <div class="detail-panel" id="profiel-slepen-kaart">
+        <div class="section-label">Opstelling op je telefoon</div>
+        <div style="padding:20px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" id="profiel-slepen-aanraking" onchange="zetSlepenAanraking(this.checked)" style="width:20px;height:20px;accent-color:var(--accent);">
+            Slepen met je vinger (experimenteel)
+          </label>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5;">Houd een atleet in een slot ongeveer een halve seconde ingedrukt en sleep hem naar een ander slot. Scrollen en tikken werken gewoon. Dit geldt alleen voor dit apparaat.</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3288,6 +3304,7 @@ async function checkAuth() {
   }
   document.getElementById("profiel-naam").value  = profiel?.gebruikersnaam || "";
   document.getElementById("profiel-email").value = session.user.email || "";
+  toonSlepenInstelling();   // patch 99: stand van de schakelaar "Slepen met je vinger" (bijzaak, valt nooit om)
   werkProfielKopBij();
   await sb.from("profielen").update({ laatste_login: new Date().toISOString() }).eq("id", session.user.id);
 
@@ -7608,10 +7625,13 @@ function vulStapSamenvatting() {
 }
 
 function sleepStart(e) {
-  // Begin van een mogelijke sleepactie in de opstelling (patch 91). Alleen muis of pen; aanrakingen worden genegeerd, zodat scrollen en tikken
-  // op een telefoon of tablet precies werken als voorheen. Een sleepactie begint pas na 5 px bewegen; een gewone klik opent nog de keuzelijst.
+  // Begin van een mogelijke sleepactie in de opstelling (patch 91). Muis of pen: de sleepactie begint na 5 px bewegen.
+  // Aanraking (patch 99): alleen als de schakelaar in Profiel aanstaat; dan begint de sleepactie na ongeveer een halve seconde stilhouden en
+  // is een gewone veeg (scrollen) of tik ongemoeid. Standaard staat aanraking uit en blijft alles precies zoals voorheen.
   try {
-    if (e.pointerType === "touch" || e.button !== 0 || opstellingAlleenLezen || window.__sleep) return;
+    const aanraking = e.pointerType === "touch";
+    if (aanraking && !slepenAanrakingAan()) return;
+    if ((aanraking && !e.isPrimary) || e.button !== 0 || opstellingAlleenLezen || window.__sleep) return;
     if (e.target.closest(".slot-remove, .slot-select")) return;
     let bron = null;
     const slotEl = e.target.closest(".atleet-slot.bezet");
@@ -7623,67 +7643,57 @@ function sleepStart(e) {
       if (!atleetId) return;
       bron = { type: "slot", ploeg: m[1], idx: Number(m[2]), nr: Number(m[3]), sleutel, atleetId, el: slotEl };
     } else {
+      if (aanraking) return;   // de lijst "Beschikbare atleten" doet met een vinger niet mee (die staat op een telefoon in een andere stap)
       const greep = e.target.closest(".sleep-greep");
       const rij = greep && greep.closest(".beschik-rij");
       if (!rij || !rij.dataset.atleet || !isBeschikbaar(rij.dataset.atleet)) return;
       bron = { type: "lijst", atleetId: rij.dataset.atleet, el: rij };
     }
     const atleet = atleten.find(a => String(a.id) === String(bron.atleetId));
-    window.__sleep = { bron, naam: atleet ? atleet.naam : "", x0: e.clientX, y0: e.clientY, actief: false, doelEl: null, doelSleutel: null, oordeel: null, spook: null };
+    window.__sleep = { bron, naam: atleet ? atleet.naam : "", x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, actief: false, touch: aanraking, pointerId: e.pointerId,
+      timer: null, autoLus: false, doelEl: null, doelSleutel: null, oordeel: null, spook: null };
     document.addEventListener("pointermove", sleepBeweeg);
     document.addEventListener("pointerup", sleepLos);
     document.addEventListener("pointercancel", sleepAnnuleer);
     document.addEventListener("keydown", sleepToets);
     window.addEventListener("blur", sleepAnnuleer);
+    if (aanraking) {
+      document.addEventListener("touchmove", sleepBlokkeerScroll, { passive: false });
+      document.addEventListener("contextmenu", sleepContextmenu);
+      window.__sleep.timer = setTimeout(sleepActiveerAanraking, 500);
+    }
   } catch (err) { sleepOpruimen(); }
 }
 
 function sleepBeweeg(e) {
-  // Tijdens het slepen: zwevend label, en het slot onder de muis kleurt groen (mag), oranje (mag, tijdconflict) of rood (mag niet) (patch 91)
+  // Tijdens het slepen: zwevend label, en het slot onder de muis of vinger kleurt groen (mag), oranje (mag, tijdconflict) of rood (mag niet) (patch 91/99)
   const s = window.__sleep;
   if (!s) return;
   try {
-    if (e.buttons === 0) { sleepAnnuleer(); return; }   // de knop is buiten het venster losgelaten
+    if (s.touch && e.pointerId !== s.pointerId) return;
+    s.x = e.clientX; s.y = e.clientY;
+    if (!s.touch && e.buttons === 0) { sleepAnnuleer(); return; }   // de knop is buiten het venster losgelaten
     if (!s.actief) {
-      if (Math.hypot(e.clientX - s.x0, e.clientY - s.y0) < 5) return;
-      s.actief = true;
-      document.querySelectorAll(".slot-select").forEach(d => d.remove());
-      const spook = document.createElement("div");
-      spook.className = "sleep-spook";
-      spook.innerHTML = "<b></b><small></small>";
-      spook.firstChild.textContent = s.naam;
-      document.body.appendChild(spook);
-      s.spook = spook;
-      document.body.classList.add("sleept");
-      if (s.bron.el) s.bron.el.classList.add("sleep-bron");
-      if (window.getSelection) window.getSelection().removeAllRanges();
+      const afstand = Math.hypot(e.clientX - s.x0, e.clientY - s.y0);
+      if (s.touch) { if (afstand > 10) sleepOpruimen(); return; }   // beweegt vóór het lang indrukken klaar is: de gebruiker scrolt, dus niets doen
+      if (afstand < 5) return;
+      sleepActiveer(s);
     }
-    s.spook.style.left = (e.clientX + 14) + "px";
-    s.spook.style.top = (e.clientY + 14) + "px";
-    const onder = document.elementFromPoint(e.clientX, e.clientY);   // het zwevende label heeft pointer-events: none
-    const slotEl = onder && onder.closest("#ploegen-container .atleet-slot");
-    const m = slotEl && /^slot_([ABC])_(\d+)_(\d+)$/.exec(slotEl.id);
-    const sleutel = m ? slotEl.id : null;
-    if (sleutel !== s.doelSleutel) {
-      if (s.doelEl) s.doelEl.classList.remove("sleep-ok", "sleep-conflict", "sleep-nee");
-      s.doelSleutel = sleutel;
-      s.doelEl = m ? slotEl : null;
-      s.oordeel = m ? sleepBeoordeel(s.bron, { ploeg: m[1], idx: Number(m[2]), nr: Number(m[3]), sleutel: `${m[1]}_${m[2]}_${m[3]}` }) : null;
-      const o = s.oordeel;
-      if (s.doelEl && o) s.doelEl.classList.add(!o.ok ? "sleep-nee" : o.conflict ? "sleep-conflict" : "sleep-ok");
-      s.spook.lastChild.textContent = !o ? "" : !o.ok ? "✕ " + (o.gewisseld ? o.naam + " " : "") + o.reden : o.conflict ? "⚠️ tijdconflict (toegestaan)" : o.wissel ? "⇄ wisselen" : "✓";
-    }
+    sleepPlaatsSpook(s, e.clientX, e.clientY);
+    sleepWerkDoelBij(s, e.clientX, e.clientY);
+    if (s.touch) sleepAutoScroll();
   } catch (err) { sleepAnnuleer(); }
 }
 
 function sleepLos(e) {
-  // Muisknop los: voer de sleepactie uit als dat mag. Zonder sleepactie (gewoon een klik) gebeurt er niets bijzonders (patch 91)
+  // Muisknop of vinger los: voer de sleepactie uit als dat mag. Zonder sleepactie (gewoon een klik of tik) gebeurt er niets bijzonders (patch 91/99)
   const s = window.__sleep;
   if (!s) return;
+  if (s.touch && e && e.pointerId !== s.pointerId) return;
   const { actief, oordeel, doelEl, bron } = s;
   sleepOpruimen();
   if (!actief) return;
-  // De klik die op het loslaten volgt onderdrukken: anders opent het slot onder de muis de keuzelijst of schakelt een rij om
+  // De klik die op het loslaten volgt onderdrukken: anders opent het slot onder de muis of vinger de keuzelijst of schakelt een rij om
   const blokkeer = ev => { ev.stopPropagation(); ev.preventDefault(); };
   document.addEventListener("click", blokkeer, { capture: true, once: true });
   setTimeout(() => document.removeEventListener("click", blokkeer, true), 0);
@@ -7715,8 +7725,11 @@ function sleepOpruimen() {
   document.removeEventListener("pointercancel", sleepAnnuleer);
   document.removeEventListener("keydown", sleepToets);
   window.removeEventListener("blur", sleepAnnuleer);
+  document.removeEventListener("touchmove", sleepBlokkeerScroll, { passive: false });
+  document.removeEventListener("contextmenu", sleepContextmenu);
   document.body.classList.remove("sleept");
   if (s) {
+    if (s.timer) clearTimeout(s.timer);
     if (s.spook) s.spook.remove();
     if (s.doelEl) s.doelEl.classList.remove("sleep-ok", "sleep-conflict", "sleep-nee");
     if (s.bron && s.bron.el) s.bron.el.classList.remove("sleep-bron");
@@ -8115,6 +8128,109 @@ function veldDatum(waarde) {
   // "2011-11-30T00:00:00"), dan blijft een datumveld anders leeg en zou opslaan de geboortedatum wissen (patch 98). Geen datum = leeg.
   const m = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(String(waarde == null ? "" : waarde).trim());
   return m ? m[1] : "";
+}
+
+function slepenAanrakingAan() {
+  // Staat "Slepen met je vinger" aan op dit apparaat? Standaard uit (patch 99)
+  try { return localStorage.getItem("sprint_slepen_aanraking") === "1"; } catch (e) { return false; }
+}
+
+function toonSlepenInstelling() {
+  // Zet het vinkje in Profiel en een klasse op <body> volgens de bewaarde keuze. Bijzaak: een fout hier mag het inloggen nooit verstoren (patch 99)
+  try {
+    const aan = slepenAanrakingAan();
+    const vink = document.getElementById("profiel-slepen-aanraking");
+    if (vink) vink.checked = aan;
+    document.body.classList.toggle("slepen-aanraking", aan);
+  } catch (e) { /* bijzaak */ }
+}
+
+function zetSlepenAanraking(aan) {
+  // De schakelaar in Profiel: bewaart de keuze in deze browser (patch 99)
+  try { localStorage.setItem("sprint_slepen_aanraking", aan ? "1" : "0"); } catch (e) { /* bijzaak */ }
+  toonSlepenInstelling();
+  toast(aan ? "Slepen met je vinger staat aan op dit apparaat ✓" : "Slepen met je vinger staat uit");
+}
+
+function sleepActiveer(s) {
+  // Het slepen begint echt: zwevend label, het bronslot wordt vaag en er is geen tekstselectie (patch 91; gedeeld met aanraking in patch 99)
+  s.actief = true;
+  document.querySelectorAll(".slot-select").forEach(d => d.remove());
+  const spook = document.createElement("div");
+  spook.className = "sleep-spook";
+  spook.innerHTML = "<b></b><small></small>";
+  spook.firstChild.textContent = s.naam;
+  document.body.appendChild(spook);
+  s.spook = spook;
+  document.body.classList.add("sleept");
+  if (s.bron.el) s.bron.el.classList.add("sleep-bron");
+  if (window.getSelection) window.getSelection().removeAllRanges();
+}
+
+function sleepPlaatsSpook(s, x, y) {
+  // Met een muis rechtsonder de aanwijzer; met een vinger erboven, zodat de vinger het label niet afdekt (patch 99)
+  if (!s.spook) return;
+  if (s.touch) { s.spook.style.left = Math.max(8, x - 70) + "px"; s.spook.style.top = Math.max(8, y - 84) + "px"; }
+  else { s.spook.style.left = (x + 14) + "px"; s.spook.style.top = (y + 14) + "px"; }
+}
+
+function sleepWerkDoelBij(s, x, y) {
+  // Zoekt het slot onder de muis of vinger, beoordeelt het en kleurt het (patch 91; losgemaakt voor aanraking en automatisch scrollen in patch 99)
+  const onder = document.elementFromPoint(x, y);   // het zwevende label heeft pointer-events: none
+  const slotEl = onder && onder.closest("#ploegen-container .atleet-slot");
+  const m = slotEl && /^slot_([ABC])_(\d+)_(\d+)$/.exec(slotEl.id);
+  const sleutel = m ? slotEl.id : null;
+  if (sleutel === s.doelSleutel) return;
+  if (s.doelEl) s.doelEl.classList.remove("sleep-ok", "sleep-conflict", "sleep-nee");
+  s.doelSleutel = sleutel;
+  s.doelEl = m ? slotEl : null;
+  s.oordeel = m ? sleepBeoordeel(s.bron, { ploeg: m[1], idx: Number(m[2]), nr: Number(m[3]), sleutel: `${m[1]}_${m[2]}_${m[3]}` }) : null;
+  const o = s.oordeel;
+  if (s.doelEl && o) s.doelEl.classList.add(!o.ok ? "sleep-nee" : o.conflict ? "sleep-conflict" : "sleep-ok");
+  if (s.spook) s.spook.lastChild.textContent = !o ? "" : !o.ok ? "✕ " + (o.gewisseld ? o.naam + " " : "") + o.reden : o.conflict ? "⚠️ tijdconflict (toegestaan)" : o.wissel ? "⇄ wisselen" : "✓";
+}
+
+function sleepActiveerAanraking() {
+  // Het lang indrukken is gelukt zonder te bewegen: het slepen met een vinger begint, met een korte trilling waar de telefoon dat toestaat (patch 99)
+  const s = window.__sleep;
+  if (!s || !s.touch || s.actief) return;
+  try {
+    s.timer = null;
+    sleepActiveer(s);
+    if (navigator.vibrate) navigator.vibrate(20);
+    sleepPlaatsSpook(s, s.x, s.y);
+    sleepWerkDoelBij(s, s.x, s.y);
+    sleepAutoScroll();
+  } catch (e) { sleepAnnuleer(); }
+}
+
+function sleepAutoScroll() {
+  // Tijdens het slepen met een vinger scrolt de pagina mee als de vinger bij de boven- of onderrand komt, anders kun je een andere ploeg niet bereiken (patch 99)
+  const s = window.__sleep;
+  if (!s || !s.actief || s.autoLus) return;
+  s.autoLus = true;
+  const stap = () => {
+    const t = window.__sleep;
+    if (!t || !t.actief) return;
+    const boven = 90, onder = window.innerHeight - 150;   // onder zit de onderbalk
+    let dy = 0;
+    if (t.y < boven) dy = -(4 + (boven - Math.max(t.y, 0)) / boven * 14);
+    else if (t.y > onder) dy = 4 + (Math.min(t.y, window.innerHeight) - onder) / (window.innerHeight - onder) * 14;
+    if (dy) { window.scrollBy(0, dy); sleepWerkDoelBij(t, t.x, t.y); }
+    requestAnimationFrame(stap);
+  };
+  requestAnimationFrame(stap);
+}
+
+function sleepBlokkeerScroll(e) {
+  // Zolang er gesleept wordt met een vinger scrolt de pagina niet mee met de beweging (alleen dan; een gewone veeg blijft scrollen) (patch 99)
+  const s = window.__sleep;
+  if (s && s.actief && e.cancelable) e.preventDefault();
+}
+
+function sleepContextmenu(e) {
+  // Lang indrukken opent op sommige telefoons een contextmenu; tijdens het slepen niet (patch 99)
+  e.preventDefault();
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────

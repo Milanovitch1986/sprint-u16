@@ -6,6 +6,35 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 99] — 2026-10-10
+
+### 📋 Opstelling: atleten slepen met je vinger
+
+<!--RELEASENOTE
+versie: Patch 99
+titel: 📋 Opstelling: atleten slepen met je vinger
+type: feature
+tags: opstelling
+beschrijving: Op een telefoon of tablet kun je in de opstelling een atleet ongeveer een halve seconde ingedrukt houden en naar een ander slot slepen om te verplaatsen of te wisselen. Het staat standaard uit en zet je aan in Profiel. Scrollen en tikken werken gewoon.
+-->
+
+Negenentwintigste stap na het UI-herontwerp: Opstelling deel 5, het laatste onderdeel uit de lijst met open mockup-onderdelen. Het slepen met een vinger werkt als het slepen met de muis van patch 91, met dezelfde regels. Het is **standaard uit** en staat per apparaat aan te zetten. **Geen databasewijziging.**
+
+**Aanzetten.** Profiel → "Opstelling op je telefoon" → "Slepen met je vinger (experimenteel)". De keuze wordt in de browser van dit apparaat bewaard. Zolang het uit staat, doen aanrakingen niets bijzonders, precies zoals voorheen.
+
+**Gebruik.** Houd een atleet in een slot ongeveer een halve seconde stil ingedrukt (zonder te bewegen). Je voelt een korte trilling (waar de telefoon dat toestaat), het slot waar je vandaan komt wordt vaag en er verschijnt een label **boven je vinger** (zodat je het niet afdekt). Sleep naar een ander slot: groen (mag), oranje (mag, met tijdconflict) of rood (mag niet, met de reden). Laat los om te **verplaatsen** (leeg slot) of te **wisselen** (gevuld slot, ook tussen ploegen). Een rood slot geeft bij het loslaten een melding en verandert niets. Bij de boven- of onderrand van het scherm scrolt de pagina vanzelf mee, zodat je ook een andere ploeg bereikt.
+
+**Scrollen blijft vrij.** Een veeg over een slot scrolt de pagina; een tik opent de keuzelijst; beweeg je binnen de halve seconde, dan wordt het lang indrukken geannuleerd. Pas als het slepen begint, scrolt de pagina niet meer mee met je vinger. Lang indrukken zonder te bewegen en dan loslaten doet niets. De reserves en de lijst "Beschikbare atleten" doen met een vinger niet mee.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `slepenAanrakingAan()`, `toonSlepenInstelling()`, `zetSlepenAanraking(aan)`, `sleepActiveer()`, `sleepPlaatsSpook()`, `sleepWerkDoelBij()`, `sleepActiveerAanraking()`, `sleepAutoScroll()`, `sleepBlokkeerScroll()` en `sleepContextmenu()`. Aangepast: `sleepStart()`, `sleepBeweeg()`, `sleepLos()` en `sleepOpruimen()` uit patch 91, en `checkAuth()` (één regel `toonSlepenInstelling();`, die zelf in een `try/catch` staat). Alle andere JavaScript is byte-voor-byte gelijk aan patch 98; `sleepBeoordeel()`, `sleepVoerUit()` en de regels zijn niet gewijzigd. Nieuwe HTML: een kaart `#profiel-slepen-kaart` met het vinkje `#profiel-slepen-aanraking` (handler `zetSlepenAanraking`). Contract-check: 0 verdwenen; 2 id's, 1 handler en 10 functies nieuw.
+- Bewaard in `localStorage` onder `sprint_slepen_aanraking` (`"1"` = aan); ontbreekt de opslag of is de waarde iets anders, dan is het uit. `<body>` krijgt de klasse `slepen-aanraking`; daaronder krijgen gevulde slots `-webkit-touch-callout: none` en `user-select: none`.
+- Aanraking: `sleepStart()` doet bij `pointerType === "touch"` alleen iets als de schakelaar aanstaat en de aanraking de primaire is, en alleen op een gevuld slot (niet op ✕ of een open keuzelijst, niet alleen-lezen). Er start een timer van 500 ms (`sleepActiveerAanraking`). Beweegt de vinger daarvoor meer dan 10 px, dan wordt alles opgeruimd en gaat het scrollen ongehinderd door; `pointercancel` ruimt ook op. Na de activatie blokkeert een `touchmove`-luisteraar (`{ passive: false }`, alleen tijdens het slepen) het scrollen; een `contextmenu`-luisteraar voorkomt het menu van lang indrukken. Het label staat 84 px boven de vinger. `sleepAutoScroll()` scrolt via `requestAnimationFrame` met 4 tot 18 px per beeld binnen 90 px van de bovenkant of vanaf 150 px boven de onderkant (de onderbalk), en beoordeelt het slot onder de vinger opnieuw. Loslaten onderdrukt de volgende klik, zoals bij de muis.
+- CSS: alleen de `body.slepen-aanraking`-regel; de kaart in Profiel is in print verborgen.
+- Gecontroleerd met echte aanraakgebeurtenissen in Chromium (CDP, `has_touch`): met de schakelaar uit doen lang indrukken en slepen niets (ook in de oude versie gelijk); met de schakelaar aan: een tik opent de keuzelijst; een veeg scrolt evenveel als zonder schakelaar (319 tegenover 334 px) en sleept niet; bewegen binnen een halve seconde annuleert; lang indrukken geeft label en trilling; tijdens het slepen kleurt het doel groen en scrolt de pagina niet mee; loslaten verplaatst (leeg slot) of wisselt (gevuld slot, label "⇄ wisselen"); een niet-toegestane plek kleurt rood met de reden en laat de indeling intact; lang indrukken zonder bewegen en loslaten doet niets; `touchCancel` ruimt op; automatisch scrollen omlaag en omhoog en het stopt na het loslaten; alleen-lezen doet niets; de schakelaar in Profiel (standaard uit, bewaard, na herladen nog aan, geen fout zonder opslag). Regressie: de muisregels en het slepen met de muis van patch 91 zijn gelijk. Pixelvergelijking van alle schermen op 1280, 1920, 390 en 360 px, licht en donker, scherm en print: identiek, behalve de Profiel-pagina op het scherm.
+- Niet getest: een echte telefoon, vooral een iPhone (Safari gedraagt zich anders bij lang indrukken en tekstselectie) en de trilling; slepen met meerdere vingers tegelijk. Daarom staat het standaard uit.
+
 ## [oktober 2026 — patch 98] — 2026-10-10
 
 ### 🛡️ Bewerkvenster atleet: geboortedatum met tijd

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 98)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 99)*
 
 ---
 
@@ -43,6 +43,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 99: Opstelling, slepen met een vinger (patch 99, okt 2026)
+Laatste onderdeel van de mockup-reeks. Live-kritiek (Opstelling): bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Tag `ui-Y` komt op de commit vóór deze patch (patch 98, `614250f`).
+- **Keuzes (Milanovitch, "beide: eerst 98, dan 99"):** lang indrukken (500 ms), standaard UIT met een schakelaar in Profiel per apparaat (localStorage `sprint_slepen_aanraking`), automatisch scrollen bij de rand, alleen slot naar slot (de lijst "Beschikbare atleten" staat op een telefoon in een andere stap; reserves doen niet mee).
+- **Opbouw:** de bestaande muisfuncties zijn uitgebreid in plaats van gedupliceerd: `sleepStart()` laat aanraking alleen door als `slepenAanrakingAan()` en start een timer; `sleepBeweeg()` annuleert bij > 10 px vóór de activatie (dan scrolt de gebruiker); `sleepActiveer()`, `sleepPlaatsSpook()` en `sleepWerkDoelBij()` zijn losgemaakt zodat muis, aanraking en het automatisch scrollen dezelfde beoordeling (`sleepBeoordeel()`, ongewijzigd) gebruiken. `sleepBlokkeerScroll()` (`touchmove`, `{ passive: false }`) werkt alleen als `window.__sleep.actief`; een veeg die vóór de activatie begint wordt dus nooit geblokkeerd. `sleepAutoScroll()` is een `requestAnimationFrame`-lus per sleepactie (vlag `autoLus`) die stopt zodra `window.__sleep` weg is.
+- **Risico en vangnet:** de standaardstand (uit) laat aanraking volledig ongemoeid (getest in oud en nieuw: gelijk). Zet je de schakelaar op een telefoon aan en gaat er iets mis, dan is hij weer uit te zetten in Profiel; een Revert op de commit haalt alles weg. Het schermtoetsenbord, een iPhone (Safari), de trilling en meerdere vingers zijn niet getest.
+- **Testmethode (nieuw geleerd):** (1) aanraking nabootsen met `Input.dispatchTouchEvent` (`touchStart`, `touchMove`, `touchEnd`, `touchCancel`) in een context met `has_touch=True` en `is_mobile=True`; die levert echte `pointerType: "touch"`-events. (2) `Input.synthesizeScrollGesture` scrolde hier niet, ook niet zonder de schakelaar; een veeg met losse aanraakgebeurtenissen wel. Controleer eerst of de testmethode in de oude versie werkt voordat je uit de uitkomst iets over de nieuwe versie concludeert. (3) Een veeg heeft uitrol: vergelijk met een tolerantie (10%), niet met pixels. (4) Zet testgegevens consistent: een atleet in twee ploegen blokkeert terecht een wissel. (5) Een nieuwe schermkaart hoort in print verborgen te zijn; de pixeltest van de print vond dat.
+- **Terugdraaien:** Revert op de commit van patch 99, of terug naar tag `ui-Y`.
 
 ### Patch 98: Bewerkvenster atleet, geboortedatum met tijd (patch 98, okt 2026)
 Fix voor de bevinding bij patch 97 (datarisico). Tag `ui-X` staat op de commit vóór deze patch (patch 97, `d628459`). Niet live-kritiek: direct na de tests gecommit.
