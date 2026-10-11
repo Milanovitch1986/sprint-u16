@@ -8,13 +8,17 @@ admin-paneel toe te voegen.
 
 ## Functies
 
-- **Atletenbeheer** — inschrijvingen, persoonsgegevens en persoonlijke records (PR's)
+- **Atletenbeheer** — inschrijvingen, persoonsgegevens en persoonlijke records (PR's), met geboortejaar en onderdelen per atleet in de lijst
+- **Prestaties** — PR's per atleet, een ranglijst per onderdeel en het verloop van wedstrijdresultaten (seizoensbeste, grafiek en lijst)
+- **Punten** — puntentelling volgens de NAU-tabellen
 - **Wedstrijdbeheer** — wedstrijden, programma en tijdschema; finales zijn als zodanig te markeren
-- **Opstellingen per onderdeel** — automatisch opstellen en aanvullen; bij finales wordt het sterkst mogelijke team samengesteld
+- **Opstellingen per onderdeel** — automatisch opstellen en aanvullen; bij finales wordt het sterkst mogelijke team samengesteld; atleten zijn te slepen met de muis of (optioneel, aan te zetten in Profiel) met je vinger
+- **Wedstrijddag** — live resultaten invoeren per onderdeel (rondes en pogingen, DNS, herkenning van nieuwe PR's) met een voortgangskaart; bij weinig verbinding blijven resultaten in een wachtrij staan en worden vanzelf verstuurd; afronden slaat nieuwe PR's op
 - **Beschikbaarheid** — bijhouden welke atleten beschikbaar zijn per wedstrijd
 - **Categorieën** — U16 actief, uitbreidbaar via het admin-paneel
 - **Uitnodigingen** — per categorie, met e-mailuitnodiging voor nieuwe gebruikers
-- **Admin-paneel** — beheer van categorieën, gebruikers en releasenotes
+- **Admin-paneel** — beheer van categorieën, gebruikers en releasenotes, en een Excel-back-up per categorie
+- **Excel** — import van atleten en PR's, en een back-up als Excel-bestand
 - **Tweestapsverificatie (2FA / TOTP)** — verplicht voor alle gebruikers
 - **PWA** — werkt offline en is installeerbaar op de telefoon
 
@@ -44,6 +48,10 @@ om een lege Supabase-database mee op te zetten.
 Een nieuwe database opzetten: plak de inhoud van `supabase_setup.sql` in de Supabase
 SQL Editor en klik **Run**.
 
+**Keep-alive:** het gratis Supabase-project wordt na een week zonder activiteit gepauzeerd.
+Een GitHub-workflow (`.github/workflows/supabase-keepalive.yml`) roept daarom elke dag
+de databasefunctie `ping()` aan, die een tijdstempel bijwerkt in de tabel `keepalive`.
+
 ## Bestanden
 
 | Bestand | Omschrijving |
@@ -55,6 +63,7 @@ SQL Editor en klik **Run**.
 | `pwa_manifest.json` | PWA-configuratie |
 | `pwa_sw.js` | Service worker (offline) |
 | `supabase_setup.sql` | Database-setupscript (beginstructuur) |
+| `.github/workflows/supabase-keepalive.yml` | Dagelijkse ping die voorkomt dat Supabase het project pauzeert |
 | `CHANGELOG.md` | Overzicht van alle wijzigingen per patch |
 | `PROJECTNOTITIES.md` | Technische notities en achtergrond |
 | `Sprint_U16_Spelregels.pdf` | Spelregels van de U16-competitie |

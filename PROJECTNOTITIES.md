@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 99)*
+*AV Sprint Breda · Laatste update: 11 oktober 2026 (patch 100)*
 
 ---
 
@@ -26,7 +26,7 @@
 | `profielen` | Traineraccounts (gebruikersnaam, rol, laatste_login) |
 | `categorieen` | U14, U16, U18 etc. (naam, volgorde) |
 | `trainer_categorieen` | Koppeling trainer ↔ categorie (many-to-many) |
-| `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr) |
+| `atleten` | Atletengegevens (naam, geslacht, geboortedatum, club, bondsnr). `geboortedatum` kan bij sommige atleten een tijd bevatten (`2011-11-30 00:00:00`); de app gebruikt sinds patch 97 en 98 alleen `JJJJ-MM-DD` (back-up en bewerkvenster) |
 | `prestaties` | PR's per atleet per discipline |
 | `resultaten` | Live wedstrijdresultaten per wedstrijd (individueel per atleet, estafette per ploeg via kolom `sleutel`; status `ok`/`dns`) — patch 47 |
 | `onderdelen` | Zelf toegevoegde onderdelen (naam, type, geslacht) — categorie-breed (`atleet_id` leeg) of per atleet (`atleet_id` gevuld, patch 41) — patch 40 |
@@ -36,6 +36,7 @@
 | `beschikbaarheid` | Beschikbaarheid per atleet per wedstrijd |
 | `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt, gebruikt) |
 | `releasenotes` | Releasenotes (versie, titel, type, beschrijving, `tags` text[] — patch 68, `gearchiveerd`, `gepubliceerd_op`) |
+| `keepalive` | Eén rij met een tijdstempel die dagelijks wordt bijgewerkt door de databasefunctie `ping()` (GitHub-workflow `supabase-keepalive.yml`); voorkomt dat het gratis project wordt gepauzeerd |
 
 **Belangrijk:** alle datatabellen gebruiken `categorie_id` als toegangssleutel — NIET `eigenaar_id`.
 Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieën.
@@ -43,6 +44,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 100: Documentatie bijgewerkt (patch 100, okt 2026)
+Alleen documentatie, geen code (`app.html` is gelijk aan patch 99). Tag `ui-Z` staat op de commit vóór deze patch (patch 99, `bca306d`). Aanleiding: de vraag of README en projectnotities nog klopten na de reeks van patch 71 tot en met 99.
+- **PROJECTNOTITIES.md:** de tabel "Projectbestanden" is aangepast aan wat er echt in de repository staat (het niet meer bestaande `sprint-u16-dashboard.html` is vervallen; `atletiek_iphone.html`, `pwa_manifest.json`, `logo.svg`, `supabase_setup.sql`, de keep-alive-workflow en de documenten zijn toegevoegd); de tabel "Databasetabellen" kreeg de tabel `keepalive` en een opmerking over `atleten.geboortedatum` met tijd; de roadmap is bijgewerkt (mobiele weergave afgevinkt en de optionele vervolgstappen uit patch 92 tot en met 99 als open punten); bij "Geteste features" staat een verwijzing naar de testmethoden per patch.
+- **README.md:** de lijst Functies noemt nu ook Prestaties, Punten, de Wedstrijddag, het slepen, de Excel-import en de Excel-back-up; er staat een alinea over de keep-alive-workflow en de bestandentabel noemt die.
+- **Controle:** de commit-opdracht voor documentatie (`commit_docs.py`) controleert vooraf dat `app.html` ongewijzigd is, dat het CHANGELOG alleen een toevoeging bevat en dat de lange patchgeschiedenis in PROJECTNOTITIES.md alleen deze nieuwe sectie erbij krijgt.
+- **Terugdraaien:** Revert op de commit van patch 100, of terug naar tag `ui-Z`.
 
 ### Patch 99: Opstelling, slepen met een vinger (patch 99, okt 2026)
 Laatste onderdeel van de mockup-reeks. Live-kritiek (Opstelling): bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Tag `ui-Y` komt op de commit vóór deze patch (patch 98, `614250f`).
@@ -743,11 +751,20 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 
 | Bestand | Doel |
 |---------|------|
-| `app.html` | Hoofd-app (atleten, prestaties, wedstrijden, opstelling, admin) |
+| `app.html` | Hoofd-app (home, atleten, prestaties, wedstrijden, wedstrijddag, opstelling, punten, profiel, admin) |
 | `index.html` | Login + registratie + 2FA setup |
+| `atletiek_iphone.html` | Mobiele weergave (apart bestand) |
 | `pwa_sw.js` | Service worker (netwerk-eerst voor HTML, patch 44) |
+| `pwa_manifest.json` | PWA-configuratie |
+| `logo.svg` | Logo |
+| `supabase_setup.sql` | Beginstructuur van de database (geen reset-script; bevat niet alle latere wijzigingen) |
+| `.github/workflows/supabase-keepalive.yml` | Dagelijkse ping die voorkomt dat het gratis Supabase-project wordt gepauzeerd |
+| `README.md` | Overzicht van de app en de database-setup |
+| `CHANGELOG.md` | Wijzigingen per patch |
+| `PROJECTNOTITIES.md` | Dit bestand |
 | `Sprint_U16_Spelregels.pdf` | Spelregels & werking voor trainers |
-| `sprint-u16-dashboard.html` | Standalone statusdashboard (Supabase live checks) |
+
+*Het statusdashboard `sprint-u16-dashboard.html` dat hier eerder stond bestaat niet meer in de repository.*
 
 ---
 
@@ -757,7 +774,13 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 - [x] Categorie U14 activeren (patch 45) — onderdelen, punten, branding en import categorie-bewust
 - [ ] Categorie U18/U20 activeren — let op: eigen NAU-puntentabel (constanten moeten dan categorie-afhankelijk worden) + gecombineerde categorie per geslacht
 - [ ] Excel-import testen met meerdere trainers
-- [ ] Mobiele weergave verbeteren (optioneel)
+- [x] Mobiele weergave verbeteren (patches 71 t/m 99: onderbalk met Meer-menu, stappen in de opstelling, slepen met een vinger)
+- [ ] De Wedstrijddag (patches 95 en 96) en het slepen met een vinger (patch 99, schakelaar in Profiel) in de praktijk testen bij een echte wedstrijd, ook op een iPhone; daarna eventueel het slepen met een vinger standaard aanzetten
+- [ ] Optioneel: onderdelen per atleet zelf instellen (nieuw veld op `atleten`; nu afgeleid uit de PR's, patch 93)
+- [ ] Optioneel: PR-geschiedenis bewaren (nu wordt bij een nieuwe PR de oude verwijderd; het verloop komt uit de wedstrijdresultaten, patch 92)
+- [ ] Optioneel: een gedeelde, handmatige "nu bezig"-markering op de Wedstrijddag (nu het eerste onderdeel dat nog niet is ingevoerd, patch 96; vraagt een kolom op `wedstrijden`)
+- [ ] Optioneel: het moment van de laatste back-up in de database vastleggen (nu per apparaat in de browser, patch 94)
+- [ ] Optioneel: de datums met tijd in `atleten.geboortedatum` opschonen met SQL (eerst het kolomtype controleren en een back-up maken; de app gaat er sinds patch 97 en 98 al goed mee om)
 
 ---
 
@@ -771,3 +794,7 @@ categorie-switcher, categorie-isolatie, uitnodiging met categorie, 2FA setup.
 
 Nieuw getest (patch 28): uitnodiging correct als "gebruikt" gemarkeerd na registratie,
 uitnodigingen-geschiedenis sectie, welkomstmail na registratie, gebruikerslijst toont alle trainers.
+
+Vanaf patch 71 (UI-herontwerp) staat bij elke patch in de sectie "Bekende technische beslissingen" hoe die is getest
+(gedragstests oud tegen nieuw met een nagebootste database, rekentests met een onafhankelijke berekening,
+pixelvergelijking op meerdere schermbreedtes en in print).

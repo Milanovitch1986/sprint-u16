@@ -6,6 +6,15 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 100] — 2026-10-11
+
+### 📝 Documentatie bijgewerkt (README en projectnotities)
+
+Alleen documentatie; er is geen code gewijzigd en er is geen releasenote voor gebruikers. Aanleiding: de vraag of de README en de projectnotities nog klopten na de reeks van patch 71 tot en met 99.
+
+- **README.md:** de lijst Functies noemt nu ook Prestaties (met het verloop), Punten, de Wedstrijddag (live resultaten met een wachtrij bij weinig verbinding en een voortgangskaart), het slepen met de muis of de vinger, de Excel-import en de Excel-back-up. Nieuw: een alinea over de dagelijkse keep-alive-workflow van Supabase, en die staat ook in de bestandentabel.
+- **PROJECTNOTITIES.md:** de tabel "Projectbestanden" komt overeen met de repository (het niet meer bestaande dashboardbestand is vervallen, ontbrekende bestanden zijn toegevoegd); de tabel "Databasetabellen" noemt `keepalive` en dat `atleten.geboortedatum` bij sommige atleten een tijd kan bevatten; de roadmap is bijgewerkt (mobiele weergave afgevinkt, optionele vervolgstappen als open punten); een verwijzing naar de testmethoden per patch; een sectie voor deze patch.
+
 ## [oktober 2026 — patch 99] — 2026-10-10
 
 ### 📋 Opstelling: atleten slepen met je vinger
