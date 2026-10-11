@@ -4044,7 +4044,7 @@ function openAtleetModal(id = null) {
     const a = atleten.find(x => String(x.id) === String(id));
     if (a) {
       document.getElementById("f-naam").value          = a.naam || "";
-      document.getElementById("f-geboortedatum").value = a.geboortedatum || "";
+      document.getElementById("f-geboortedatum").value = veldDatum(a.geboortedatum);   // patch 98: alleen het datumdeel, anders blijft het veld leeg en wist opslaan de datum
       document.getElementById("f-geslacht").value      = a.geslacht || "M";
       document.getElementById("f-club").value          = "AV Sprint";
       document.getElementById("f-bondsnr").value       = a.bondsnr || "";
@@ -8108,6 +8108,13 @@ function backupDatum(waarde) {
   const tekst = String(waarde == null ? "" : waarde).trim();
   const m = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(tekst);
   return m ? m[1] : tekst;
+}
+
+function veldDatum(waarde) {
+  // De waarde voor een datumveld (<input type="date">): alleen JJJJ-MM-DD. Heeft de opgeslagen datum een tijd ("2011-11-30 00:00:00" of
+  // "2011-11-30T00:00:00"), dan blijft een datumveld anders leeg en zou opslaan de geboortedatum wissen (patch 98). Geen datum = leeg.
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(String(waarde == null ? "" : waarde).trim());
+  return m ? m[1] : "";
 }
 
 // ── Wedstrijddag-modus (patch 47) ─────────────────────────────

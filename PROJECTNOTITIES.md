@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 97)*
+*AV Sprint Breda · Laatste update: 10 oktober 2026 (patch 98)*
 
 ---
 
@@ -43,6 +43,13 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 98: Bewerkvenster atleet, geboortedatum met tijd (patch 98, okt 2026)
+Fix voor de bevinding bij patch 97 (datarisico). Tag `ui-X` staat op de commit vóór deze patch (patch 97, `d628459`). Niet live-kritiek: direct na de tests gecommit.
+- **Oorzaak bevestigd met een test:** `openAtleetModal()` zette `a.geboortedatum` rechtstreeks in `#f-geboortedatum` (`<input type="date">`). Bevat die waarde een tijd, dan wordt het veld leeg; `saveAtleet()` schrijft `geboortedatum: value || null`, dus een bewerking van een ander veld (bondsnummer) wist de datum. In de oude versie was dat met een nagebootste atleet reproduceerbaar (`null` in de schrijfaanroep).
+- **Fix:** `veldDatum(waarde)` (regex `^(\d{4}-\d{2}-\d{2})(?:[T ]|$)`, anders leeg) vult het veld; `saveAtleet()` ongewijzigd. Een bewerking ruimt de tijd bij die atleet dus vanzelf op. De database is niet aangeraakt; een opschoning (bijvoorbeeld een SQL-opdracht die de tijd van `atleten.geboortedatum` haalt) is niet nodig, maar kan; eerst het type van de kolom controleren en een back-up maken.
+- **Testmethode (nieuw geleerd):** reproduceer een vermoed datarisico eerst in de oude versie (hier: opslaan na alleen een ander veld te wijzigen geeft `null`), en laat dezelfde test op de nieuwe versie het verschil bewijzen.
+- **Terugdraaien:** Revert op de commit van patch 98, of terug naar tag `ui-X`.
 
 ### Patch 97: Excel-back-up, geboortedatum zonder tijd (patch 97, okt 2026)
 Kleine fix op verzoek (Milanovitch toonde een screenshot van de back-up). Tag `ui-W` staat op de commit vóór deze patch (patch 96, `28d1e9f`). Admin is niet live-kritiek: direct na de tests gecommit.

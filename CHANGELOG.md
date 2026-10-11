@@ -6,6 +6,30 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [oktober 2026 — patch 98] — 2026-10-10
+
+### 🛡️ Bewerkvenster atleet: geboortedatum met tijd
+
+<!--RELEASENOTE
+versie: Patch 98
+titel: 🛡️ Bewerkvenster atleet: geboortedatum met tijd
+type: fix
+tags: atleten
+beschrijving: Bij sommige atleten stond in het bewerkvenster een lege geboortedatum, en opslaan wiste die datum dan. Dat is opgelost: de datum wordt nu altijd getoond en blijft bewaard.
+-->
+
+Achtentwintigste stap na het UI-herontwerp: een fix naar aanleiding van de bevinding bij patch 97. **Geen databasewijziging.**
+
+**Het probleem.** Bij een deel van de atleten bewaart de database de geboortedatum met een tijd (`2011-11-30 00:00:00`). Een datumveld accepteert alleen `JJJJ-MM-DD`, dus bij zo'n atleet was het veld Geboortedatum in het bewerkvenster **leeg**, en opslaan (bijvoorbeeld na het aanpassen van een bondsnummer) schreef dan "geen datum": de geboortedatum van die atleet was weg.
+
+**De fix.** Het bewerkvenster gebruikt nu alleen het datumdeel (`JJJJ-MM-DD`). Een datum zonder tijd, of zonder datum, gedraagt zich als voorheen. Opslaan bewaart voortaan de zuivere datum, waarmee de tijd bij zo'n atleet vanzelf verdwijnt zodra je hem opslaat.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functie `veldDatum(waarde)` (herkent `JJJJ-MM-DD` gevolgd door niets, een spatie of een `T`; anders leeg); in `openAtleetModal()` is één regel aangepast. `saveAtleet()` is niet gewijzigd. Alle andere JavaScript is byte-voor-byte gelijk aan patch 97.
+- Gecontroleerd, oud tegen nieuw, met acht atleten (met tijd met spatie, `T`, tijdzone en een echte tijd, zonder tijd, leeg, lege tekst, onleesbaar): het veld in het bewerkvenster en de waarde die `saveAtleet()` wegschrijft nadat alleen het bondsnummer is aangepast. In de oude versie was het veld leeg en werd `null` geschreven bij elke datum met tijd; in de nieuwe staat de datum erin en wordt `JJJJ-MM-DD` geschreven. Zonder tijd, leeg of onleesbaar is het gedrag gelijk aan voorheen.
+- Niet getest: je echte atleten (nagebootst). De database zelf is niet opgeschoond; dat is niet nodig voor deze fix.
+
 ## [oktober 2026 — patch 97] — 2026-10-10
 
 ### 💾 Excel-back-up: geboortedatum zonder tijd
