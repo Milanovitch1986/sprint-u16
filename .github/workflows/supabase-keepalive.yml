@@ -14,8 +14,10 @@
 name: Supabase keep-alive
 
 on:
-  schedule:
-    - cron: "0 6 * * *"   # elke dag om 06:00 UTC
+    schedule:
+    - cron: "0 6 * * *"    # 's ochtends 06:00 UTC
+    - cron: "0 14 * * *"   # 's middags 14:00 UTC
+    - cron: "0 22 * * *"   # 's avonds 22:00 UTC
   workflow_dispatch:          # maakt handmatig starten mogelijk
 
 jobs:
