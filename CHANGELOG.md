@@ -6,6 +6,36 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 102] — 2026-11-04
+
+### 🛠️ Juiste categorienaam in afdruk en WhatsApp, en regels voor U18/U20
+
+<!--RELEASENOTE
+versie: Patch 102
+titel: 🛠️ Juiste categorienaam in afdruk en WhatsApp, en regels voor U18/U20
+type: bugfix
+tags: opstelling
+beschrijving: In de afdruk van de opstelling en in de WhatsApp-teksten stond altijd "U16", ook bij een andere categorie. Dat is nu de naam van de actieve categorie. Het keuzemenu bij Punten toont bij U14 nu de onderdelen van U14. Voor U18/U20 is de 3-uursregel aangepast (800m/1500m tegen 400m/400m horden) en de import van een finale-tijdschema herkent nu de rijen van U18 en U20. Bij U16 verandert er niets.
+-->
+
+Vervolg op patch 101: de eerste open punten voor de categorie U18/U20. **Geen databasewijziging.** Bij U16 verandert er niets in het gedrag; bij U14 verandert alleen het keuzemenu bij Punten en de tekst in afdruk en WhatsApp.
+
+**Juiste categorienaam.** In de afdruk van de opstelling (hele wedstrijd en per ploeg), in beide WhatsApp-teksten en in het label van een startgroep bij een technisch onderdeel stond de tekst "U16" vast. Dat is nu de naam van de actieve categorie. Bij U16 komt precies dezelfde tekst uit.
+
+**Keuzemenu bij Punten (U14).** U14 toonde nog de onderdelenlijst van U16. U14 heeft nu zijn eigen lijst: 60m, 80m, 600m, 1000m, 60m horden, 80m horden en de technische onderdelen. U16 blijft ongewijzigd.
+
+**3-uursregel per categorie.** Bij het automatisch opstellen mogen 800m en 1500m niet binnen 3 uur bij de 300m of 300m horden. Voor **U18/U20** geldt dat nu voor de **400m en 400m horden** (op keuze van Milanovitch). U14 en U16 houden de 300m en 300m horden. De regel werkt alleen bij het automatisch opstellen en aanvullen, zoals voorheen.
+
+**Finale-import (U18/U20).** De import van een finale-tijdschema vergeleek de categorie in elke cel (bijvoorbeeld "U18") met de naam van de actieve categorie ("U18/U20") en sloeg daardoor **alle** rijen over: bij U18/U20 werd niets geïmporteerd. Nu telt een samengestelde naam voor zowel U18 als U20. Rijen van andere categorieën worden nog steeds overgeslagen.
+
+#### Technisch
+
+- Geen databasewijziging. Geen nieuwe of verdwenen functies (398 functies, 315 id's, 155 handlers; contract-check 0 verdwenen, 0 nieuw). Aangepast: het startgroep-label in `renderPloeg()`, de afdruksjablonen in `bouwAlleTeams()` (de afdruk van de hele opstelling) en `printPloeg()` (`catNaam()` in plaats van vast "U16"), de kop van de WhatsApp-teksten in `deelGekozenTeamsViaWhatsApp()` en `deelPloegViaWhatsApp()` (`catNaam().toUpperCase()`), `heeftDrieUurConflict()`, `werkPuntenSelectBij()` en `ontleedFinaleCel()`. In `CATEGORIE_CONFIG`: U14 kreeg `puntenLijst`, U18/U20 kreeg `drieUur: { midden, sprint }`. In totaal 16 plekken aangepast; de rest van de JavaScript is gelijk aan patch 101.
+- `heeftDrieUurConflict()` kiest de sets uit de config van de actieve categorie als die `drieUur` heeft, anders de vaste `MIDDEN_AFSTANDEN` en `SPRINT_COMBINATIES`. `werkPuntenSelectBij()` vergelijkt nu de inhoud van de lijst (niet meer alleen "eigen" of "standaard"), zodat wisselen tussen U14 en U18/U20 ook de lijst wisselt. `ontleedFinaleCel()` gebruikt `categorieNaamDekt()` (patch 49) in plaats van gelijkheid; een lege categorienaam wordt nog steeds overgeslagen.
+- Gecontroleerd: `node --check` op alle scriptblokken; contract-check; rooktest: alle drie de scriptblokken laden in de oude en de nieuwe versie zonder fout. **3-uursregel oud tegen nieuw** voor U16, U14, zonder categorie, U12 en Senioren: 968.000 combinaties van onderdeel en starttijd, 0 verschillen; voor U18/U20 11 gevallen en voor U16 3 gevallen tegen de verwachting (800m of 1500m bij 400m of 400m horden binnen en buiten 3 uur, geen conflict met 300m, 3000m of 100m): 0 fouten. **Finale-parser oud tegen nieuw** voor U16, U14 en Senioren: 45 en 18 cellen (waaronder het echte formaat "Hoogspringen U18 groep A 12 atleten"), 0 verschillen; bij "U18/U20" werden in de oude versie alle 9 cellen overgeslagen en worden nu de 5 cellen van U18 en U20 herkend en de 4 van andere categorieën overgeslagen. Keuzemenu bij Punten: U16 exact de oorspronkelijke lijst, U14 11 opties zonder estafettes, U18/U20 30 opties, en terugwisselen herstelt de lijst. Kop van de WhatsApp-tekst: U16 geeft dezelfde tekst als voorheen.
+- **Niet getest:** de echte afdruk en de echte WhatsApp-tekst in een browser (de aangepaste uitdrukkingen zijn getest, niet de volledige functies); het automatisch opstellen met echte atleten; de import van een echt finale-tijdschema van U18/U20 (er is er nog geen).
+- **Nog open voor U18/U20:** (1) de namen van onderdelen in een finale-tijdschema die afwijken van de namen in de app (bijvoorbeeld afkortingen) worden pas herkend als er een voorbeeld is; een naam die niet matcht komt in de lijst "onbekend"; (2) staan U18 en U20 in een tijdschema als aparte rijen, dan komt hetzelfde onderdeel mogelijk twee keer langs; (3) namen met hordehoogte of gewicht in een lang PR-bestand ("kogelstoten 5kg") wachten op een voorbeeldbestand; (4) de 300m horden (volgens de richtlijnen 2026-2027 nieuw voor U18/U20/senioren) hebben nog geen constanten in de publicatie van december 2025 en geven dus 0 punten.
+
 ## [november 2026 — patch 101] — 2026-11-04
 
 ### 🏃 U18/U20 voorbereid: onderdelen en punten

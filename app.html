@@ -3505,18 +3505,18 @@ function showTab(tab) {
 let puntenRijen = [];
 let puntenTeller = 0;
 
-// patch 101: het keuzemenu "Onderdeel" bij Punten volgt de categorie. U14 en U16 houden de vaste lijst uit de pagina;
-// alleen een categorie met een eigen puntenLijst (U18/U20) krijgt een andere lijst. Bij een gelijkblijvende soort gebeurt er niets.
+// patch 101/102: het keuzemenu "Onderdeel" bij Punten volgt de categorie. U16 houdt de vaste lijst uit de pagina;
+// een categorie met een eigen puntenLijst (U14 sinds patch 102, U18/U20) krijgt die lijst. Bij een gelijkblijvende lijst gebeurt er niets.
 function werkPuntenSelectBij() {
   try {
     const sel = document.getElementById("punten-discipline");
     if (!sel) return;
     if (window.__puntenOptiesStandaard === undefined) { window.__puntenOptiesStandaard = sel.innerHTML; window.__puntenOptiesSoort = "standaard"; }
     const cfg = catConfig();
-    const soort = (cfg && cfg.puntenLijst) ? "eigen" : "standaard";
+    const soort = (cfg && cfg.puntenLijst) ? cfg.puntenLijst.join("|") : "standaard";
     if (soort === window.__puntenOptiesSoort) return;
     const huidig = sel.value;
-    sel.innerHTML = (soort === "eigen")
+    sel.innerHTML = (soort !== "standaard")
       ? cfg.puntenLijst.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("")
       : window.__puntenOptiesStandaard;
     window.__puntenOptiesSoort = soort;
@@ -5854,10 +5854,10 @@ DISC_U18U20.forEach(d => { PR_KOLOM_MAP_U18U20[d.naam.toLowerCase()] = d.naam; }
 const PR_TIJD_KOLOMMEN_U18U20 = new Set(DISC_U18U20.filter(d => d.type !== "technisch").map(d => d.naam.toLowerCase()));
 
 // Centrale config per categorie. Optionele velden: puntenTabel (eigen puntentabel), prLijst (PR-formulier per geslacht),
-// exportLijst (PR-export), volgorde (sortering bij Prestaties) en puntenLijst (keuzemenu bij Punten).
+// exportLijst (PR-export), volgorde (sortering bij Prestaties), puntenLijst (keuzemenu bij Punten) en drieUur (eigen 3-uursregel).
 const CATEGORIE_CONFIG = {
   "U16": { disciplines: DISC_U16 },
-  "U14": { disciplines: DISC_U14 },
+  "U14": { disciplines: DISC_U14, puntenLijst: DISC_U14.filter(d => d.type !== "estafette").map(d => d.naam) }, // patch 102: eigen lijst bij Punten
   "U18/U20": {
     disciplines: DISC_U18U20,
     puntenTabel: "U18U20",
@@ -5865,6 +5865,8 @@ const CATEGORIE_CONFIG = {
     exportLijst: _U18U20_ENKEL,
     volgorde: _U18U20_ENKEL.concat(DISC_U18U20.filter(d => d.type === "estafette").map(d => d.naam)).map(n => n.toLowerCase()),
     puntenLijst: _U18U20_ENKEL,
+    // patch 102: voor U18/U20 geldt de 3-uursregel voor 800m/1500m tegen 400m/400m horden (U14 en U16: 300m/300m horden, zie MIDDEN_AFSTANDEN)
+    drieUur: { midden: new Set(["800m", "1500m"]), sprint: new Set(["400m", "400m horden"]) },
   },
 };
 // Config van de actieve categorie (of null). Een naam die U18 of U20 bevat ("U18/U20", "U18-U20", "U20") krijgt de U18/U20-config.
@@ -6661,7 +6663,7 @@ function renderPloeg(ploeg, isOpen = false) {
 
     const geslachtCode = actiefGeslacht === "V" ? "V" : "M";
     const startgroepLabel = isTechnisch && item.startgroep
-      ? `U16-${geslachtCode} - Groep ${item.startgroep}`
+      ? `${catNaam()}-${geslachtCode} - Groep ${item.startgroep}` // patch 102: was vast "U16"
       : "";
 
     // Initialiseer verzameling voor deze discipline als die nog niet bestaat
@@ -6790,17 +6792,21 @@ const SPRINT_COMBINATIES = new Set(["300m", "300m horden"]);
 
 function heeftDrieUurConflict(nieuweDisc, nieuweTijd, ingeplandLijst) {
   if (!nieuweTijd) return false;
+  // patch 102: een categorie met een eigen 3-uursregel (U18/U20) gebruikt die; U14 en U16 de vaste sets hierboven
+  const _cfg3 = catConfig();
+  const _midden = (_cfg3 && _cfg3.drieUur) ? _cfg3.drieUur.midden : MIDDEN_AFSTANDEN;
+  const _sprint = (_cfg3 && _cfg3.drieUur) ? _cfg3.drieUur.sprint : SPRINT_COMBINATIES;
   // Bepaal of de nieuwe discipline een middenafstand of een sprintcombinatie is
-  const nieuweIsMidden  = MIDDEN_AFSTANDEN.has(nieuweDisc);
-  const nieuweIsSprint  = SPRINT_COMBINATIES.has(nieuweDisc);
+  const nieuweIsMidden  = _midden.has(nieuweDisc);
+  const nieuweIsSprint  = _sprint.has(nieuweDisc);
   if (!nieuweIsMidden && !nieuweIsSprint) return false; // regel geldt niet
 
   const nieuwMin = tijdNaarMinuten(nieuweTijd);
 
   for (const ingepland of ingeplandLijst) {
     if (!ingepland.starttijd || !ingepland.discipline) continue;
-    const ingeplandIsMidden = MIDDEN_AFSTANDEN.has(ingepland.discipline);
-    const ingeplandIsSprint = SPRINT_COMBINATIES.has(ingepland.discipline);
+    const ingeplandIsMidden = _midden.has(ingepland.discipline);
+    const ingeplandIsSprint = _sprint.has(ingepland.discipline);
 
     // Conflict = één is midden, ander is sprint, én tijdsverschil < 180 min
     const combinatieConflict =
@@ -10299,7 +10305,7 @@ async function printOpstelling() {
       const pageBreakStyle = isAllereersteTeam ? "" : `style="page-break-before: always;"`;
       const headerHtml = isAllereersteTeam ? `
         <div class="doc-header">
-          <div class="club-naam">AV Sprint Breda — U16</div>
+          <div class="club-naam">AV Sprint Breda — ${esc(catNaam())}</div>
           <div class="wedstrijd-titel">${esc(wedstrijdNaam)}</div>
           <div class="wedstrijd-meta">${[wedstrijdDatum, wedstrijdLoc].filter(Boolean).join(" · ")}</div>
           <div class="print-datum">Afgedrukt op ${printDatum}</div>
@@ -10586,7 +10592,7 @@ function deelGekozenTeamsViaWhatsApp() {
 
   // Header
   let tekst = "";
-  tekst += "⚡ AV SPRINT BREDA — U16\n";
+  tekst += "⚡ AV SPRINT BREDA — " + catNaam().toUpperCase() + "\n"; // patch 102: was vast "U16"
   tekst += `📋 ${wedstrijd.naam}\n`;
   if (wedstrijd.datum)   tekst += `📅 ${formatDate(wedstrijd.datum)}\n`;
   if (wedstrijd.locatie) tekst += `📍 ${wedstrijd.locatie}\n`;
@@ -10720,7 +10726,7 @@ async function printPloeg(ploeg) {
 </head>
 <body>
   <div class="doc-header">
-    <div class="club-naam">AV Sprint Breda — U16</div>
+    <div class="club-naam">AV Sprint Breda — ${esc(catNaam())}</div>
     <div class="wedstrijd-titel">${esc(wedstrijd.naam)}</div>
     <div class="wedstrijd-meta">${[wedstrijd.datum ? formatDate(wedstrijd.datum) : "", wedstrijd.locatie || ""].filter(Boolean).join(" · ")}</div>
     <div class="print-datum">Afgedrukt op ${printDatum}</div>
@@ -10756,7 +10762,7 @@ function deelPloegViaWhatsApp(ploeg) {
   const opst     = opstellingData[ploeg] || {};
 
   let tekst = "";
-  tekst += "⚡ AV SPRINT BREDA — U16\n";
+  tekst += "⚡ AV SPRINT BREDA — " + catNaam().toUpperCase() + "\n"; // patch 102: was vast "U16"
   tekst += `📋 ${wedstrijd.naam}\n`;
   if (wedstrijd.datum)   tekst += `📅 ${formatDate(wedstrijd.datum)}\n`;
   if (wedstrijd.locatie) tekst += `📍 ${wedstrijd.locatie}\n`;
@@ -12820,7 +12826,8 @@ function ontleedFinaleCel(tekst, catNaam) {
   const m = s.match(/U\s*(\d{2})/i);
   if (!m) return null; // geen categorie-aanduiding → geen onderdeel
   const cat = "U" + m[1];
-  if (cat.toLowerCase() !== String(catNaam).toLowerCase()) return { skipCat: true };
+  // patch 102: een samengestelde naam ("U18/U20") dekt zowel "U18" als "U20"; met alleen gelijkheid werd bij U18/U20 elke rij overgeslagen
+  if (!String(catNaam || "") || !categorieNaamDekt(String(catNaam), cat)) return { skipCat: true };
 
   let groep = null;
   const g = s.match(/groep\s+([AB])/i);

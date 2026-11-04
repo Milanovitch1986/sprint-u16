@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 november 2026 (patch 101)*
+*AV Sprint Breda · Laatste update: 4 november 2026 (patch 102)*
 
 ---
 
@@ -44,6 +44,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 102: Categorienaam in afdruk en WhatsApp, regels voor U18/U20 (patch 102, nov 2026)
+Vervolg op patch 101 met de eerste open punten voor U18/U20. Live-kritiek (raakt het automatisch opstellen): bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Tag `ui-AB` komt op de commit vóór deze patch (patch 101, `7d806f5`).
+- **Keuzes (Milanovitch):** 3-uursregel voor U18/U20 = 800m/1500m tegen 400m/400m horden (U14 en U16 blijven 300m/300m horden); U18/U20 doet mee aan finales met een Excel-tijdschema; voor de import van namen met hordehoogte of gewicht en de onderdeelnamen in een finale-tijdschema is een voorbeeldbestand nodig, maar dat is er nog niet (hij heeft nog geen PR-bestand en geen tijdschema's voor finales van U18/U20). Handtijd-correctie (0,24 s): bewust niet gedaan (de app kent geen onderscheid tussen hand- en elektronische tijd).
+- **Opbouw:** hetzelfde patroon als patch 101: een optioneel veld in `CATEGORIE_CONFIG` (`drieUur: { midden, sprint }` voor U18/U20, `puntenLijst` nu ook voor U14) en een plek in de code die ernaar kijkt en anders terugvalt op de oude vaste waarde. `catNaam()` vervangt het vaste "U16" in de afdruk (hele wedstrijd en per ploeg), beide WhatsApp-koppen en het startgroep-label.
+- **Bevinding finale-import:** `ontleedFinaleCel()` vergeleek de categorie in een cel ("U18") met de naam van de actieve categorie ("U18/U20") op gelijkheid, dus bij U18/U20 werden alle rijen overgeslagen en werd niets geïmporteerd. Nu `categorieNaamDekt()` (patch 49). Het echte celformaat is `Onderdeel Uxx groep A nn atleten`.
+- **Open voor U18/U20 (wacht op voorbeeldbestanden):** namen met hordehoogte of gewicht in een lang PR-bestand; onderdeelnamen en afkortingen in een finale-tijdschema (`FINALE_DISC_MAP`); of U18 en U20 als aparte rijen dubbele onderdelen geven; de 300m horden (nieuw voor U18/U20/senioren volgens de richtlijnen 2026-2027) hebben geen constanten in de publicatie van december 2025 en geven 0 punten.
+- **Testmethode:** `node --check`; contract-check; rooktest van alle scriptblokken; 3-uursregel oud tegen nieuw voor U16, U14, zonder categorie, U12 en Senioren (968.000 combinaties, 0 verschillen) plus verwachte uitkomsten voor U18/U20; finale-parser oud tegen nieuw met het echte celformaat; keuzemenu bij Punten per categorie en terug. Niet getest: de echte afdruk en WhatsApp in een browser, automatisch opstellen met echte atleten, een echt finale-tijdschema van U18/U20.
+- **Terugdraaien:** Revert op de commit van patch 102, of terug naar tag `ui-AB`.
 
 ### Patch 101: U18/U20 voorbereid, onderdelen en punten (patch 101, nov 2026)
 Voorbereiding op de categorie U18/U20; de categorie zelf is nog niet aangemaakt (dat gebeurt in het Admin-paneel, geen SQL). Geraakt zijn functies die ook op de wedstrijddag worden gebruikt (punten, PR's); daarom bouwen, testen en pas committen na "commit nu". Tag `ui-AA` komt op de commit vóór deze patch (patch 100, `32802cf`).
@@ -783,7 +792,7 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 
 - [ ] Meerdere trainers per categorie uitnodigen en testen
 - [x] Categorie U14 activeren (patch 45) — onderdelen, punten, branding en import categorie-bewust
-- [ ] Categorie U18/U20 activeren — onderdelen en puntentelling zijn klaar (patch 101); nog te doen: de categorie aanmaken in het Admin-paneel, testen met testatleten, onderdelen schrappen die jullie niet doen, en de open punten bij patch 101 (3-uursregel, namen met hordehoogte of gewicht bij de import, "U16" in afdruk en WhatsApp)
+- [ ] Categorie U18/U20 activeren — onderdelen en puntentelling zijn klaar (patch 101), de 3-uursregel, de categorienaam in afdruk en WhatsApp en de categorie-herkenning bij de finale-import ook (patch 102); nog te doen: de categorie aanmaken in het Admin-paneel, testen met testatleten, onderdelen schrappen die jullie niet doen, en de import van namen met hordehoogte of gewicht en van finale-tijdschema's, zodra er voorbeeldbestanden zijn
 - [ ] Optioneel: de afrondmarge van patch 101 ook voor U14 en U16 toepassen (6 afwijkingen op 242.209 berekeningen)
 - [ ] Excel-import testen met meerdere trainers
 - [x] Mobiele weergave verbeteren (patches 71 t/m 99: onderbalk met Meer-menu, stappen in de opstelling, slepen met een vinger)
