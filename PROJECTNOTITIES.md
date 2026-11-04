@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 11 oktober 2026 (patch 100)*
+*AV Sprint Breda · Laatste update: 4 november 2026 (patch 101)*
 
 ---
 
@@ -44,6 +44,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 101: U18/U20 voorbereid, onderdelen en punten (patch 101, nov 2026)
+Voorbereiding op de categorie U18/U20; de categorie zelf is nog niet aangemaakt (dat gebeurt in het Admin-paneel, geen SQL). Geraakt zijn functies die ook op de wedstrijddag worden gebruikt (punten, PR's); daarom bouwen, testen en pas committen na "commit nu". Tag `ui-AA` komt op de commit vóór deze patch (patch 100, `32802cf`).
+- **Keuzes (Milanovitch):** U18/U20 volgt dezelfde competitieregels als U16 (3 atleten per onderdeel, 1 bij technisch, 4 bij estafette, maximaal 3 onderdelen, 15 minuten); alle onderdelen uit de Atletiekunie-tabel, schrappen volgt later; eerst patch 101 (onderdelen en punten), de U16-tekst in print en WhatsApp volgt apart. De U16-app blijft ongewijzigd bruikbaar voor nieuwe U16-atleten volgend seizoen: dit is alleen een uitbreiding.
+- **Opbouw:** `CATEGORIE_CONFIG` heeft nu een sleutel "U18/U20" met optionele velden (`puntenTabel`, `prLijst`, `exportLijst`, `volgorde`, `puntenLijst`); `catConfig()` zoekt de config bij de actieve categorie (exacte naam, anders een naam met U18 of U20 erin). Plekken die per categorie anders moeten zijn kijken naar zo'n veld en vallen anders terug op de oude vaste lijst, zodat U14 en U16 niet veranderen. Dit patroon is bedoeld voor een volgende categorie.
+- **Puntentelling:** `berekenPunten()` vertakt voor U18/U20 vroeg naar `berekenPuntenU18U20()` met `PUNTEN_U18U20` (constanten per geslacht uit de Atletiekunie-publicatie "Formules en constanten", december 2025). De U14/U16-code eronder is niet aangeraakt. Oplossing van de eerdere waarschuwing in deze notities: de constanten zijn nu categorie- en geslachtsafhankelijk voor U18/U20, voor U14/U16 blijven ze gedeeld.
+- **Afrondmarge:** voor looponderdelen van U18/U20 wordt `1e-9` opgeteld vóór het afkappen, omdat `A / tijd - B` bij een exact geheel getal anders net onder dat getal uitkomt (800m jongens 2:00,00 = exact 748, zonder marge 747). Gemeten: 0 afwijkingen van de exacte rekensom bij ruim 1,9 miljoen berekeningen, zonder marge 15. De kleinste echte afstand tot een geheel getal is veel groter dan de marge. **U14/U16 heeft hetzelfde effect (6 op 242.209 berekeningen) en is bewust niet aangepast;** met dezelfde ene regel op te lossen als Milanovitch dat wil.
+- **Fout bij U14 hersteld:** `60m horden` ontbrak in `isSprintDiscipline()`; daardoor gold "hoger is beter" voor PR's en stond de eenheid op meter. Bewezen met een test op de oude versie (`isLagerBeter("60m horden")` was `false`).
+- **Open punten en vragen voor U18/U20:** (1) de 3-uursregel (`MIDDEN_AFSTANDEN` 800m/1500m tegen `SPRINT_COMBINATIES` 300m/300m horden) staat vast op U16-namen; voor U18/U20 is misschien de 400m bedoeld; (2) in een lang PR-bestand worden namen met hordehoogte of gewicht voor U18/U20 nog niet vertaald; (3) `FINALE_DISC_MAP` (PDF-import van finales) is niet uitgebreid; (4) afdruk en WhatsApp tonen nog vast "U16" (ook bij U14); (5) het keuzemenu bij Punten van U14 toont nog de U16-lijst; (6) de handtijd-correctie van 0,24 s (en 0,14 s bij 400m) uit de Atletiekunie-publicatie zit niet in de app.
+- **Testmethode:** `node --check`; contract-check; puntentelling oud tegen nieuw voor U16, U14, zonder categorie, U12 en Senioren (288.320 berekeningen, 0 verschillen); U18/U20 tegen een onafhankelijke Python-berekening met apart overgetypte constanten (10.514 gevallen, 0 verschillen) en tegen de exacte rekensom met BigInt (1.977.549 berekeningen); de hulpfuncties oud tegen nieuw voor alle bestaande namen (alleen `60m horden` verschilt); rooktest van alle scriptblokken in een nagebootste omgeving. Niet getest: een echte browser, Supabase, echte atleten en het aanmaken van de categorie.
+- **Terugdraaien:** Revert op de commit van patch 101, of terug naar tag `ui-AA`.
 
 ### Patch 100: Documentatie bijgewerkt (patch 100, okt 2026)
 Alleen documentatie, geen code (`app.html` is gelijk aan patch 99). Tag `ui-Z` staat op de commit vóór deze patch (patch 99, `bca306d`). Aanleiding: de vraag of README en projectnotities nog klopten na de reeks van patch 71 tot en met 99.
@@ -516,7 +527,7 @@ De Opstelling-tab heeft twee stappen: stap 1 = wedstrijdkeuze, stap 2 = het opst
 De onderdelenlijst, de branding en (deels) de puntenberekening zijn nu categorie-afhankelijk in plaats van vast op U16.
 - **Centrale config:** `CATEGORIE_CONFIG` bevat per categorie een onderdelenlijst (`DISC_U16`, `DISC_U14`). `U16_DISCIPLINES` bestaat niet meer als losse lijst; overal in de code wordt nu `getDisciplines()` gebruikt, die de lijst van `actieveCategorie.naam` teruggeeft en bij een onbekende categorie terugvalt op `DISC_U16`. Helper `catNaam()` geeft de categorienaam voor labels (fallback "U16").
 - **U14-onderdelen:** jongens 80m/80mH/4x80m, meisjes 60m/60mH/4x60m; beide 600m, 1000m, hoog, ver, kogel, discus, speer. (Géén 150m/300m/800m/1500m — die staan niet op het U14-programma.) Het verschil M/V is niet hard gesplitst in de code; net als bij U16 is het één gecombineerde lijst waaruit de trainer per atleet kiest.
-- **Punten gedeeld U14/U16:** het NAU-document hanteert één gezamenlijke "U14 én U16"-telling, dus `berekenPunten` gebruikt dezelfde constanten voor beide. Toegevoegd in patch 45: `4x60m` (A=59225, B=1130) en `60m horden` (A=14050, B=795,5 — 76,2 cm / 6 horden). **Let op voor de toekomst:** U18/U20 heeft een *eigen* NAU-tabel; bij het activeren daarvan moeten de constanten zélf categorie-afhankelijk worden gemaakt (nu zijn ze nog gedeeld).
+- **Punten gedeeld U14/U16:** het NAU-document hanteert één gezamenlijke "U14 én U16"-telling, dus `berekenPunten` gebruikt dezelfde constanten voor beide. Toegevoegd in patch 45: `4x60m` (A=59225, B=1130) en `60m horden` (A=14050, B=795,5 — 76,2 cm / 6 horden). **Let op voor de toekomst:** U18/U20 heeft een *eigen* NAU-tabel; bij het activeren daarvan moeten de constanten zélf categorie-afhankelijk worden gemaakt (nu zijn ze nog gedeeld). **Bijgewerkt in patch 101:** voor U18/U20 is dat gedaan (`PUNTEN_U18U20`, per geslacht); U14 en U16 delen nog steeds één tabel.
 - **Branding dynamisch:** `renderCategorieSwitcher()` werkt logo, ondertitel (`#home-subtitle-cat`), `document.title` en de PDF-labels (`#pdf-cat-m`/`#pdf-cat-v`) bij; teamnamen en de "Gedeeld via Sprint …"-teksten gebruiken `catNaam()`.
 - **Import categorie-bewust:** de PDF-schema-import zocht hard naar `U16-M`/`U16-V`; dat is nu een regex op `catNaam()`. In `PDF_DISCIPLINE_VERTALING`, `FINALE_DISC_MAP` en `DISC_MAP` (PR-import) zijn de U14-onderdelen (60m, 60m horden 76,2 cm, 4x60m) van `null` naar echte waarden gezet; `1000m` toegevoegd aan de PDF-map. De 83,8 cm-hordevariant blijft op `null` (U14-meisjes lopen 76,2 cm).
 - **Hoogspringen-correctie:** de drempelformule onder 1,35 m gebruikte `+0,5`; dat is `+0,7` volgens het NAU-document. Opgelost via een per-onderdeel `drempelPlus` in `veldConst` (verspringen 0,5, hoogspringen 0,7).
@@ -772,7 +783,8 @@ De puntentelling in `renderPloeg()` groepeert punten per discipline-naam en past
 
 - [ ] Meerdere trainers per categorie uitnodigen en testen
 - [x] Categorie U14 activeren (patch 45) — onderdelen, punten, branding en import categorie-bewust
-- [ ] Categorie U18/U20 activeren — let op: eigen NAU-puntentabel (constanten moeten dan categorie-afhankelijk worden) + gecombineerde categorie per geslacht
+- [ ] Categorie U18/U20 activeren — onderdelen en puntentelling zijn klaar (patch 101); nog te doen: de categorie aanmaken in het Admin-paneel, testen met testatleten, onderdelen schrappen die jullie niet doen, en de open punten bij patch 101 (3-uursregel, namen met hordehoogte of gewicht bij de import, "U16" in afdruk en WhatsApp)
+- [ ] Optioneel: de afrondmarge van patch 101 ook voor U14 en U16 toepassen (6 afwijkingen op 242.209 berekeningen)
 - [ ] Excel-import testen met meerdere trainers
 - [x] Mobiele weergave verbeteren (patches 71 t/m 99: onderbalk met Meer-menu, stappen in de opstelling, slepen met een vinger)
 - [ ] De Wedstrijddag (patches 95 en 96) en het slepen met een vinger (patch 99, schakelaar in Profiel) in de praktijk testen bij een echte wedstrijd, ook op een iPhone; daarna eventueel het slepen met een vinger standaard aanzetten

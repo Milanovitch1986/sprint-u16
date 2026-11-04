@@ -6,6 +6,38 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 101] — 2026-11-04
+
+### 🏃 U18/U20 voorbereid: onderdelen en punten
+
+<!--RELEASENOTE
+versie: Patch 101
+titel: 🏃 U18/U20 voorbereid: onderdelen en punten
+type: feature
+tags: prestaties
+beschrijving: De app is voorbereid op een categorie U18/U20 met alle onderdelen uit de Atletiekunie-tabel en de officiële puntentelling voor jongens en meisjes apart. U14 en U16 rekenen precies zoals voorheen. Daarnaast is een fout bij U14 verholpen: een PR op de 60m horden telde de verkeerde kant op (een tijd moet lager zijn).
+-->
+
+Voorbereiding op een categorie **U18/U20** (gecombineerd per geslacht), dezelfde competitieregels als U16 (3 atleten per onderdeel, maximaal 3 onderdelen, 15 minuten tussen starts). Er verandert **niets voor U14 en U16**, behalve de verbetering bij de 60m horden hieronder. De categorie zelf is nog **niet aangemaakt**: dat gebeurt later in het Admin-paneel. **Geen databasewijziging.**
+
+**Onderdelen.** De categorie U18/U20 krijgt alle onderdelen uit de Atletiekunie-tabel "Formules en constanten" (december 2025), behalve het gewichtwerpen (alleen masters): 35m tot en met 5000m, de steeples, de horden (50m, 60m, 100m, 110m, 400m), de estafettes (4x100m, 4x200m, 4x400m, 4x400m gemengd en de Zweedse estafette) en de technische onderdelen (hoog, polsstok, ver, hink-stap, kogel, discus, kogelslingeren, speer). Schrappen kan later.
+
+**Punten.** De puntentelling voor senioren, U20/U18 en masters, met aparte constanten voor jongens en meisjes. Bij het hoogspringen van meisjes gelden tot en met 1,40 m andere constanten dan daarboven. Een onderdeel zonder constanten voor dat geslacht (bijvoorbeeld 110m horden bij meisjes) geeft 0 punten.
+
+**Verbetering bij U14: 60m horden.** De app zag de 60m horden niet als tijdonderdeel. Een PR werd daardoor als "hoger is beter" beoordeeld en de eenheid was meter in plaats van seconden. Dat is hersteld.
+
+**Wat verandert per scherm voor U18/U20.** Het keuzemenu bij Punten toont de U18/U20-onderdelen; het PR-formulier toont per geslacht de onderdelen waarvoor de tabel constanten heeft; de PR-export en -import gebruiken deze onderdelen; de lijst met PR's sorteert logisch (kort naar lang, dan springen en werpen); bij het importeren van een lang PR-bestand worden gewone namen als "400 meter" of "3000 meter steeplechase" vertaald.
+
+#### Technisch
+
+- Geen databasewijziging. Nieuwe functies: `catConfig()` (de config van de actieve categorie; een naam met U18 of U20 erin, zoals "U18/U20", "U18-U20" of "U20", krijgt de U18/U20-config), `berekenPuntenU18U20()` en `werkPuntenSelectBij()`. Nieuwe gegevens: `DISC_U18U20` (35 onderdelen), `PUNTEN_U18U20` (constanten per geslacht, sleutels in kleine letters), `CATEGORIE_CONFIG["U18/U20"]` met de optionele velden `puntenTabel`, `prLijst`, `exportLijst`, `volgorde` en `puntenLijst`, en de hulptabellen `PR_KOLOM_MAP_U18U20`, `PR_TIJD_KOLOMMEN_U18U20` en `DISC_MAP_EXTRA_U18U20`.
+- Aangepast: `getDisciplines()` (gebruikt `catConfig()`), `berekenPunten()` (een extra vroege vertakking voor U18/U20; de bestaande U14/U16-code is niet aangeraakt), `isSprintDiscipline()`, `isMiddellangeAfstandDiscipline()` en `isVeldDiscipline()` (nieuwe namen erbij, plus `60m horden`), `updateEenheidField()` (gebruikt nu `isVeldDiscipline()`), `getPRDisciplinesVoorAtleet()` en de controle op een bestaand eigen onderdeel, de PR-export, de sortering in `renderPrestatieTable()`, `TIJD_DISCIPLINES`, `mapDisc()`, de kolomherkenning bij het PR-overzicht importeren, `onderdeelVolgorde()` (herkent "estafette" in de naam) en `renderCategorieSwitcher()` (roept `werkPuntenSelectBij()` aan). In totaal zijn 17 oude regels vervangen; de rest is toevoeging.
+- Rekenmethode: looponderdelen `INT(A / tijd - B + 1e-9)`, spring- en werponderdelen `INT(A * SQRT(afstand) - B)`. De marge van 1e-9 corrigeert het drijvende-komma-effect bij uitkomsten die precies een geheel getal zijn (bijvoorbeeld 800m in 2:00,00 voor jongens: exact 748, zonder marge 747). Gemeten bij alle looponderdelen van U18/U20 voor elke honderdste seconde (1.977.549 berekeningen): 0 afwijkingen van de exacte rekensom; zonder marge waren het er 15. **De bestaande U14/U16-berekening heeft hetzelfde effect (6 op 242.209 berekeningen) en is bewust niet aangepast.**
+- Gecontroleerd: `node --check` op alle scriptblokken; contract-check 0 id's, handlers of functies verdwenen (3 functies nieuw). **Regressie:** de puntentelling van de oude en de nieuwe versie is vergeleken voor U16, U14, zonder categorie, U12 en Senioren: 53 onderdeelnamen × 2 geslachten × 544 invoerwaarden (waaronder m:ss, komma's, onleesbare waarden en de drempels 1,35 en 4,41), 288.320 berekeningen: **0 verschillen**. **U18/U20:** een onafhankelijke berekening in Python met apart overgetypte constanten uit de PDF, 10.514 gevallen over 35 onderdelen: 0 verschillen; plus een controle tegen de exacte rekensom (zie boven). Hulplijsten: voor alle 30 bestaande onderdeelnamen is het gedrag van de zeven hulpfuncties gelijk, behalve de bedoelde `60m horden`; bij alle 35 nieuwe onderdelen kloppen "lager is beter", de eenheid en het type. De categorienaam wordt goed herkend (10 varianten), het PR-formulier voor U14 en U16 is gelijk aan de oude versie, het keuzemenu bij Punten blijft voor U16 ongewijzigd en komt na een wisseling terug in de oude vorm. Rooktest: alle drie de scriptblokken laden zonder fout in een nagebootste omgeving, in de oude en de nieuwe versie gelijk.
+- Bron van de constanten: Atletiekunie, "Formules en constanten", december 2025, de tabellen "puntentelling voor senioren, U20/U18 en masters (competities)". De bestaande U14/U16-constanten zijn met dezelfde publicatie vergeleken en kloppen.
+- **Niet getest:** een echte browser, Supabase en echte atleten; het aanmaken van de categorie in het Admin-paneel; het PR-formulier, de export en de import met echte bestanden (alleen de lijsten en de vertaalfuncties zijn getest). De duur per onderdeel in `DISC_U18U20` is een schatting.
+- **Bewust niet gedaan, nog open:** de 3-uursregel (800m/1500m tegen 300m/300m horden) staat vast op U16-onderdelen en geldt voor U18/U20 dus voor dezelfde namen; mogelijk is voor U18/U20 een andere combinatie bedoeld (bijvoorbeeld de 400m). Namen met hordehoogte of gewicht in een lang PR-bestand ("kogelstoten 5kg") worden voor U18/U20 nog niet vertaald; de PDF-import van finales (`FINALE_DISC_MAP`) is niet uitgebreid; de afdruk en de WhatsApp-tekst tonen nog vast "U16" (ook bij U14).
+
 ## [oktober 2026 — patch 100] — 2026-10-11
 
 ### 📝 Documentatie bijgewerkt (README en projectnotities)
