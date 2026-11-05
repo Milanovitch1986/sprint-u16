@@ -6,6 +6,76 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 103] — 2026-11-05
+
+### 🔀 Doorstroming eerder openen en atleten handmatig laten doorstromen
+
+<!--RELEASENOTE
+versie: Patch 103
+titel: 🔀 Doorstroming eerder openen en atleten handmatig laten doorstromen
+type: feature
+tags: atleten, administratie
+beschrijving: De admin kan de doorstroming al vóór 1 januari openen (Admin, Categorieën). Alle trainers zien dan op het tabblad Atleten wie per 1 januari doorstroomt. Atleten die nog niet aan de leeftijdsregel voldoen, kun je er met "+ Atleet toevoegen" of via het ⋯-menu van de atleet toch bij zetten. Ze verhuizen, met hun PR's, pas als je op Doorstromen klikt.
+-->
+
+Vereniging: de officiële datum voor doorstroming is 1 januari, maar AV Sprint laat de atleten al half oktober doorstromen, zodat er tijd is om het nieuwe seizoen voor te bereiden. Soms stroomt een atleet bovendien een jaar eerder door.
+
+**Doorstroming vervroegd openen (admin).** Bij Admin, tab Categorieën, staat een schakelaar "Doorstroming vervroegd openen". Staat die aan, dan rekent de doorstroming met het **volgende seizoen**: de atleten die per 1 januari doorstromen staan op het tabblad Atleten al klaar, voor alle trainers, met de gewone knop Doorstromen. De schakelaar bewaart het seizoen waarvoor hij openstaat (bijvoorbeeld 2027). Vanaf 1 januari 2027 vallen de officiële regels en de instelling samen, dus uitzetten hoeft niet; ook kan de instelling nooit een jaar te ver doorrekenen. Het ⚠️ achter een atleet in de lijst blijft op de officiële datum.
+
+**Atleten handmatig laten doorstromen (alle trainers, zoals de gewone doorstroming).** Zodra het doorstroompaneel actief is (er staan atleten klaar, of de doorstroming is vervroegd geopend) kun je een atleet die nog niet aan de leeftijdsregel voldoet toch laten doorstromen, op twee manieren: de knop **＋ Atleet toevoegen** in het paneel (kies de atleet en de doelcategorie, standaard de volgende) en **🔀 Nu doorstromen…** in het ⋯-menu van de atleet. Zo'n atleet komt in dezelfde lijst, met het label "handmatig" en een ✕ om hem er weer uit te halen. Er verhuist niets tot je op Doorstromen klikt; dan verhuizen atleet en PR's precies zoals bij de gewone doorstroming, met "handmatig" achter de naam in de bevestiging. Alleen categorieën waartoe je toegang hebt zijn te kiezen. Het paneel blijft ook open als niemand volgens de regel klaarstaat, zodat "+ Atleet toevoegen" bereikbaar is.
+
+**Databasewijziging (door Milanovitch uitgevoerd in Supabase vóór deze patch).** Een nieuwe tabel `instellingen` (sleutel, waarde, bijgewerkt_op) met RLS: alle ingelogde gebruikers mogen lezen, niemand schrijft rechtstreeks. Wijzigen kan alleen via de functie `zet_instelling(p_sleutel, p_waarde)` met `SECURITY DEFINER`, die zelf controleert of de aanroeper een actieve admin is (zelfde aanpak als `verwijder_gebruiker`; geen policy op `profielen`, dus geen recursie). De sleutel voor deze instelling is `doorstroom_vanaf_jaar`. Zonder de tabel werkt de app gewoon, met de doorstroming niet vervroegd.
+
+```sql
+-- Tabel voor instellingen die alle trainers moeten zien
+create table if not exists public.instellingen (
+  sleutel       text primary key,
+  waarde        text,
+  bijgewerkt_op timestamptz not null default now()
+);
+
+-- Beveiliging: alleen lezen voor ingelogde gebruikers, niemand schrijft rechtstreeks
+alter table public.instellingen enable row level security;
+
+drop policy if exists "instellingen_lezen" on public.instellingen;
+create policy "instellingen_lezen" on public.instellingen
+  for select to authenticated using (true);
+
+-- Alleen een admin mag een instelling wijzigen, via deze functie
+create or replace function public.zet_instelling(p_sleutel text, p_waarde text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1 from public.profielen
+    where id = auth.uid() and rol = 'admin' and actief
+  ) then
+    raise exception 'Alleen een admin mag instellingen wijzigen';
+  end if;
+
+  insert into public.instellingen (sleutel, waarde, bijgewerkt_op)
+  values (p_sleutel, p_waarde, now())
+  on conflict (sleutel) do update
+    set waarde = excluded.waarde, bijgewerkt_op = now();
+end;
+$$;
+
+revoke all on function public.zet_instelling(text, text) from public, anon;
+grant execute on function public.zet_instelling(text, text) to authenticated;
+```
+
+#### Technisch
+
+- Nieuwe functies: `bouwDoorstroomKandidaten()` (kandidatenlijst opbouwen uit de geladen atleten; het ophalen zit nog in `bepaalDoorstroomKandidaten()`), `doorstroomReferentieJaar()`, `doorstroomVervroegdOpen()`, `doorstroomPaneelActief()`, `laadDoorstroomInstelling()`, `werkDoorstroomPaneelBij()`, `aantalAangevinkt()`, `standaardDoorstroomDoel()`, `toonNuDoorstromen()`, `toggleDoorstroomToevoegen()`, `vulDoorstroomDoelKeuze()`, `bevestigDoorstroomToevoegen()`, `voegDoorstroomHandmatigToe()`, `verwijderDoorstroomHandmatig()`, `startHandmatigeDoorstroom()`, `laadDoorstroomInstellingAdmin()`, `renderDoorstroomInstellingAdmin()` en `zetDoorstroomVervroegd()`. Nieuwe variabelen: `doorstroomAlleAtleten`, `doorstroomHandmatig` (handmatig gekozen atleten, alleen in het geheugen: na het vernieuwen van de pagina is die keuze weg) en `doorstroomVervroegdJaar`.
+- Aangepast: `berekenLeeftijdsCategorie(geboortedatum, jaar)` krijgt een optionele tweede waarde (zonder is alles gelijk aan voorheen; alleen de doorstroming geeft het referentiejaar mee), `laadDoorstroming()` (leest eerst de instelling; tekent via `werkDoorstroomPaneelBij()`), `renderDoorstroomLijst()` (herschreven: label en ✕ bij handmatig, formulier, vinkjes die al waren uitgezet blijven uit bij opnieuw tekenen), `werkDoorstroomKopBij()`, `renderDoorstroomMelding()` (de banner telt alleen de gewone kandidaten), `startDoorstroming()` (bevestiging noemt "handmatig"; na het verhuizen worden die keuzes opgeruimd; het verhuizen zelf is niet gewijzigd), `toggleAtleetMenu()` en `atleetMenuActie()` (menu-item), `laadAdmin()`. Nieuwe elementen: `#doorstroom-instelling` (Admin, Categorieën), `#doorstroom-toevoegen`, `#doorstroom-add-atleet` en `#doorstroom-add-doel`; nieuwe CSS voor het label, het formulier en de schakelaar-rij (de bestaande klassen `.schakelaar` en `.schakelaar-input` zijn hergebruikt).
+- `supabase_setup.sql` is bijgewerkt met dezelfde SQL, vóór de afsluitende regel van het script.
+- Gecontroleerd: `node --check` op alle scriptblokken; contract-check: 0 id's, handlers of functies verdwenen (4 id's, 5 handlers en 18 functies nieuw); rooktest: alle drie de scriptblokken laden in de oude en de nieuwe versie zonder fout. **Regressie:** de gewone doorstroming (zonder instelling) oud tegen nieuw voor 5 toegangsinstellingen (alle categorieën, alleen U16, U14 en U16, U16 en U18/U20, met Senioren), 209 atleten (waaronder zonder en met onleesbare geboortedatum) en 154 kandidaten: 0 verschillen; `berekenLeeftijdsCategorie` zonder tweede waarde oud tegen nieuw voor 79 datums: 0 verschillen. **Gedrag** (vaste nagebootste datum 5 november 2026, nagebootste database-aanroepen, 45 controles): vervroegd openen voor 2027 geeft Pepijn, Pim en Quinn waar de gewone regel alleen Pim geeft; een instelling van 2026, 2025, leeg of onleesbaar geeft de gewone regels, 2028 blijft open; een ontbrekende tabel of leesfout laat de doorstroming gewoon niet vervroegd; handmatig toevoegen, vervangen, weigeren (gewone kandidaat, eigen categorie, geen toegang, onbekende atleet) en verwijderen; een handmatige keuze valt weg als de atleet later vanzelf kandidaat wordt; zichtbaarheid van "Nu doorstromen" in het ⋯-menu; het formulier (alleen atleten die nog niet in de lijst staan, doelkeuze zonder de eigen categorie en met de volgende als standaard); label, ✕ en geen ⚠️ bij handmatig; banner en kop; uitgezette vinkjes blijven uit; uitvoeren verhuist atleet en PR's naar de juiste categorie en ruimt de handmatige keuze op; annuleren verhuist niets; de schakelaar roept `zet_instelling("doorstroom_vanaf_jaar", "2027")` aan, uitzetten geeft een lege waarde, een mislukte aanroep geeft een foutmelding en laat de schakelaar terugspringen, en een trainer kan de schakelaar niet gebruiken.
+- **Niet getest:** de echte database (de beveiliging van de functie `zet_instelling` en de leesrechten voor trainers; te proberen door als admin de schakelaar aan te zetten en daarna als trainer in te loggen), een echte browser (opmaak van het formulier en de schakelaar, vooral op mobiel) en echte atleten.
+- **Opmerking, niet gewijzigd:** de bestaande banner schrijft bij één atleet "1 atlete staat klaar" in plaats van "1 atleet".
+
 ## [november 2026 — patch 102] — 2026-11-04
 
 ### 🛠️ Juiste categorienaam in afdruk en WhatsApp, en regels voor U18/U20

@@ -440,5 +440,49 @@ create policy "trainer_categorie_resultaten" on public.resultaten
 grant select, insert, update, delete on public.resultaten to authenticated;
 
 -- ============================================================================
+-- Instellingen voor de hele app (patch 103): bijvoorbeeld "doorstroming vervroegd openen".
+-- Sleutel doorstroom_vanaf_jaar = het seizoen waarvoor de doorstroming vervroegd openstaat (leeg = niet).
+-- ============================================================================
+
+-- Tabel voor instellingen die alle trainers moeten zien
+create table if not exists public.instellingen (
+  sleutel       text primary key,
+  waarde        text,
+  bijgewerkt_op timestamptz not null default now()
+);
+
+-- Beveiliging: alleen lezen voor ingelogde gebruikers, niemand schrijft rechtstreeks
+alter table public.instellingen enable row level security;
+
+drop policy if exists "instellingen_lezen" on public.instellingen;
+create policy "instellingen_lezen" on public.instellingen
+  for select to authenticated using (true);
+
+-- Alleen een admin mag een instelling wijzigen, via deze functie
+create or replace function public.zet_instelling(p_sleutel text, p_waarde text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1 from public.profielen
+    where id = auth.uid() and rol = 'admin' and actief
+  ) then
+    raise exception 'Alleen een admin mag instellingen wijzigen';
+  end if;
+
+  insert into public.instellingen (sleutel, waarde, bijgewerkt_op)
+  values (p_sleutel, p_waarde, now())
+  on conflict (sleutel) do update
+    set waarde = excluded.waarde, bijgewerkt_op = now();
+end;
+$$;
+
+revoke all on function public.zet_instelling(text, text) from public, anon;
+grant execute on function public.zet_instelling(text, text) to authenticated;
+
+-- ============================================================================
 -- Einde setup
 -- ============================================================================

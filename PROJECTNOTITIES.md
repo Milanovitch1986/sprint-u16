@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 4 november 2026 (patch 102)*
+*AV Sprint Breda · Laatste update: 5 november 2026 (patch 103)*
 
 ---
 
@@ -37,6 +37,7 @@
 | `uitnodigingen` | Invite-only registratie (token, email, categorie_id, vervalt, gebruikt) |
 | `releasenotes` | Releasenotes (versie, titel, type, beschrijving, `tags` text[] — patch 68, `gearchiveerd`, `gepubliceerd_op`) |
 | `keepalive` | Eén rij met een tijdstempel die dagelijks wordt bijgewerkt door de databasefunctie `ping()` (GitHub-workflow `supabase-keepalive.yml`); voorkomt dat het gratis project wordt gepauzeerd |
+| `instellingen` | Instellingen voor de hele app (sleutel, waarde, bijgewerkt_op) — patch 103; lezen voor ingelogde gebruikers, wijzigen alleen via de functie `zet_instelling()` (admin). Nu in gebruik: `doorstroom_vanaf_jaar` |
 
 **Belangrijk:** alle datatabellen gebruiken `categorie_id` als toegangssleutel — NIET `eigenaar_id`.
 Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieën.
@@ -44,6 +45,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 103: Doorstroming eerder openen en handmatig doorstromen (patch 103, nov 2026)
+Aanleiding (Milanovitch): de officiële doorstroomdatum is 1 januari, maar de vereniging laat atleten al half oktober doorstromen, en soms stroomt een atleet een jaar eerder door. Niet live-kritiek (geen wedstrijddag-functies); commit na "commit nu". Tag `ui-AC` komt op de commit vóór deze patch (patch 102, `5135ff9`).
+- **Keuzes (Milanovitch):** de schakelaar staat in de database en geldt voor alle trainers (hij voert zelf de SQL uit); handmatig doorstromen kan op twee manieren (knop "+ Atleet toevoegen" in het paneel én "Nu doorstromen…" in het ⋯-menu); alle trainers mogen dat, zoals bij de gewone doorstroming; alleen de admin zet de schakelaar om. Het ⚠️ in de atletenlijst blijft op de officiële datum (mijn voorstel, geen bezwaar).
+- **Database:** nieuwe tabel `instellingen` (sleutel, waarde) met RLS (lezen voor ingelogde gebruikers) en de `SECURITY DEFINER`-functie `zet_instelling(p_sleutel, p_waarde)` die zelf controleert of de aanroeper een actieve admin is. Sleutel `doorstroom_vanaf_jaar` = het seizoen waarvoor de doorstroming vervroegd openstaat (leeg = niet). De app valt terug op "niet vervroegd" als de tabel ontbreekt of het lezen mislukt. SQL staat in de CHANGELOG-entry en in `supabase_setup.sql`. De tabel is bedoeld voor meer instellingen (nieuwe sleutel, geen nieuwe SQL).
+- **Referentiejaar:** `doorstroomReferentieJaar()` = het hoogste van het huidige jaar en het ingestelde seizoen. Daardoor loopt de instelling vanzelf af op 1 januari van dat seizoen en kan hij nooit een jaar te ver rekenen; uitzetten hoeft niet. De schakelaar zet het seizoen op huidig jaar + 1. Alleen de doorstroming gebruikt dit: `berekenLeeftijdsCategorie(geboortedatum, jaar)` heeft een optionele tweede waarde, de rest (bijvoorbeeld het ⚠️) rekent zoals voorheen.
+- **Handmatig:** een kandidaat met `handmatig: true` heeft `catBerekend: null` en een zelf gekozen `doelCat` (alleen categorieën met toegang). Handmatige keuzes staan in `doorstroomHandmatig` (alleen in het geheugen) en worden bij elke herberekening opnieuw samengevoegd; ze vallen weg als de atleet al in de lijst staat, al is verhuisd of de categorie niet meer klopt. Het verhuizen loopt via de bestaande `startDoorstroming()`; daar is alleen het label en het opruimen bijgekomen.
+- **Open / ideeën:** handmatige keuzes overleven geen pagina vernieuwen (bewust simpel); een melding in de banner voor een vervroegd geopende doorstroming bestaat niet (het paneel zelf toont het wel). De import van namen met hordehoogte of gewicht en van finale-tijdschema's (de eerder geplande patch 103) schuift naar patch 104 en wacht op voorbeeldbestanden.
+- **Testmethode:** `node --check`; contract-check; rooktest; regressie van de gewone doorstroming oud tegen nieuw (5 toegangsinstellingen, 209 atleten, 154 kandidaten, 0 verschillen); 45 gedragscontroles met een vaste nagebootste datum en nagebootste database-aanroepen. Niet getest: de echte database en beveiliging van `zet_instelling`, een echte browser, echte atleten.
+- **Terugdraaien:** Revert op de commit van patch 103, of terug naar tag `ui-AC`. De tabel `instellingen` mag blijven staan; de oudere app leest hem niet.
 
 ### Patch 102: Categorienaam in afdruk en WhatsApp, regels voor U18/U20 (patch 102, nov 2026)
 Vervolg op patch 101 met de eerste open punten voor U18/U20. Live-kritiek (raakt het automatisch opstellen): bouwen en testen, dan wachten op "commit nu" en eerst vragen of er een wedstrijd loopt. Tag `ui-AB` komt op de commit vóór deze patch (patch 101, `7d806f5`).
@@ -711,7 +722,7 @@ UPDATE public.profielen SET rol = 'admin' WHERE email = 'milande_maat@hotmail.co
 - **2FA verplicht:** TOTP via Google Authenticator, Authy e.d.
 - **RLS:** elke tabel heeft Row Level Security
 - **Auth guard:** app.html stuurt door naar index.html zonder geldige sessie
-- **SECURITY DEFINER functies:** `markeer_uitnodiging_gebruikt` en `koppel_trainer_aan_uitnodiging_categorie` werken sessie-onafhankelijk voor acties direct na registratie
+- **SECURITY DEFINER functies:** `zet_instelling` (patch 103, alleen een actieve admin mag een instelling wijzigen), `markeer_uitnodiging_gebruikt` en `koppel_trainer_aan_uitnodiging_categorie` werken sessie-onafhankelijk voor acties direct na registratie
 
 ---
 

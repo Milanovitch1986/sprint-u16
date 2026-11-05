@@ -1163,6 +1163,26 @@
     display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px;
     border-radius: 6px; background: rgba(232,56,61,.12); color: var(--accent2);
   }
+  /* patch 103: handmatige doorstroming en vervroegd openen */
+  .doorstroom-handmatig {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px;
+    border-radius: 6px; background: rgba(245,166,35,.15); color: var(--accent);
+  }
+  .doorstroom-verwijder { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; }
+  .doorstroom-verwijder:hover { color: var(--accent2); }
+  .doorstroom-vervroegd {
+    font-size: 12px; line-height: 1.5; color: var(--muted); background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
+  }
+  .doorstroom-toevoegen {
+    margin-top: 12px; padding: 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .doorstroom-toevoegen label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .doorstroom-toevoegen select { width: 100%; }
+  .doorstroom-instelling-blok { padding: 0 16px 16px; }
+  .doorstroom-instelling { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; padding-top: 14px; border-top: 1px solid var(--border); }
+  .doorstroom-instelling-tekst { display: block; font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.5; margin-top: 3px; }
   @media (max-width: 768px) {
     .doorstroom-banner { margin: 12px 14px 0; }
   }
@@ -2929,6 +2949,7 @@
         <button class="btn btn-primary btn-sm" style="margin:8px 16px;" onclick="openCategorieModal()">+ Nieuwe categorie</button>
       </div>
       <div id="categorieen-lijst" style="padding:16px;"></div>
+      <div id="doorstroom-instelling" class="doorstroom-instelling-blok"></div>
     </div>
 
     <!-- Trainer–categorie koppelingen -->
@@ -3717,11 +3738,12 @@ async function verwijderGeselecteerde() {
 // Atletiek gebruikt het verschil tussen huidig jaar en geboortejaar (de leeftijd
 // die je dit jaar WORDT), niet je werkelijke leeftijd op dit moment.
 //   U14 = wordt 12/13   U16 = wordt 14/15   U18/U20 = wordt 16 t/m 19
-function berekenLeeftijdsCategorie(geboortedatum) {
+// patch 103: met een tweede waarde (jaar) rekent de functie met dat jaar in plaats van het huidige kalenderjaar; zonder die waarde is alles gelijk aan voorheen.
+function berekenLeeftijdsCategorie(geboortedatum, jaar) {
   if (!geboortedatum) return null;
   const geboortejaar = new Date(geboortedatum).getFullYear();
   if (isNaN(geboortejaar)) return null;
-  const jaarVerschil = new Date().getFullYear() - geboortejaar;
+  const jaarVerschil = (jaar || new Date().getFullYear()) - geboortejaar;
   if      (jaarVerschil <= 11) return "U12";
   else if (jaarVerschil <= 13) return "U14";
   else if (jaarVerschil <= 15) return "U16";
@@ -3822,6 +3844,7 @@ function toggleAtleetMenu(id, event) {
   menu.dataset.atleetId = String(id);
   menu.innerHTML = `<button type="button" role="menuitem" onclick="atleetMenuActie('bewerk', '${a.id}')">✏️ Bewerken</button>`
     + `<button type="button" role="menuitem" onclick="atleetMenuActie('prestaties', '${a.id}')">📈 Prestaties bekijken</button>`
+    + (toonNuDoorstromen(a) ? `<button type="button" role="menuitem" onclick="atleetMenuActie('doorstroom', '${a.id}')">🔀 Nu doorstromen…</button>` : "") // patch 103
     + `<button type="button" role="menuitem" class="gevaar" onclick="atleetMenuActie('verwijder', '${a.id}')">🗑️ Verwijderen</button>`;
   menu.classList.add("open");
   // Positie: onder de knop, rechts uitgelijnd; past dat niet, dan erboven. Altijd binnen het scherm.
@@ -3851,6 +3874,7 @@ function sluitAtleetMenu() {
 function atleetMenuActie(actie, id) {
   sluitAtleetMenu();
   if (actie === "bewerk") { openAtleetModal(id); return; }
+  if (actie === "doorstroom") { startHandmatigeDoorstroom(id); return; } // patch 103
   if (actie === "prestaties") {
     showTab("prestaties");   // showTab vult de atletenlijst van het filter opnieuw (populateAtleetSelects)
     const sel = document.getElementById("prestatie-atleet-filter");
@@ -10885,7 +10909,8 @@ async function laadAdmin() {
     laadAdminGebruikers(),
     laadCategorieBeheer(),
     laadTrainerCategorieBeheer(),
-    laadOverigTagHint()
+    laadOverigTagHint(),
+    laadDoorstroomInstellingAdmin()   // patch 103
   ]);
 }
 
@@ -11137,18 +11162,63 @@ async function maakCategorie() {
   } catch(e) { toast("Fout: " + e.message, "err"); }
 }
 
+// ── Doorstroming vervroegd openen: schakelaar voor de admin (patch 103) ──
+// De instelling staat in de tabel instellingen (sleutel doorstroom_vanaf_jaar, waarde = het seizoen, bijvoorbeeld 2027) en wordt
+// alleen via de database-functie zet_instelling() gewijzigd, die zelf controleert of je admin bent.
+async function laadDoorstroomInstellingAdmin() {
+  await laadDoorstroomInstelling();
+  renderDoorstroomInstellingAdmin();
+}
+
+function renderDoorstroomInstellingAdmin() {
+  const el = document.getElementById("doorstroom-instelling");
+  if (!el) return;
+  const aan = doorstroomVervroegdOpen();
+  const seizoen = new Date().getFullYear() + 1;
+  el.innerHTML = `
+    <label class="doorstroom-instelling">
+      <input type="checkbox" class="schakelaar-input" ${aan ? "checked" : ""} onchange="zetDoorstroomVervroegd(this.checked)">
+      <span class="schakelaar" aria-hidden="true"></span>
+      <span>
+        <b>Doorstroming vervroegd openen</b>
+        <span class="doorstroom-instelling-tekst">${aan
+          ? `Staat aan voor seizoen ${doorstroomVervroegdJaar}. Alle trainers zien op het tabblad Atleten al wie per 1 januari ${doorstroomVervroegdJaar} doorstroomt. Je hoeft dit niet uit te zetten: vanaf 1 januari ${doorstroomVervroegdJaar} vallen de officiële regels er vanzelf mee samen.`
+          : `Zet de doorstroming nu al open voor seizoen ${seizoen}. Alle trainers zien dan op het tabblad Atleten wie per 1 januari ${seizoen} doorstroomt. Nu geldt nog de officiële datum van 1 januari.`}</span>
+      </span>
+    </label>`;
+}
+
+async function zetDoorstroomVervroegd(aan) {
+  if (!huidigeProfiel || huidigeProfiel.rol !== "admin") return;
+  const seizoen = new Date().getFullYear() + 1;
+  try {
+    const { error } = await sb.rpc("zet_instelling", { p_sleutel: "doorstroom_vanaf_jaar", p_waarde: aan ? String(seizoen) : "" });
+    if (error) throw error;
+    doorstroomVervroegdJaar = aan ? seizoen : 0;
+    toast(aan ? `Doorstroming staat vervroegd open voor seizoen ${seizoen} ✓` : "Doorstroming volgt weer de officiële datum ✓");
+  } catch(e) {
+    toast("Opslaan mislukt: " + e.message, "err");
+  }
+  renderDoorstroomInstellingAdmin();   // de schakelaar laten kloppen met de echte stand, ook als opslaan is mislukt
+  laadDoorstroming().catch(e => console.warn("Doorstroming-check mislukt:", e.message));
+}
+
 // ── Doorstroming (patch 49) ───────────────────────────────────
 // Atleten van wie het geboortejaar niet meer past bij hun huidige categorie
 // kunnen naar een volgende categorie worden verplaatst. Bij doorstroming
 // verhuizen de atleet én zijn PR's mee; wedstrijdresultaten (patch 47) en
 // opstellingen/beschikbaarheid blijven bewust bij de oude wedstrijden staan.
-let doorstroomKandidaten = []; // { atleet, huidigeCat, catBerekend, doelCat|null, doelBestaatGeenToegang }
+let doorstroomKandidaten = []; // { atleet, huidigeCat, catBerekend, doelCat|null, doelBestaatGeenToegang, handmatig? }
+let doorstroomAlleAtleten = []; // patch 103: alle atleten van de toegankelijke categorieën (voor de lijst en "+ Atleet toevoegen")
+let doorstroomHandmatig   = []; // patch 103: handmatig gekozen atleten { atleetId, doelCatId }, tot ze zijn doorgestroomd of verwijderd
+let doorstroomVervroegdJaar = 0; // patch 103: seizoen waarvoor de doorstroming vervroegd openstaat (0 = niet); uit de tabel instellingen
 let alleCategorieNamen   = []; // {id, naam} van ALLE categorieën (ook zonder toegang), om
                                // 'bestaat niet' vs 'geen toegang' te kunnen onderscheiden
 
 // Bepaal alle kandidaten over alle categorieën waartoe de gebruiker toegang heeft.
 async function bepaalDoorstroomKandidaten() {
   doorstroomKandidaten = [];
+  doorstroomAlleAtleten = [];
   const cats = beschikbareCategorieen || [];
   if (!cats.length) return;
 
@@ -11176,11 +11246,22 @@ async function bepaalDoorstroomKandidaten() {
     return;
   }
 
+  doorstroomAlleAtleten = alleAtleten;
+  bouwDoorstroomKandidaten();
+}
+
+// patch 103: de kandidatenlijst opbouwen uit de al geladen atleten. De gewone kandidaten volgen de leeftijdsregel met het
+// referentiejaar van doorstroomReferentieJaar() (normaal dit jaar, bij vervroegd openen het volgende seizoen); daarna komen
+// de handmatig gekozen atleten (doorstroomHandmatig) erbij.
+function bouwDoorstroomKandidaten() {
+  doorstroomKandidaten = [];
+  const cats = beschikbareCategorieen || [];
   const catById = {};
   cats.forEach(c => { catById[c.id] = c; });
+  const refJaar = doorstroomReferentieJaar();
 
-  alleAtleten.forEach(a => {
-    const catBerekend = berekenLeeftijdsCategorie(a.geboortedatum);
+  doorstroomAlleAtleten.forEach(a => {
+    const catBerekend = berekenLeeftijdsCategorie(a.geboortedatum, refJaar);
     if (!catBerekend) return; // geen geboortedatum → geen oordeel
     const huidigeCat = catById[a.categorie_id];
     if (!huidigeCat) return;
@@ -11193,12 +11274,58 @@ async function bepaalDoorstroomKandidaten() {
       alleCategorieNamen.some(c => categorieNaamDekt(c.naam, catBerekend));
     doorstroomKandidaten.push({ atleet: a, huidigeCat, catBerekend, doelCat, doelBestaatGeenToegang });
   });
+
+  // Handmatig gekozen atleten: alleen als de atleet bestaat, nog niet in de lijst staat en de doelcategorie
+  // toegankelijk is en een andere dan de huidige. Wat niet meer klopt (bijvoorbeeld al verhuisd) valt weg.
+  const inLijst = new Set(doorstroomKandidaten.map(k => String(k.atleet.id)));
+  doorstroomHandmatig = doorstroomHandmatig.filter(h => {
+    const a = doorstroomAlleAtleten.find(x => String(x.id) === String(h.atleetId));
+    if (!a || inLijst.has(String(a.id))) return false;
+    const huidigeCat = catById[a.categorie_id];
+    const doelCat = catById[h.doelCatId];
+    if (!huidigeCat || !doelCat || String(doelCat.id) === String(huidigeCat.id)) return false;
+    doorstroomKandidaten.push({ atleet: a, huidigeCat, catBerekend: null, doelCat, doelBestaatGeenToegang: false, handmatig: true });
+    inLijst.add(String(a.id));
+    return true;
+  });
+}
+
+// patch 103: het jaar waarmee de doorstroming rekent. Normaal het huidige kalenderjaar. Staat de doorstroming vervroegd open
+// (instelling van de admin), dan het hoogste van het huidige jaar en het ingestelde seizoen; zo loopt de instelling vanzelf af.
+function doorstroomReferentieJaar() {
+  return Math.max(new Date().getFullYear(), doorstroomVervroegdJaar || 0);
+}
+function doorstroomVervroegdOpen() {
+  return (doorstroomVervroegdJaar || 0) > new Date().getFullYear();
+}
+function doorstroomPaneelActief() {
+  return doorstroomKandidaten.length > 0 || doorstroomVervroegdOpen();
+}
+
+// Leest de instelling uit de tabel instellingen. Ontbreekt de tabel of mislukt het lezen, dan staat de doorstroming
+// gewoon niet vervroegd open (de app werkt dan zoals voorheen).
+async function laadDoorstroomInstelling() {
+  try {
+    const { data, error } = await sb.from("instellingen").select("waarde").eq("sleutel", "doorstroom_vanaf_jaar").limit(1);
+    if (error) throw error;
+    const jaar = parseInt(data && data[0] ? data[0].waarde : "", 10);
+    doorstroomVervroegdJaar = isNaN(jaar) ? 0 : jaar;
+  } catch(e) {
+    console.warn("Doorstroming: instelling lezen mislukt:", e.message);
+    doorstroomVervroegdJaar = 0;
+  }
 }
 
 async function laadDoorstroming() {
+  await laadDoorstroomInstelling();   // patch 103
   await bepaalDoorstroomKandidaten();
+  werkDoorstroomPaneelBij();
+}
+
+// Toont of verbergt het paneel en tekent lijst, kop en banner opnieuw (patch 103: ook zonder opnieuw laden, bijvoorbeeld na "+ Atleet toevoegen").
+function werkDoorstroomPaneelBij() {
   const paneel = document.getElementById("doorstroom-paneel");
-  if (paneel) paneel.style.display = doorstroomKandidaten.length ? "" : "none";
+  if (paneel) paneel.style.display = doorstroomPaneelActief() ? "" : "none";
   renderDoorstroomLijst();
   werkDoorstroomKopBij();
   renderDoorstroomMelding();
@@ -11216,7 +11343,10 @@ function werkDoorstroomKopBij() {
   if (!el) return;
   const n = doorstroomKandidaten.filter(k => k.doelCat).length;
   const geblokkeerd = doorstroomKandidaten.length - n;
-  let tekst = n ? n + (n === 1 ? " atleet staat" : " atleten staan") + " klaar" : "niemand kan nu doorstromen";
+  const handmatig = doorstroomKandidaten.filter(k => k.handmatig).length; // patch 103
+  let tekst = n ? n + (n === 1 ? " atleet staat" : " atleten staan") + " klaar"
+                : (doorstroomVervroegdOpen() ? "vervroegd open · niemand staat klaar" : "niemand kan nu doorstromen");
+  if (handmatig) tekst += " · " + handmatig + " handmatig";
   if (geblokkeerd) tekst += " · " + geblokkeerd + " geblokkeerd";
   el.textContent = tekst;
 }
@@ -11224,13 +11354,16 @@ function werkDoorstroomKopBij() {
 function renderDoorstroomLijst() {
   const el = document.getElementById("doorstroom-lijst");
   if (!el) return;
-  if (!doorstroomKandidaten.length) {
-    el.innerHTML = `<div style="font-size:13px;color:var(--muted);">Er staan geen atleten klaar voor doorstroming. Zodra het geboortejaar van een atleet niet meer bij de categorie past, verschijnt die hier.</div>`;
-    return;
-  }
+  // patch 103: vinkjes die al waren uitgezet onthouden, zodat opnieuw tekenen (bijvoorbeeld na "+ Atleet toevoegen") ze niet terugzet
+  const uitgezet = new Set();
+  el.querySelectorAll("input[data-atleet]").forEach(c => { if (!c.checked && !c.disabled) uitgezet.add(c.getAttribute("data-atleet")); });
+
+  const vervroegdTekst = doorstroomVervroegdOpen()
+    ? `<div class="doorstroom-vervroegd">🗓️ De doorstroming staat vervroegd open voor seizoen ${doorstroomVervroegdJaar}. Atleten die per 1 januari ${doorstroomVervroegdJaar} doorstromen, staan nu al klaar.</div>`
+    : "";
 
   const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat);
-  const rijen = doorstroomKandidaten.map((k, i) => {
+  const rijen = doorstroomKandidaten.length ? doorstroomKandidaten.map((k, i) => {
     const geboortejaar = k.atleet.geboortedatum ? new Date(k.atleet.geboortedatum).getFullYear() : "—";
     const kanVerhuizen = !!k.doelCat;
     let doelHtml;
@@ -11241,19 +11374,27 @@ function renderDoorstroomLijst() {
     } else {
       doelHtml = `<span class="doorstroom-blok">categorie "${esc(k.catBerekend)}" bestaat niet ✗</span>`;
     }
+    const aangevinkt = kanVerhuizen && !uitgezet.has(String(k.atleet.id));
+    const handmatigHtml = k.handmatig
+      ? `<span class="doorstroom-handmatig">handmatig</span><button type="button" class="doorstroom-verwijder" title="Uit de lijst halen" aria-label="${esc(k.atleet.naam)} uit de lijst halen" onclick="verwijderDoorstroomHandmatig('${k.atleet.id}')">✕</button>`
+      : "";
     return `
       <div class="doorstroom-rij${kanVerhuizen ? "" : " geblokkeerd"}">
         <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:${kanVerhuizen ? "pointer" : "default"};">
-          <input type="checkbox" id="doorstroom-chk-${i}" ${kanVerhuizen ? "checked" : "disabled"}>
+          <input type="checkbox" id="doorstroom-chk-${i}" data-atleet="${k.atleet.id}" ${aangevinkt ? "checked" : ""} ${kanVerhuizen ? "" : "disabled"}>
           <span style="flex:1;">
             <b>${esc(k.atleet.naam)}</b>
             <span style="color:var(--muted);font-size:12px;"> · ${geboortejaar}</span>
           </span>
         </label>
-        <span style="font-size:12px;color:var(--muted);">${esc(k.huidigeCat.naam)} ⚠️ →</span>
+        ${handmatigHtml}
+        <span style="font-size:12px;color:var(--muted);">${esc(k.huidigeCat.naam)}${k.handmatig ? "" : " ⚠️"} →</span>
         ${doelHtml}
       </div>`;
-  }).join("");
+  }).join("") : `<div style="font-size:13px;color:var(--muted);padding:6px 0;">${
+    doorstroomVervroegdOpen()
+      ? `Volgens de leeftijdsregel voor seizoen ${doorstroomVervroegdJaar} staat er niemand klaar. Je kunt hieronder zelf een atleet toevoegen.`
+      : "Er staan geen atleten klaar voor doorstroming."}</div>`;
 
   // Tips onder de lijst: onderscheid 'bestaat niet' en 'geen toegang'.
   const geenToegang = doorstroomKandidaten.some(k => !k.doelCat && k.doelBestaatGeenToegang);
@@ -11267,14 +11408,25 @@ function renderDoorstroomLijst() {
   }
 
   el.innerHTML = `
+    ${vervroegdTekst}
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
       Bij doorstroming verhuizen de atleet en al zijn persoonlijke records (PR's) mee naar de nieuwe categorie. Wedstrijdresultaten en opstellingen blijven bij de oude wedstrijden staan.
     </div>
     ${rijen}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;">
       <button class="btn btn-primary btn-sm" onclick="startDoorstroming()" ${verplaatsbaar.length ? "" : "disabled"}>
-        Doorstromen (<span id="doorstroom-aantal">${verplaatsbaar.length}</span> geselecteerd)
+        Doorstromen (<span id="doorstroom-aantal">${aantalAangevinkt(verplaatsbaar, uitgezet)}</span> geselecteerd)
       </button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleDoorstroomToevoegen()">＋ Atleet toevoegen</button>
+    </div>
+    <div id="doorstroom-toevoegen" class="doorstroom-toevoegen" style="display:none;">
+      <label>Atleet<select id="doorstroom-add-atleet" onchange="vulDoorstroomDoelKeuze()"></select></label>
+      <label>Naar categorie<select id="doorstroom-add-doel"></select></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="bevestigDoorstroomToevoegen()">Toevoegen aan de lijst</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleDoorstroomToevoegen()">Annuleren</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;">Zo'n atleet voldoet nog niet aan de leeftijdsregel. Hij komt met het label "handmatig" in de lijst; er verhuist niets zolang je niet op Doorstromen klikt.</div>
     </div>
     ${tips}`;
 
@@ -11283,6 +11435,99 @@ function renderDoorstroomLijst() {
     const chk = document.getElementById(`doorstroom-chk-${i}`);
     if (chk && k.doelCat) chk.addEventListener("change", updateDoorstroomAantal);
   });
+}
+
+// Aantal aangevinkte rijen bij het tekenen van de lijst (rekening houdend met de vinkjes die al waren uitgezet).
+function aantalAangevinkt(verplaatsbaar, uitgezet) {
+  return verplaatsbaar.filter(k => !uitgezet.has(String(k.atleet.id))).length;
+}
+
+// ── Handmatig doorlaten stromen (patch 103) ────────────────────
+// Een atleet die nog niet aan de leeftijdsregel voldoet, toch laten doorstromen. Hij komt in dezelfde lijst, met het label
+// "handmatig"; het verhuizen zelf (atleet en PR's) loopt via startDoorstroming(), exact zoals bij de gewone doorstroming.
+function standaardDoorstroomDoel(atleet) {
+  // De volgende categorie in de volgorde; bestaat die niet (of heeft de gebruiker er geen toegang toe), dan de eerste andere.
+  const cats = beschikbareCategorieen || [];
+  const i = cats.findIndex(c => String(c.id) === String(atleet.categorie_id));
+  const volgende = i >= 0 ? cats[i + 1] : null;
+  const andere = cats.find(c => String(c.id) !== String(atleet.categorie_id));
+  const gekozen = volgende || andere;
+  return gekozen ? gekozen.id : null;
+}
+
+function toonNuDoorstromen(atleet) {
+  // Voor het ⋯-menu bij Atleten: alleen als het doorstroompaneel actief is en de atleet nog niet in de lijst staat.
+  return doorstroomPaneelActief() && !doorstroomKandidaten.some(k => String(k.atleet.id) === String(atleet.id));
+}
+
+function toggleDoorstroomToevoegen() {
+  const blok = document.getElementById("doorstroom-toevoegen");
+  if (!blok) return;
+  if (blok.style.display !== "none") { blok.style.display = "none"; return; }
+  const sel = document.getElementById("doorstroom-add-atleet");
+  const catNaamVan = id => ((beschikbareCategorieen || []).find(c => String(c.id) === String(id)) || {}).naam || "";
+  const opties = doorstroomAlleAtleten
+    .filter(a => !doorstroomKandidaten.some(k => String(k.atleet.id) === String(a.id)))
+    .sort((x, y) => String(x.naam || "").localeCompare(String(y.naam || ""), "nl"));
+  if (!opties.length) { toast("Er zijn geen andere atleten om toe te voegen", "err"); return; }
+  sel.innerHTML = opties.map(a => {
+    const jaar = a.geboortedatum ? new Date(a.geboortedatum).getFullYear() : null;
+    return `<option value="${esc(String(a.id))}">${esc(a.naam || "")} (${esc(catNaamVan(a.categorie_id))}${jaar && !isNaN(jaar) ? ", " + jaar : ""})</option>`;
+  }).join("");
+  blok.style.display = "";
+  vulDoorstroomDoelKeuze();
+}
+
+function vulDoorstroomDoelKeuze() {
+  // De doelcategorieën voor de gekozen atleet: alle toegankelijke categorieën behalve zijn huidige; standaard de volgende.
+  const selA = document.getElementById("doorstroom-add-atleet");
+  const selD = document.getElementById("doorstroom-add-doel");
+  if (!selA || !selD) return;
+  const a = doorstroomAlleAtleten.find(x => String(x.id) === String(selA.value));
+  if (!a) { selD.innerHTML = ""; return; }
+  const standaard = String(standaardDoorstroomDoel(a));
+  const doelen = (beschikbareCategorieen || []).filter(c => String(c.id) !== String(a.categorie_id));
+  selD.innerHTML = doelen.map(c => `<option value="${esc(String(c.id))}"${String(c.id) === standaard ? " selected" : ""}>${esc(c.naam)}</option>`).join("");
+}
+
+function bevestigDoorstroomToevoegen() {
+  const selA = document.getElementById("doorstroom-add-atleet");
+  const selD = document.getElementById("doorstroom-add-doel");
+  if (!selA || !selD) return;
+  voegDoorstroomHandmatigToe(selA.value, selD.value);
+}
+
+function voegDoorstroomHandmatigToe(atleetId, doelCatId) {
+  const a = doorstroomAlleAtleten.find(x => String(x.id) === String(atleetId));
+  const doel = (beschikbareCategorieen || []).find(c => String(c.id) === String(doelCatId));
+  if (!a || !doel) { toast("Kies een atleet en een categorie", "err"); return false; }
+  if (String(a.categorie_id) === String(doel.id)) { toast("De atleet zit al in " + doel.naam, "err"); return false; }
+  if (doorstroomKandidaten.some(k => String(k.atleet.id) === String(a.id))) { toast("Deze atleet staat al in de lijst", "err"); return false; }
+  doorstroomHandmatig = doorstroomHandmatig.filter(h => String(h.atleetId) !== String(a.id));
+  doorstroomHandmatig.push({ atleetId: String(a.id), doelCatId: String(doel.id) });
+  bouwDoorstroomKandidaten();
+  werkDoorstroomPaneelBij();
+  return true;
+}
+
+function verwijderDoorstroomHandmatig(atleetId) {
+  doorstroomHandmatig = doorstroomHandmatig.filter(h => String(h.atleetId) !== String(atleetId));
+  bouwDoorstroomKandidaten();
+  werkDoorstroomPaneelBij();
+}
+
+// Vanuit het ⋯-menu bij Atleten: de atleet met de standaard doelcategorie in de lijst zetten en het paneel openen.
+function startHandmatigeDoorstroom(atleetId) {
+  const a = doorstroomAlleAtleten.find(x => String(x.id) === String(atleetId));
+  if (!a) { toast("Atleet niet gevonden. Probeer het opnieuw.", "err"); return; }
+  const doelId = standaardDoorstroomDoel(a);
+  if (!doelId) { toast("Er is geen andere categorie waar je naartoe kunt doorstromen", "err"); return; }
+  if (!voegDoorstroomHandmatigToe(a.id, doelId)) return;
+  const paneel = document.getElementById("doorstroom-paneel");
+  if (paneel) {
+    paneel.classList.add("open");
+    paneel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function updateDoorstroomAantal() {
@@ -11299,7 +11544,7 @@ function updateDoorstroomAantal() {
 function renderDoorstroomMelding() {
   const el = document.getElementById("doorstroom-melding");
   if (!el) return;
-  const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat).length;
+  const verplaatsbaar = doorstroomKandidaten.filter(k => k.doelCat && !k.handmatig).length; // patch 103: handmatig gekozen atleten niet meetellen
   if (verplaatsbaar < 1) {
     el.style.display = "none";
     el.innerHTML = "";
@@ -11348,7 +11593,7 @@ async function startDoorstroming() {
         .eq("atleet_id", k.atleet.id);
       aantalPR = count || 0;
     } catch(e) { /* telfout negeren, toon 0 */ }
-    regels.push(`• ${k.atleet.naam}: ${k.huidigeCat.naam} → ${k.doelCat.naam} (${aantalPR} PR's)`);
+    regels.push(`• ${k.atleet.naam}: ${k.huidigeCat.naam} → ${k.doelCat.naam} (${aantalPR} PR's)${k.handmatig ? " · handmatig" : ""}`);
   }
 
   const ok = await bevestig(
@@ -11358,6 +11603,7 @@ async function startDoorstroming() {
   if (!ok) return;
 
   let gelukt = 0, fouten = 0;
+  const verhuisd = new Set(); // patch 103: welke atleten echt zijn verhuisd
   for (const k of teVerhuizen) {
     try {
       // 1. PR's verhuizen naar de nieuwe categorie
@@ -11373,6 +11619,7 @@ async function startDoorstroming() {
         .eq("categorie_id", k.huidigeCat.id);
       if (aErr) throw aErr;
       gelukt++;
+      verhuisd.add(String(k.atleet.id));
     } catch(e) {
       console.warn("Doorstroming mislukt voor", k.atleet.naam, e.message);
       fouten++;
@@ -11383,6 +11630,7 @@ async function startDoorstroming() {
     ? `${gelukt} doorgestroomd · ${fouten} mislukt`
     : `${gelukt} atlet${gelukt === 1 ? "e" : "en"} doorgestroomd ✓`, fouten ? "err" : "ok");
 
+  doorstroomHandmatig = doorstroomHandmatig.filter(h => !verhuisd.has(String(h.atleetId))); // patch 103
   // Herlaad de doorstroomlijst + banner, en als de actieve categorie is geraakt
   // ook de getoonde atleten/PR's.
   await laadDoorstroming();
