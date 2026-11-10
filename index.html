@@ -394,31 +394,37 @@ async function registreer() {
 
   bezig("reg-btn", true, "Account aanmaken…");
 
-  // Controleer uitnodigingstoken
-  const { data: uitn, error: uitnErr } = await sb
-    .from("uitnodigingen")
-    .select("*")
-    .eq("token", token)
-    .eq("gebruikt", false)
-    .gt("vervalt", new Date().toISOString())
-    .maybeSingle();
+  // Controleer uitnodigingstoken (patch 104): de database controleert dit ene token
+  // en het e-mailadres via de functie controleer_uitnodiging. De tabel uitnodigingen
+  // zelf is niet meer leesbaar zonder in te loggen.
+  const { data: uitnStatus, error: uitnErr } = await sb.rpc("controleer_uitnodiging", {
+    p_token: token,
+    p_email: email
+  });
 
-  if (uitnErr || !uitn) {
+  if (uitnErr || uitnStatus !== "ok") {
     bezig("reg-btn", false);
-    toonFout("reg-fout", "Ongeldige of verlopen uitnodigingscode. Neem contact op met de beheerder.");
+    toonFout("reg-fout", uitnStatus === "ander_email"
+      ? "Deze uitnodiging is voor een ander e-mailadres. Registreer met het adres waarop je de uitnodiging hebt ontvangen."
+      : "Ongeldige of verlopen uitnodigingscode. Neem contact op met de beheerder.");
     return;
   }
 
   // Registreer
   const { data: signUpData, error } = await sb.auth.signUp({
     email, password: ww,
-    options: { data: { gebruikersnaam: naam, rol: "trainer" } }
+    // patch 104: het token gaat mee; de database controleert het bij het aanmaken van het
+    // account, zet de uitnodiging op gebruikt en koppelt de trainer aan de categorie.
+    options: { data: { gebruikersnaam: naam, uitnodiging_token: token } }
   });
 
   if (error) {
     bezig("reg-btn", false);
     toonFout("reg-fout", error.message.includes("already registered")
-      ? "Dit e-mailadres is al geregistreerd." : "Registratie mislukt: " + error.message);
+      ? "Dit e-mailadres is al geregistreerd."
+      : error.message.includes("Database error")
+        ? "Registratie geweigerd: de uitnodiging is niet (meer) geldig voor dit e-mailadres. Neem contact op met de beheerder."
+        : "Registratie mislukt: " + error.message);
     return;
   }
 
@@ -430,16 +436,8 @@ async function registreer() {
     return;
   }
 
-  // Markeer uitnodiging als gebruikt
-  await sb.from("uitnodigingen").update({ gebruikt: true }).eq("token", token);
-
-  // Koppel trainer automatisch aan de categorie van de uitnodiging
-  try {
-    await sb.rpc("koppel_trainer_aan_uitnodiging_categorie", {
-      p_trainer_id: nieuweUser.id,
-      p_token:      token
-    });
-  } catch(e) { console.warn("Categorie koppeling mislukt:", e.message); }
+  // patch 104: op gebruikt zetten en koppelen aan de categorie gebeurt nu in de database
+  // (functie handle_new_user), niet meer vanuit deze pagina.
 
   bezig("reg-btn", false);
 

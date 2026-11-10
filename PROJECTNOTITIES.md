@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 5 november 2026 (patch 103)*
+*AV Sprint Breda · Laatste update: 10 november 2026 (patch 104)*
 
 ---
 
@@ -45,6 +45,17 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 104: Beveiliging van registreren en uitnodigingen (patch 104, nov 2026)
+
+- **Wat:** de database controleert de uitnodiging zelf bij het aanmaken van een account (`handle_new_user`): geldig, niet gebruikt, niet verlopen en voor hetzelfde e-mailadres. Daarna zet hij de uitnodiging op gebruikt en koppelt hij de trainer aan de categorie. Zonder geldige uitnodiging wordt er geen account aangemaakt (na stap 2b).
+- **Inlogpagina (`index.html`):** `registreer()` gebruikt `controleer_uitnodiging(p_token, p_email)` voor een nette melding vooraf en stuurt `uitnodiging_token` mee bij het aanmelden. De tabel `uitnodigingen` wordt vanaf de inlogpagina niet meer gelezen of gewijzigd. `app.html` is niet gewijzigd.
+- **Rollen:** `rol` en `actief` in `profielen` kan alleen een actieve admin wijzigen (bewaker `bescherm_profiel`, hulpfunctie `is_admin()`, regel "admin wijzigt profielen"). De rolknop in Admin werkte eerder niet voor anderen (nul rijen gewijzigd, geen foutmelding) en werkt nu wel. De laatste actieve admin blijft admin.
+- **Bewuste keuzes:** het e-mailadres bij registreren moet gelijk zijn aan het uitgenodigde adres (hoofdletters maken niet uit; keuze Milanovitch). `is_admin()` is `SECURITY DEFINER` zodat een regel op `profielen` niet naar zichzelf verwijst (geen recursie). De bewaker controleert alleen aanroepen vanuit de app (`auth.role()` is `authenticated` of `anon`); de SQL-editor valt erbuiten.
+- **Volgorde bij uitrollen:** SQL 2a, dan deze patch, dan SQL 2b. Andersom werkt registreren tijdelijk niet.
+- **Vervallen:** de functies `koppel_trainer_aan_uitnodiging_categorie` en `markeer_uitnodiging_gebruikt`, de leesregel "token ophalen" en de zes regels op `eigenaar_id` (de kolom zelf staat er nog en wordt niet gebruikt).
+- **Open:** 2FA afdwingen in de databaseregels, de mail-Worker, de oude tabel `release_notes` (niet gebruikt), en `supabase_setup.sql` gelijktrekken met de echte database.
+- **Terugdraaien:** Revert op de commit van patch 104 zet de oude inlogpagina terug; die werkt alleen als stap 2b nog niet is uitgevoerd. De SQL staat in de CHANGELOG.
 
 ### Patch 103: Doorstroming eerder openen en handmatig doorstromen (patch 103, nov 2026)
 Aanleiding (Milanovitch): de officiële doorstroomdatum is 1 januari, maar de vereniging laat atleten al half oktober doorstromen, en soms stroomt een atleet een jaar eerder door. Niet live-kritiek (geen wedstrijddag-functies); commit na "commit nu". Tag `ui-AC` komt op de commit vóór deze patch (patch 102, `5135ff9`).

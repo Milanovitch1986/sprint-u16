@@ -6,6 +6,287 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 104] — 2026-11-10
+
+### 🔒 Beveiliging: registreren en uitnodigingen worden in de database gecontroleerd
+
+<!--RELEASENOTE
+versie: Patch 104
+titel: 🔒 Veiliger registreren met een uitnodiging
+type: update
+tags: administratie
+beschrijving: Een uitnodiging wordt nu door de database zelf gecontroleerd en werkt alleen voor het e-mailadres waarnaar hij is gestuurd. Na het registreren staat de uitnodiging als gebruikt in de lijst. Rollen en de status van een account kan alleen een admin nog wijzigen; de rolknop bij Admin, Gebruikers werkt nu ook echt.
+-->
+
+Aanleiding: een beveiligingscontrole van de database (10 november 2026). Gevonden: (1) registreren buiten de app om met `rol: "admin"` gaf een admin-account, (2) een trainer kon zijn eigen `rol` en `actief` wijzigen, (3) de tabel `uitnodigingen` was zonder inloggen leesbaar (e-mailadressen en tokens), (4) de controle van een uitnodiging gebeurde alleen in de browser, (5) `koppel_trainer_aan_uitnodiging_categorie` koppelde elk account aan een categorie, ook met een oud token, (6) uitnodigingen werden nooit op gebruikt gezet, (7) er stonden nog oude regels op `eigenaar_id`. Milanovitch heeft gecontroleerd dat alle accounts bekend zijn.
+
+**App (alleen `index.html`; `app.html` is ongewijzigd).** `registreer()` vraagt de status van de uitnodiging op via de functie `controleer_uitnodiging(p_token, p_email)` (`ok`, `ander_email`, `ongeldig`) in plaats van de tabel te lezen, en stuurt het token mee bij het aanmelden (`uitnodiging_token` in de metagegevens; `rol` wordt niet meer meegestuurd). De twee aanroepen na het aanmelden (uitnodiging op gebruikt zetten, koppelen aan de categorie) zijn vervallen: dat doet de database nu zelf in `handle_new_user`. Nieuwe meldingen: "Deze uitnodiging is voor een ander e-mailadres…" en "Registratie geweigerd: de uitnodiging is niet (meer) geldig…".
+
+**Database (door Milanovitch uitgevoerd in Supabase), in deze volgorde:** stap 1 en 1b vóór deze patch, stap 2a vóór deze patch, stap 2b ná deze patch.
+
+Stap 1 — rollen beschermen (hulpfunctie `is_admin()`, bewaker `bescherm_profiel` op `profielen`, regel "admin wijzigt profielen", registreren levert altijd `trainer`, dubbele regels op `uitnodigingen` weg):
+
+```sql
+begin;
+
+-- 1. Hulpfunctie: is degene die dit aanroept een actieve admin?
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select exists (
+    select 1 from public.profielen
+    where id = auth.uid() and rol = 'admin' and actief
+  );
+$$;
+
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
+-- 2. Registreren levert altijd de rol 'trainer' op
+--    (de rol uit het aanmeldformulier wordt niet meer overgenomen)
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+begin
+  insert into public.profielen (id, gebruikersnaam, email, rol)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'gebruikersnaam', split_part(new.email, '@', 1)),
+    new.email,
+    'trainer'
+  );
+  return new;
+end;
+$$;
+
+-- 3. Bewaker op de tabel profielen: alleen een admin wijzigt rol en actief
+create or replace function public.bescherm_profiel()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+begin
+  -- Alleen aanroepen vanuit de app controleren. De SQL-editor en de
+  -- registratie (handle_new_user) vallen hier niet onder.
+  if coalesce(auth.role(), '') not in ('authenticated', 'anon') then
+    return new;
+  end if;
+
+  if not public.is_admin() then
+    if tg_op = 'INSERT' then
+      if new.rol <> 'trainer' or new.actief is not true then
+        raise exception 'Alleen een admin mag de rol of de status van een gebruiker instellen';
+      end if;
+    elsif new.rol is distinct from old.rol
+       or new.actief is distinct from old.actief
+       or new.id is distinct from old.id then
+      raise exception 'Alleen een admin mag de rol of de status van een gebruiker wijzigen';
+    end if;
+    return new;
+  end if;
+
+  -- Een admin mag dit wel, maar de laatste actieve admin blijft admin
+  if tg_op = 'UPDATE'
+     and old.rol = 'admin' and old.actief
+     and (new.rol <> 'admin' or new.actief is not true)
+     and not exists (
+       select 1 from public.profielen
+       where id <> old.id and rol = 'admin' and actief
+     ) then
+    raise exception 'Dit is de laatste admin; maak eerst een andere gebruiker admin';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists bescherm_profiel_trigger on public.profielen;
+create trigger bescherm_profiel_trigger
+  before insert or update on public.profielen
+  for each row execute function public.bescherm_profiel();
+
+-- 4. Een admin mag het profiel van een ander wijzigen (de rolknop in Admin)
+drop policy if exists "admin wijzigt profielen" on public.profielen;
+create policy "admin wijzigt profielen" on public.profielen
+  for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- 5. Dubbele regels op uitnodigingen opruimen (het gedrag blijft gelijk)
+drop policy if exists "anon_leest_uitnodigingen" on public.uitnodigingen;
+drop policy if exists "admin uitnodigingen" on public.uitnodigingen;
+
+commit;
+```
+
+Stap 1b — de zes oude regels op `eigenaar_id` verwijderd (`eigen atleten`, `eigen prestaties`, `eigen wedstrijden`, `eigen programma`, `eigen opstelling`, `eigen beschikbaarheid`), na een controle dat geen enkele rij alleen via die regels bereikbaar was.
+
+Stap 2a — uitnodiging controleren in de database (alleen toevoegen; de oude inlogpagina blijft werken):
+
+```sql
+begin;
+
+-- 1. Controle van één uitnodiging, voor de inlogpagina (vóór het inloggen).
+--    Geeft alleen een status terug voor dit ene token:
+--    'ok', 'ander_email' of 'ongeldig'. De tabel zelf hoeft niet meer leesbaar te zijn.
+create or replace function public.controleer_uitnodiging(p_token text, p_email text)
+returns text
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_email text;
+begin
+  select email into v_email
+  from public.uitnodigingen
+  where token = p_token
+    and gebruikt = false
+    and vervalt > now();
+
+  if not found then
+    return 'ongeldig';
+  end if;
+
+  if lower(trim(v_email)) <> lower(trim(coalesce(p_email, ''))) then
+    return 'ander_email';
+  end if;
+
+  return 'ok';
+end;
+$$;
+
+revoke all on function public.controleer_uitnodiging(text, text) from public;
+grant execute on function public.controleer_uitnodiging(text, text) to anon, authenticated;
+
+-- 2. Registratie: stuurt de app een uitnodigingstoken mee, dan controleert de
+--    database dat token zelf, zet de uitnodiging op gebruikt en koppelt de
+--    trainer aan de categorie. Zonder token blijft alles zoals het was
+--    (tot stap 2b), zodat de huidige inlogpagina blijft werken.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_token        text := nullif(trim(new.raw_user_meta_data->>'uitnodiging_token'), '');
+  v_categorie_id uuid;
+begin
+  insert into public.profielen (id, gebruikersnaam, email, rol)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'gebruikersnaam', split_part(new.email, '@', 1)),
+    new.email,
+    'trainer'
+  );
+
+  if v_token is not null then
+    update public.uitnodigingen
+       set gebruikt = true
+     where token = v_token
+       and gebruikt = false
+       and vervalt > now()
+       and lower(trim(email)) = lower(trim(new.email))
+    returning categorie_id into v_categorie_id;
+
+    if not found then
+      raise exception 'Geen geldige uitnodiging voor dit e-mailadres';
+    end if;
+
+    if v_categorie_id is not null then
+      insert into public.trainer_categorieen (trainer_id, categorie_id)
+      values (new.id, v_categorie_id)
+      on conflict do nothing;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+commit;
+```
+
+Stap 2b — dichtzetten (registreren kan alleen nog met een geldige uitnodiging voor dat e-mailadres; de leesregel "token ophalen" en de twee oude functies vervallen):
+
+```sql
+begin;
+
+-- 1. Registreren kan alleen nog met een geldige uitnodiging voor dat e-mailadres
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_token        text := nullif(trim(new.raw_user_meta_data->>'uitnodiging_token'), '');
+  v_categorie_id uuid;
+begin
+  if v_token is null then
+    raise exception 'Registreren kan alleen met een uitnodiging';
+  end if;
+
+  update public.uitnodigingen
+     set gebruikt = true
+   where token = v_token
+     and gebruikt = false
+     and vervalt > now()
+     and lower(trim(email)) = lower(trim(new.email))
+  returning categorie_id into v_categorie_id;
+
+  if not found then
+    raise exception 'Geen geldige uitnodiging voor dit e-mailadres';
+  end if;
+
+  insert into public.profielen (id, gebruikersnaam, email, rol)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'gebruikersnaam', split_part(new.email, '@', 1)),
+    new.email,
+    'trainer'
+  );
+
+  if v_categorie_id is not null then
+    insert into public.trainer_categorieen (trainer_id, categorie_id)
+    values (new.id, v_categorie_id)
+    on conflict do nothing;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- 2. Uitnodigingen zijn niet meer leesbaar zonder admin-rechten
+drop policy if exists "token ophalen" on public.uitnodigingen;
+
+-- 3. De twee oude functies zijn niet meer nodig
+drop function if exists public.koppel_trainer_aan_uitnodiging_categorie(uuid, text);
+drop function if exists public.markeer_uitnodiging_gebruikt(text);
+
+commit;
+```
+
+**Gevolgen.** Een account aanmaken via het Supabase-dashboard kan na stap 2b niet meer; het loopt altijd via een uitnodiging. De laatste actieve admin kan zichzelf niet degraderen of op inactief zetten. Wijzigingen via de SQL-editor vallen buiten de bewaker.
+
+**Getest.** De SQL in een lokale PostgreSQL-testdatabase die de beveiliging van `profielen`, `uitnodigingen` en `trainer_categorieen` nabootst: 14 situaties voor stap 1 (oud tegenover nieuw) en 13 voor stap 2 in drie standen (na stap 1, na 2a, na 2b), waaronder de oude en de nieuwe inlogpagina. `index.html` in Chromium tegen een nagebootste Supabase: zes situaties (ok, ander e-mailadres, ongeldig, functie ontbreekt, database weigert, al geregistreerd). `node --check` geldig.
+
+**Niet getest.** De echte Supabase-database, het echte aanmelden via Supabase Auth en de uitnodigingsmail; daarvoor doet Milanovitch na elk deel een testregistratie.
+
+**Nog open uit de beveiligingscontrole.** 2FA afdwingen in de databaseregels (stap 3), de mail-Worker (controle op de afzender), en `supabase_setup.sql` gelijktrekken met de echte database (na stap 3).
+
+---
+
 ## [november 2026 — patch 103] — 2026-11-05
 
 ### 🔀 Doorstroming eerder openen en atleten handmatig laten doorstromen
