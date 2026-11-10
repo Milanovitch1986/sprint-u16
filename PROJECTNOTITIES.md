@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 november 2026 (patch 105)*
+*AV Sprint Breda · Laatste update: 10 november 2026 (patch 106)*
 
 ---
 
@@ -45,6 +45,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 106: Uitnodigingsmail alleen nog door een admin met 2FA (patch 106, nov 2026)
+
+- **Wat:** de Cloudflare Worker `sprint-uitnodiging` verstuurt alleen nog een uitnodigingsmail als het meegestuurde toegangsbewijs van een actieve admin met 2FA is (`rpc/is_admin`) en de uitnodiging bestaat, ongebruikt en niet verlopen is en bij het e-mailadres hoort. De link bouwt de Worker zelf (`APP_BASIS` + token).
+- **App:** `verstuurUitnodiging()` stuurt `Authorization: Bearer <access_token>` en `{ email, token }`.
+- **Worker-code:** staat in de CHANGELOG bij patch 106 (niet in de repository). Bij een domeinwissel `APP_ORIGIN` en `APP_BASIS` in de Worker aanpassen. De Supabase-sleutel in de Worker is de openbare sleutel; het enige geheim blijft `BREVO_API_KEY`.
+- **Keep-alive:** `scheduled` ongewijzigd (Cron "0 6 1,15 * *").
+- **Terugdraaien:** oude Worker-code terugzetten (bewaard als `worker_origineel_backup.js`) en de commit van patch 106 terugdraaien (tag `ui-AF`); beide samen, want oud en nieuw werken niet door elkaar.
 
 ### Patch 105: 2FA wordt ook door de database geëist (patch 105, nov 2026)
 

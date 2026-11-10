@@ -6,6 +6,187 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 106] — 2026-11-10
+
+### 🔒 Beveiliging: uitnodigingsmail alleen nog door een admin met 2FA
+
+<!--RELEASENOTE
+versie: Patch 106
+titel: 🔒 Uitnodigingsmail alleen nog door een admin
+type: update
+tags: administratie, techniek
+beschrijving: De mailservice die de uitnodigingen verstuurt, controleert nu of de aanvraag van een admin met 2FA komt en of de uitnodiging echt bestaat. De link in de mail wordt door de mailservice zelf gemaakt en wijst altijd naar de app. Voor het uitnodigen zelf verandert er niets.
+-->
+
+Aanleiding: vervolg op de beveiligingscontrole van 10 november 2026. De Cloudflare Worker `sprint-uitnodiging` verstuurde via Brevo een mail naar elk adres met elke link, zonder te controleren wie hem aanriep (de CORS-instelling geldt alleen voor browsers). Daarmee kon iedereen phishingmails laten versturen met als afzender "AV Sprint Breda", het Brevo-tegoed opmaken en de afzender als spam laten markeren. De link werd bovendien zonder controle in de HTML van de mail gezet. Het type "welkom" werd nergens gebruikt.
+
+**Worker (door Milanovitch bijgewerkt in Cloudflare).** Eist `Authorization: Bearer <toegangsbewijs>`; vraagt Supabase met dat bewijs `rpc/is_admin` (actieve admin met 2FA, zie patch 105); zoekt de uitnodiging op (`token`, zelfde e-mailadres, niet gebruikt, niet verlopen; alleen leesbaar voor een admin met 2FA); bouwt de link zelf uit het vaste adres van de app plus het token (alleen hexadecimaal toegestaan); stuurt bij fouten een algemene melding terug en zet de details in het logboek van Cloudflare. Het type "welkom" is vervallen. De keep-alive (`scheduled`, Cron "0 6 1,15 * *") is ongewijzigd. De oorspronkelijke code is bewaard als `worker_origineel_backup.js` (niet in de repository).
+
+**App (`app.html`, `verstuurUitnodiging`).** Stuurt het toegangsbewijs van de sessie mee en alleen `email` en `token` (geen `link` en `type` meer). `kopieerUitnodigingslink` is ongewijzigd.
+
+**Volgorde.** Oude app en nieuwe Worker werken niet samen (401) en andersom ook niet (de browser blokkeert de voorcontrole); daarom vlak na elkaar live: eerst de Worker, dan deze patch.
+
+Worker-code (de openbare sleutel is hier ingekort):
+
+```js
+// Sprint U16 — Cloudflare Worker "sprint-uitnodiging" (versie patch 106, november 2026)
+//
+// Verstuurt de uitnodigingsmail via Brevo. Sinds patch 106 alleen voor een admin
+// die met 2FA is ingelogd, en alleen voor een bestaande, ongebruikte uitnodiging.
+// De link in de mail bouwt de Worker zelf op; de app stuurt geen link meer mee.
+//
+// Geheim (Settings → Variables and Secrets): BREVO_API_KEY. Dat blijft ongewijzigd.
+
+// Adres van de app. Bij de overstap naar een eigen domein: hier en bij APP_ORIGIN aanpassen.
+const APP_ORIGIN  = "https://milanovitch1986.github.io";
+const APP_BASIS   = "https://milanovitch1986.github.io/sprint-u16/";
+
+// Supabase. Dit is de OPENBARE sleutel (dezelfde die in app.html staat), geen geheim.
+const SUPABASE_URL      = "https://wntxmxvjvnishwkwvkux.supabase.co";
+const SUPABASE_ANON_KEY = "<openbare sleutel, gelijk aan SUPA_KEY in app.html>";
+
+const AFZENDER = { name: "AV Sprint Breda", email: "milande_maat@hotmail.com" };
+
+const CORS = {
+  "Access-Control-Allow-Origin": APP_ORIGIN,
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Vary": "Origin",
+};
+
+function antwoord(tekst, status) {
+  return new Response(tekst, { status, headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+// Vraag aan Supabase, namens de ingelogde gebruiker (zijn eigen toegangsbewijs)
+async function supabase(pad, jwt, opties = {}) {
+  return fetch(SUPABASE_URL + pad, {
+    ...opties,
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + jwt,
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+export default {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
+    if (request.method !== "POST") return antwoord("Niet toegestaan", 405);
+
+    // 1. Inlogbewijs van de app verplicht
+    const auth = request.headers.get("Authorization") || "";
+    const jwt  = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+    if (!jwt) return antwoord("Niet ingelogd", 401);
+
+    // 2. Invoer: alleen e-mailadres en token
+    let body;
+    try { body = await request.json(); }
+    catch { return antwoord("Ongeldige aanvraag", 400); }
+    const email = String(body?.email || "").trim().toLowerCase();
+    const token = String(body?.token || "").trim();
+    if (!/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email) || email.length > 254) {
+      return antwoord("Ongeldig e-mailadres", 400);
+    }
+    if (!/^[0-9a-f]{32,128}$/i.test(token)) return antwoord("Ongeldige uitnodiging", 400);
+
+    try {
+      // 3. Is de aanroeper een actieve admin met 2FA? (functie is_admin in de database)
+      const adm = await supabase("/rest/v1/rpc/is_admin", jwt, { method: "POST", body: "{}" });
+      if (!adm.ok || (await adm.json()) !== true) return antwoord("Geen toegang", 403);
+
+      // 4. Bestaat deze uitnodiging, voor dit adres, ongebruikt en niet verlopen?
+      const res = await supabase(
+        "/rest/v1/uitnodigingen?select=email,gebruikt,vervalt&token=eq." + encodeURIComponent(token),
+        jwt, { method: "GET" });
+      if (!res.ok) return antwoord("Uitnodiging niet gevonden", 404);
+      const rijen = await res.json();
+      const u = Array.isArray(rijen) ? rijen[0] : null;
+      if (!u || u.gebruikt || new Date(u.vervalt) <= new Date()
+          || String(u.email).trim().toLowerCase() !== email) {
+        return antwoord("Uitnodiging niet gevonden of niet meer geldig", 404);
+      }
+    } catch (err) {
+      console.log("Controle bij Supabase mislukt:", err);
+      return antwoord("Controle mislukt, probeer het later opnieuw", 502);
+    }
+
+    // 5. De link bouwt de Worker zelf: altijd naar de eigen app
+    const link = APP_BASIS + "index.html?uitnodiging=" + token.toLowerCase();
+
+    const htmlContent = `
+      <div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;'>
+        <h2 style='color:#e8420a;'>AV Sprint Breda — Sprint U16</h2>
+        <p>Hallo,</p>
+        <p>Je bent uitgenodigd om een account aan te maken voor de Sprint U16 beheerapp van AV Sprint Breda.</p>
+        <p style='margin:24px 0;'>
+          <a href='${link}'
+             style='background:#e8420a;color:#fff;padding:12px 24px;border-radius:6px;
+                    text-decoration:none;font-weight:bold;font-size:15px;'>
+            Account aanmaken
+          </a>
+        </p>
+        <p style='color:#888;font-size:13px;'>
+          Deze uitnodigingslink is 7 dagen geldig. Registreer met het e-mailadres waarop je
+          deze mail hebt ontvangen. Na het aanmaken van je account stel je verplicht een
+          authenticator-app in voor extra beveiliging (2FA).
+        </p>
+        <hr style='border:none;border-top:1px solid #eee;margin:24px 0;'>
+        <p style='color:#aaa;font-size:12px;'>
+          AV Sprint Breda · Sprint U16 beheerapp
+        </p>
+      </div>`;
+
+    try {
+      const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": env.BREVO_API_KEY },
+        body: JSON.stringify({
+          sender: AFZENDER,
+          to: [{ email }],
+          subject: "Uitnodiging Sprint U16",
+          htmlContent,
+        }),
+      });
+      if (!resp.ok) {
+        console.log("Brevo fout:", resp.status, await resp.text());
+        return antwoord("Mail versturen mislukt", 502);
+      }
+    } catch (err) {
+      console.log("Brevo niet bereikbaar:", err);
+      return antwoord("Mail versturen mislukt", 502);
+    }
+
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  },
+
+  // Keep-alive (Cron Trigger "0 6 1,15 * *"): één onschuldige aanroep naar Brevo zodat de
+  // API-sleutel als "gebruikt" telt. Verstuurt GEEN mail. Ongewijzigd ten opzichte van eerder.
+  async scheduled(event, env, ctx) {
+    try {
+      const resp = await fetch("https://api.brevo.com/v3/account", {
+        method: "GET",
+        headers: { "api-key": env.BREVO_API_KEY },
+      });
+      console.log("Brevo keep-alive ping status:", resp.status);
+    } catch (err) {
+      console.log("Brevo keep-alive fout:", err);
+    }
+  },
+};
+```
+
+**Getest.** De Worker in Node, oud tegenover nieuw, met een nagebootste Supabase en Brevo (geen echte mail): 15 situaties, waaronder aanroepen zonder inloggen, als trainer, als admin zonder 2FA, met een eigen link, een ander e-mailadres, een gebruikt/verlopen/onbekend token, een token met HTML, Supabase onbereikbaar, Brevo-fout, en de keep-alive. De hele keten in Chromium (app → Worker met echte CORS-voorcontrole → nagebootste Supabase en Brevo) in vijf combinaties van oude/nieuwe app en Worker. `node --check` geldig.
+
+**Niet getest.** De echte Cloudflare-omgeving, de echte Supabase-aanroepen van de Worker en de echte mail; daarvoor doet Milanovitch een uitnodiging naar een `+test`-adres.
+
+**Nog open.** De afzender is een hotmail-adres via Brevo (kan in de spam belanden); lost de overstap naar een eigen domein op. Daarnaast `supabase_setup.sql` gelijktrekken met de echte database.
+
+---
+
 ## [november 2026 — patch 105] — 2026-11-10
 
 ### 🔒 Beveiliging: 2FA wordt ook door de database geëist

@@ -11746,16 +11746,17 @@ async function verstuurUitnodiging() {
       return;
     }
 
-    // 2. Bouw de uitnodigingslink
-    const basis = window.location.origin + window.location.pathname.replace("app.html", "");
-    const link  = `${basis}index.html?uitnodiging=${nieuweUitn.token}`;
-
-    // 3. Verstuur e-mail via Cloudflare Worker (Brevo)
+    // 2. Verstuur e-mail via Cloudflare Worker (Brevo).
+    // patch 106: de Worker eist het inlogbewijs (admin met 2FA), controleert de uitnodiging
+    // in de database en bouwt de link zelf. De app stuurt daarom alleen e-mail en token mee.
     try {
+      const { data: sessieData } = await sb.auth.getSession();
+      const jwt = sessieData?.session?.access_token;
+      if (!jwt) throw new Error("geen sessie");
       const resp = await fetch("https://sprint-uitnodiging.milande-maat.workers.dev", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, link, type: "uitnodiging" })
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + jwt },
+        body: JSON.stringify({ email, token: nieuweUitn.token })
       });
       if (!resp.ok) {
         const fout = await resp.text();
