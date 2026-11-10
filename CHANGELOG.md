@@ -6,6 +6,146 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 105] — 2026-11-10
+
+### 🔒 Beveiliging: 2FA wordt ook door de database geëist
+
+<!--RELEASENOTE
+versie: Patch 105
+titel: 🔒 2FA wordt ook door de database geëist
+type: update
+tags: administratie, techniek
+beschrijving: De app laat je alleen nog binnen als je in deze sessie je 2FA-code hebt ingevoerd, en de database eist hetzelfde bij elk verzoek. Heb je nog geen 2FA ingesteld, dan start de inlogpagina de instelling vanzelf. Voor wie 2FA al gebruikt verandert er niets.
+-->
+
+Aanleiding: vervolg op de beveiligingscontrole van 10 november 2026 (stap 3). Gevonden: (1) geen enkele databaseregel keek naar de tweede stap, dus met alleen een wachtwoord kon je buiten de app om bij de gegevens; (2) `app.html` liet een account zonder ingestelde 2FA binnen (de controle stuurde alleen terug als 2FA was ingesteld maar de code nog niet was ingevoerd). Alle drie de bestaande accounts hadden 2FA al ingesteld (gecontroleerd door Milanovitch).
+
+**App.**
+- `app.html`, `checkAuth()`: alleen een sessie met `currentLevel === "aal2"` komt de app in; anders terug naar de inlogpagina. Kan het niveau niet worden opgevraagd, dan ook terug (veilige kant).
+- `index.html`, bij openen: ingelogd zonder tweede stap en zonder ingestelde 2FA start nu de 2FA-instelling (eerder gebeurde er niets).
+- `index.html`, `start2FASetup()`: ruimt eerst een eerder begonnen, niet afgemaakte instelling op (`unenroll` van niet-geverifieerde factoren); anders weigert Supabase een nieuwe met dezelfde naam. Een fout bij het instellen staat nu ook op het inlogformulier.
+
+**Database (door Milanovitch uitgevoerd in Supabase ná deze patch).** `is_admin()` eist een sessie met 2FA; `zet_instelling` en `verwijder_gebruiker` gebruiken `is_admin()`; categorienamen zijn alleen nog leesbaar voor ingelogde gebruikers; op elke tabel staat de extra regel `vereist_2fa` (restrictief, bovenop de bestaande regels). `keepalive`/`ping()` en `controleer_uitnodiging` werken zonder inloggen en zijn niet aangeraakt.
+
+```sql
+begin;
+
+-- 1. is_admin(): een admin telt alleen als admin in een sessie met 2FA
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select coalesce(auth.jwt() ->> 'aal', '') = 'aal2'
+     and exists (
+       select 1 from public.profielen
+       where id = auth.uid() and rol = 'admin' and actief
+     );
+$$;
+
+-- 2. De twee admin-functies gebruiken voortaan is_admin() (dus ook 2FA)
+create or replace function public.zet_instelling(p_sleutel text, p_waarde text)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Alleen een admin mag instellingen wijzigen';
+  end if;
+
+  insert into public.instellingen (sleutel, waarde, bijgewerkt_op)
+  values (p_sleutel, p_waarde, now())
+  on conflict (sleutel) do update
+    set waarde = excluded.waarde, bijgewerkt_op = now();
+end;
+$$;
+
+create or replace function public.verwijder_gebruiker(p_gebruiker_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+begin
+  -- Alleen een admin (met 2FA) mag dit aanroepen
+  if not public.is_admin() then
+    raise exception 'Geen toegang: alleen admins mogen gebruikers verwijderen';
+  end if;
+
+  -- Blokkeer zelfverwijdering
+  if p_gebruiker_id = auth.uid() then
+    raise exception 'Je kunt jezelf niet verwijderen';
+  end if;
+
+  delete from trainer_categorieen where trainer_id = p_gebruiker_id;
+  delete from uitnodigingen where aangemaakt_door = p_gebruiker_id;
+  delete from profielen where id = p_gebruiker_id;
+  delete from auth.users where id = p_gebruiker_id;
+end;
+$$;
+
+-- 3. Categorienamen zijn alleen nog leesbaar voor ingelogde gebruikers
+drop policy if exists "iedereen_leest_categorieen" on public.categorieen;
+drop policy if exists "ingelogd_leest_categorieen" on public.categorieen;
+create policy "ingelogd_leest_categorieen" on public.categorieen
+  for select to authenticated using (true);
+
+-- 4. Op elke tabel een extra regel bovenop de bestaande: alleen een sessie
+--    met 2FA (aal2) mag lezen en schrijven. De bestaande regels blijven staan.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'atleten', 'beschikbaarheid', 'categorieen', 'instellingen', 'onderdelen',
+    'opstelling', 'prestaties', 'profielen', 'programma', 'release_notes',
+    'releasenotes', 'resultaten', 'trainer_categorieen', 'uitnodigingen',
+    'wedstrijden'
+  ]
+  loop
+    if to_regclass('public.' || t) is not null then
+      execute format('drop policy if exists "vereist_2fa" on public.%I', t);
+      execute format(
+        'create policy "vereist_2fa" on public.%I as restrictive for all to authenticated '
+        || 'using ((select auth.jwt() ->> ''aal'') = ''aal2'') '
+        || 'with check ((select auth.jwt() ->> ''aal'') = ''aal2'')', t);
+    end if;
+  end loop;
+end;
+$$;
+
+commit;
+```
+
+Noodrem (haalt alleen de regel `vereist_2fa` van alle tabellen af):
+
+```sql
+-- Noodrem: haalt de 2FA-regel van alle tabellen af (de rest blijft staan)
+do $$
+declare
+  r record;
+begin
+  for r in select tablename from pg_policies
+           where schemaname = 'public' and policyname = 'vereist_2fa'
+  loop
+    execute format('drop policy "vereist_2fa" on public.%I', r.tablename);
+  end loop;
+end;
+$$;
+```
+
+**Getest.** De SQL in de lokale PostgreSQL-testdatabase, oud tegenover nieuw, 13 situaties: trainer en admin met en zonder tweede stap (lezen, schrijven, rol wijzigen, instelling zetten, gebruiker verwijderen, uitnodigingen), zonder inloggen, registreren met een uitnodiging, de SQL-editor, de laatste admin; plus twee keer uitvoeren en de noodrem. De app in Chromium tegen een nagebootste Supabase, oud tegenover nieuw: vijf situaties voor `app.html` en zeven voor de inlogpagina. `node --check` geldig voor beide bestanden.
+
+**Niet getest.** De echte Supabase-database (met name dat het echte toegangsbewijs het veld `aal` bevat zoals de documentatie beschrijft), een echte telefoon en de offline-wachtrij op een wedstrijddag tegen de nieuwe regels.
+
+**Nog open uit de beveiligingscontrole.** De mail-Worker (controle op de afzender) en `supabase_setup.sql` gelijktrekken met de echte database.
+
+---
+
 ## [november 2026 — patch 104] — 2026-11-10
 
 ### 🔒 Beveiliging: registreren en uitnodigingen worden in de database gecontroleerd

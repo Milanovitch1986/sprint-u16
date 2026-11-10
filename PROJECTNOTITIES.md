@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 november 2026 (patch 104)*
+*AV Sprint Breda · Laatste update: 10 november 2026 (patch 105)*
 
 ---
 
@@ -45,6 +45,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 105: 2FA wordt ook door de database geëist (patch 105, nov 2026)
+
+- **Wat:** op elke tabel staat de restrictieve regel `vereist_2fa`: alleen een sessie met `aal2` (tweede stap gedaan) mag lezen en schrijven. De bestaande regels zijn niet gewijzigd; deze komt erbovenop. `is_admin()` eist ook `aal2`.
+- **App:** `checkAuth()` in `app.html` eist `currentLevel === "aal2"`. De inlogpagina start de 2FA-instelling voor een ingelogd account zonder 2FA en ruimt een onafgemaakte instelling op.
+- **Bij een nieuwe tabel:** naast `GRANT` en `ENABLE ROW LEVEL SECURITY` ook de regel `vereist_2fa` toevoegen (zie de SQL in de CHANGELOG), anders valt die tabel buiten de 2FA-eis.
+- **Buiten de regel:** `keepalive` (alleen via `ping()`), `controleer_uitnodiging` (vóór het inloggen) en de registratie (`handle_new_user`).
+- **Volgorde bij uitrollen:** eerst deze patch, dan de SQL.
+- **Noodrem:** de opdracht in de CHANGELOG haalt `vereist_2fa` van alle tabellen af; de app blijft dan werken zoals met patch 105.
+- **Terugdraaien:** Revert op de commit van patch 105, of terug naar tag `ui-AE`. De databaseregels mogen blijven staan; de oudere app werkt ermee voor accounts met 2FA.
 
 ### Patch 104: Beveiliging van registreren en uitnodigingen (patch 104, nov 2026)
 

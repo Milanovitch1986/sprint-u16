@@ -292,11 +292,12 @@ function bezig(id, ja, label) {
   if (!session) return;
   const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal?.currentLevel === "aal2") { window.location.href = "app.html"; return; }
-  if (aal?.nextLevel === "aal2") {
-    const { data: factors } = await sb.auth.mfa.listFactors();
-    const totp = factors?.totp?.[0];
-    if (totp) { totpFactorId = totp.id; toonView("view-2fa"); }
-  }
+  // patch 105: ingelogd maar de tweede stap nog niet gedaan. Met een ingestelde 2FA
+  // vragen we de code; zonder ingestelde 2FA starten we de instelling (verplicht).
+  const { data: factors } = await sb.auth.mfa.listFactors();
+  const totp = factors?.totp?.[0];
+  if (totp) { totpFactorId = totp.id; toonView("view-2fa"); }
+  else { await start2FASetup(); }
 })();
 
 // ── Inloggen ──────────────────────────────────────────────────
@@ -446,8 +447,22 @@ async function registreer() {
 }
 
 async function start2FASetup() {
+  // patch 105: ruim een eerder begonnen maar niet afgemaakte 2FA-instelling op.
+  // Anders weigert Supabase een nieuwe met dezelfde naam en loopt het instellen vast.
+  try {
+    const { data: bestaand } = await sb.auth.mfa.listFactors();
+    for (const f of (bestaand?.all || [])) {
+      if (f.status !== "verified") await sb.auth.mfa.unenroll({ factorId: f.id });
+    }
+  } catch (e) { console.warn("Opruimen van een onafgemaakte 2FA-instelling mislukt:", e.message); }
+
   const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "Sprint U16" });
-  if (error) { toonFout("reg-fout", "2FA instellen mislukt: " + error.message); return; }
+  if (error) {
+    // De melding staat op het formulier dat op dat moment zichtbaar is (inloggen of registreren).
+    toonFout("reg-fout", "2FA instellen mislukt: " + error.message);
+    toonFout("login-fout", "2FA instellen mislukt: " + error.message);
+    return;
+  }
   totpFactorId = data.id;
   document.getElementById("totp-qr").src = data.totp.qr_code;
   document.getElementById("totp-secret-key").textContent = data.totp.secret;

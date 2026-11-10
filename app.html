@@ -3312,8 +3312,11 @@ let geselecteerd     = new Set();
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = "index.html"; return false; }
+  // patch 105: alleen een sessie waarin de tweede stap (2FA) is gedaan komt de app in.
+  // Eerder kwam een account zonder ingestelde 2FA er ook door; de inlogpagina start
+  // in dat geval nu de 2FA-instelling. De database eist hetzelfde (regel "vereist_2fa").
   const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+  if (aal?.currentLevel !== "aal2") {
     window.location.href = "index.html"; return false;
   }
   const { data: profiel } = await sb.from("profielen").select("*").eq("id", session.user.id).single();
