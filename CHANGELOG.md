@@ -6,6 +6,34 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 107] — 2026-11-11
+
+### 📲 App installeerbaar en zonder internet te openen
+
+<!--RELEASENOTE
+versie: Patch 107
+titel: 📲 Sprint U16 op je beginscherm, ook zonder internet te openen
+type: feature
+tags: techniek, wedstrijddag
+beschrijving: Je kunt Sprint U16 nu als app op het beginscherm van je telefoon zetten (iPhone: Safari → Deel → Zet op beginscherm; Android: menu → App installeren). De app opent daarna ook als er even geen internet is, en bij een traag netwerk na hooguit vier seconden. Gegevens werken offline nog niet; dat volgt in de volgende patch.
+-->
+
+Aanleiding: de verbeterpuntenlijst van 10 november 2026. De service worker `pwa_sw.js` bestond, maar werd nergens geregistreerd; hij gebruikte bovendien paden vanaf de hoofdmap (`/index.html`) terwijl de app onder `/sprint-u16/` staat, verwees naar `manifest.json` (het bestand heet `pwa_manifest.json`) en naar iconen die niet bestonden. Zonder internet laadde de app dus niet, ook niet als de offline-wachtrij van de wedstrijddag nog resultaten had.
+
+**Wijzigingen.**
+- `pwa_sw.js` herschreven (cache `sprint-u16-v3`, oude caches worden opgeruimd): pagina's netwerk-eerst met een wachttijd van 4 seconden (daarna de bewaarde versie; de nieuwe wordt op de achtergrond alsnog bewaard), pagina's bewaard zonder zoekdeel; bibliotheken met een vast versienummer (jsDelivr, cdnjs) en Google Fonts cache-eerst; Supabase, de mail-Worker en alles wat geen GET is worden niet aangeraakt.
+- `app.html` en `index.html`: link naar het manifest, `theme-color`, apple-touch-icon en web-app-meta's; registratie van de service worker (alleen in een beveiligde omgeving); Supabase-bibliotheek vast op versie 2.119.0 (was `@2`, wat op dat moment ook 2.119.0 opleverde).
+- `pwa_manifest.json` herschreven: `start_url` en `scope` relatief (`./app.html`, `./`), naam "Sprint U16 — AV Sprint Breda", kleuren gelijk aan de app, iconen apart voor `any` en `maskable`, geen vergrendeling op staand scherm.
+- Nieuwe bestanden `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (geel in de accentkleur van de app #f9a825, zwarte tekst "SPRINT U16" en drie baanlijnen, Barlow Condensed; tekst binnen de veilige zone voor ronde iconen).
+
+**Getest.** In Chromium met de mappenstructuur van GitHub Pages (`/sprint-u16/`): service worker actief met de juiste scope; bewaarde bestanden; offline openen van `app.html`, `index.html?uitnodiging=…` en de map zelf (inclusief de Supabase-bibliotheek); geen Supabase-gegevens in de cache; bij een netwerk van 8 seconden de pagina na 4,1 seconden; een nieuwe versie is online direct zichtbaar en wordt daarna ook offline getoond. `node --check` geldig. Geen JavaScript-fouten.
+
+**Niet getest.** Een echte iPhone en Android-telefoon (installeren, opstarten vanaf het beginscherm), GitHub Pages zelf en de echte CDN's.
+
+**Bekende beperking (volgt in patch 108).** Offline opent de app, maar er zijn geen gegevens en na een uur zonder internet (verlopen inlogbewijs) stuurt de app je naar de inlogpagina.
+
+---
+
 ## [november 2026 — patch 106] — 2026-11-10
 
 ### 🔒 Beveiliging: uitnodigingsmail alleen nog door een admin met 2FA

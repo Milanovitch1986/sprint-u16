@@ -1,25 +1,17 @@
 {
-  "name": "SPRINT U16 Competitietool",
-  "short_name": "SPRINT U16",
-  "description": "U16 atletiek competitietool voor AV SPRINT Breda",
-  "start_url": "/index.html",
+  "id": "./app.html",
+  "name": "Sprint U16 — AV Sprint Breda",
+  "short_name": "Sprint U16",
+  "description": "Atletiektool voor AV Sprint Breda: atleten, PR's, opstellingen en de wedstrijddag",
+  "start_url": "./app.html",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#111111",
-  "theme_color": "#111111",
+  "background_color": "#0a0b0f",
+  "theme_color": "#0a0b0f",
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["sports", "utilities"],
   "lang": "nl"

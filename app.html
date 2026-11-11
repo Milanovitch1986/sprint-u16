@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- patch 107: installeerbaar op het beginscherm en offline te openen -->
+<link rel="manifest" href="pwa_manifest.json">
+<meta name="theme-color" content="#0a0b0f">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sprint U16">
 <title>Sprint U16 — Atletiek</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2251,7 +2258,7 @@
     #mob-meer, #mob-meer-backdrop { display: none !important; }
   }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 </head>
 <body>
 
@@ -13602,6 +13609,14 @@ function kiesSegment(knop, selectId, waarde) {
   const groep = knop && knop.parentElement;
   if (groep) groep.querySelectorAll(".segment-knop").forEach(b => b.classList.toggle("active", b === knop));
   sel.dispatchEvent(new Event("change"));
+}
+</script>
+<script>
+// patch 107: service worker registreren (zie pwa_sw.js), zodat de app ook zonder internet opent
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("pwa_sw.js").catch(e => console.warn("Service worker niet geregistreerd:", e.message));
+  });
 }
 </script>
 </body>

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 10 november 2026 (patch 106)*
+*AV Sprint Breda · Laatste update: 11 november 2026 (patch 107)*
 
 ---
 
@@ -45,6 +45,16 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 107: Installeerbaar en offline te openen (patch 107, nov 2026)
+
+- **Service worker:** `pwa_sw.js`, geregistreerd onderaan `app.html` en `index.html`; scope `/sprint-u16/`. Pagina's netwerk-eerst (wachttijd 4 s), vaste bibliotheken en lettertypen cache-eerst; Supabase en de mail-Worker worden nooit bewaard.
+- **Bij een nieuwe externe bibliotheek:** altijd met een vast versienummer laden (jsDelivr `@x.y.z`), anders bewaart de service worker hem niet.
+- **Bij een nieuw bestand dat offline nodig is:** toevoegen aan `BASIS` in `pwa_sw.js` en `VERSIE` ophogen.
+- **Iconen:** `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`; manifest `pwa_manifest.json` (`start_url` `./app.html`).
+- **Supabase-bibliotheek:** vast op 2.119.0 in beide pagina's.
+- **Valkuil:** een gebruiker ziet een nieuwe patch pas na de wachttijd als zijn netwerk trager is dan 4 s; de volgende keer krijgt hij de nieuwe versie.
+- **Terugdraaien:** Revert op de commit van patch 107 of tag `ui-AG`. Een al geïnstalleerde service worker blijft dan actief tot hij wordt vervangen; netwerk-eerst zorgt dat online toch de teruggedraaide pagina's verschijnen.
 
 ### Patch 106: Uitnodigingsmail alleen nog door een admin met 2FA (patch 106, nov 2026)
 
