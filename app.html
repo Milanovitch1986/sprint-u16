@@ -4750,15 +4750,7 @@ function formateerResultaatWeergave(resultaat, disc) {
 
 // ── Excel export van alle PR's ────────────────────────────────
 async function exporteerPRsExcel() {
-  if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
+  await laadXlsx();   // patch 111
 
   // Vaste volgorde van alle onderdelen (gecombineerd jongens + meisjes)
   const _cfgExp = catConfig(); // patch 101: U18/U20 exporteert zijn eigen onderdelen; U14 en U16 de vaste lijst
@@ -4798,6 +4790,28 @@ async function exporteerPRsExcel() {
   toast("PR's geëxporteerd ✓");
 }
 
+// patch 111: gedeelde hulpfunctie om SheetJS on-demand te laden.
+// Zolang de bibliotheek eenmaal ingeladen is (window.XLSX), doet een volgende
+// aanroep niets. cdnjs/0.18.5 is de versie die de service worker al bewaart.
+let _xlsxLaden = null;
+async function laadXlsx() {
+  if (window.XLSX) return;
+  if (!_xlsxLaden) {
+    _xlsxLaden = new Promise((res, rej) => {
+      const el = document.createElement("script");
+      el.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      el.onload = res; el.onerror = rej;
+      document.head.appendChild(el);
+    });
+  }
+  try {
+    await _xlsxLaden;
+  } catch (e) {
+    _xlsxLaden = null;   // volgende poging mag het opnieuw proberen
+    throw new Error("SheetJS kon niet geladen worden — controleer je verbinding");
+  }
+}
+
 // ── Eén-klik back-up van de actieve categorie naar Excel (patch 64) ──
 // Vangnet: exporteert de al ingeladen data van de actieve categorie naar één
 // Excel-bestand met drie tabbladen (Atleten, PR's, Wedstrijden). Alleen lezen —
@@ -4805,21 +4819,8 @@ async function exporteerPRsExcel() {
 async function backupNaarExcel() {
   if (!actieveCategorie) { toast("Geen categorie beschikbaar", "err"); return; }
 
-  // SheetJS on-demand laden — zelfde patroon als exporteerPRsExcel()
-  if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
-    try {
-      await new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-    } catch (e) {
-      toast("SheetJS kon niet geladen worden — controleer je verbinding", "err");
-      return;
-    }
-  }
+  // patch 111: gedeelde hulpfunctie (foutafhandeling zit in laadXlsx())
+  try { await laadXlsx(); } catch (e) { toast(e.message, "err"); return; }
 
   const wb = XLSX.utils.book_new();
   const atletenGesorteerd = [...atleten].sort((a, b) => (a.naam || "").localeCompare(b.naam || ""));
@@ -4973,15 +4974,7 @@ async function importExcel(input) {
   input.value = "";
 
   // Laad SheetJS dynamisch
-  if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
+  await laadXlsx();   // patch 111
 
   const buf = await file.arrayBuffer();
   const wb  = XLSX.read(buf, { type: "array", cellDates: true });
@@ -5477,15 +5470,7 @@ async function openPROverzichtImport(input) {
   if (!file) return;
   input.value = "";
 
-  // Laad SheetJS
-  if (!window.XLSX) {
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
+  await laadXlsx();   // patch 111
 
   // Toon modal in stap-1 staat
   document.getElementById("prImport-stap1").style.display = "";
@@ -11920,15 +11905,7 @@ async function exporteerOpstelling() {
   if (!programma.length)  { toast("Geen programma ingevoerd", "err"); return; }
 
   // Laad SheetJS dynamisch
-  if (!window.XLSX) {
-    toast("SheetJS laden…", "ok");
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
+  await laadXlsx();   // patch 111
 
   const wedstrijd  = wedstrijden.find(w => String(w.id) === String(actiefWedstrijdId));
   const bestandsnaam = wedstrijd ? wedstrijd.naam.replace(/[^a-zA-Z0-9 _-]/g, "") : "opstelling";
@@ -13198,20 +13175,8 @@ async function verwerkFinaleBestand(bestand) {
   statusEl.style.display = "";
   statusEl.textContent = "Excel wordt gelezen…";
 
-  // SheetJS lazy laden
-  if (!window.XLSX) {
-    try {
-      await new Promise((res, rej) => {
-        const sc = document.createElement("script");
-        sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-        sc.onload = res; sc.onerror = rej;
-        document.head.appendChild(sc);
-      });
-    } catch(e) {
-      statusEl.textContent = "❌ Kon de Excel-bibliotheek niet laden.";
-      return;
-    }
-  }
+  // patch 111: gedeelde hulpfunctie (foutafhandeling zit in laadXlsx())
+  try { await laadXlsx(); } catch (e) { statusEl.textContent = "❌ Kon de Excel-bibliotheek niet laden."; return; }
 
   try {
     const buf = await bestand.arrayBuffer();

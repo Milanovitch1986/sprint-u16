@@ -6,6 +6,28 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 111] — 2026-11-11
+
+### 🔧 Onderhoud: SheetJS-laadblok samengevat in één hulpfunctie
+
+<!--RELEASENOTE
+versie: Patch 111
+titel: 🔧 Onderhoud: Excel-bibliotheek samengevat
+type: update
+tags: techniek, excel
+beschrijving: De code om de Excel-bibliotheek te laden stond op zes plekken bijna identiek gekopieerd. Die zes blokken zijn samengevat in één functie, laadXlsx(). Voor de gebruiker verandert er niets.
+-->
+
+Aanleiding: de verbeterpuntenlijst van 10 november 2026. De code om SheetJS on-demand te laden was op zes plekken bijna identiek gekopïeerd (exporteerPRsExcel, backupNaarExcel, importExcel, openPROverzichtImport, exporteerOpstelling en verwerkFinaleBestand). Een versie-update of foutoplossing moest op zes plekken worden doorgevoerd. Geen gedragswijziging voor de gebruiker; `app.html` is de enige gewijzigde file.
+
+**Wijziging.** Nieuwe functie `laadXlsx()` met de gedeelde laadlogica. Verbeteringen ten opzichte van de oude blokken: (1) bij parallelle aanroepen (twee functies tegelijk) wordt de bibliotheek maar één keer geladen (`_xlsxLaden` als gedeelde belofte); (2) bij mislukken wordt `_xlsxLaden` gereset zodat een volgende poging het opnieuw kan proberen; (3) foutafhandeling is consistent voor alle zes functies.
+
+Versie 0.18.5 blijft gehandhaafd: dat is de versie die de service worker al bewaart (patch 107, cdnjs) en die cdnjs beschikbaar stelt. Een upgrade naar een nieuwere versie (0.19.x/0.20.x) vereist een andere CDN (cdn.sheetjs.com is niet op cdnjs beschikbaar) en een aanpassing van de service worker; dat is een aparte patch.
+
+**Getest.** `node --check` geldig; geïsoleerde test bevestigt dat `laadXlsx()` bij parallelle aanroepen maar één script-element aanmaakt. De zes aanroeplocaties zijn handmatig geverifieerd.
+
+---
+
 ## [november 2026 — patch 110] — 2026-11-11
 
 ### 🧪 Automatische tests
