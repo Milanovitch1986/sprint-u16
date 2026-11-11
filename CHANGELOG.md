@@ -6,6 +6,28 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 112] — 2026-11-11
+
+### 🔧 Opruimen: drie kleine verbeterpunten
+
+<!--RELEASENOTE
+versie: Patch 112
+titel: 🔧 Drie kleine verbeterpunten
+type: bugfix
+tags: techniek
+beschrijving: Een apostrof in een atlaatnaam of eigen onderdeel (bijv. "O'Brien") brak knoppen op de wedstrijddag. Dat is opgelost. Daarnaast worden de locatie en de paginatitel nu ook netjes gesaneerd in de afdrukken, en is het oude bestand atletiek_iphone.html verwijderd.
+-->
+
+**esc() vangt nu ook een apostrof af (patch 112).** Een apostrof (`'`) in een eigen onderdeelnaam of atlaatnaam brak `onclick`-attributen zoals `onclick="kiesAtleet('O'Brien', ...)"`. De fout was bekend en stond als open punt in de tests. `'` → `&#39;` is de standaard HTML-entiteit voor enkelvoudig aanhalingsteken.
+
+**Locatie en paginatitel in afdrukken.** In `printOpstelling` en `printPloeg` stond `wedstrijdLoc` / `wedstrijd.locatie` als tekst in de HTML van het afdrukdocument zonder `esc()`. Dat is nu hersteld, evenals de `<title>`-tags van beide afdrukken (ook `wedstrijd.naam` stond daar zonder `esc()`).
+
+**`atletiek_iphone.html` verwijderd.** Dit was een vroeg prototype van de app dat nergens meer naar wordt verwezen. Het registreerde een service worker op `/sw.js` (een bestand dat niet bestaat), zodat er geen risico aan verbonden was; de enige reden om het te bewaren was terugkijken, en die staat in de git-geschiedenis.
+
+**Automatische tests bijgewerkt.** De apostrof-test was gelabeld als `todo`; die status is verwijderd nu het is opgelost.
+
+---
+
 ## [november 2026 — patch 111] — 2026-11-11
 
 ### 🔧 Onderhoud: SheetJS-laadblok samengevat in één hulpfunctie

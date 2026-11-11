@@ -4910,7 +4910,10 @@ document.querySelectorAll(".modal-overlay").forEach(el => {
 });
 
 function esc(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  // patch 112: apostrof toegevoegd (een apostrof in een onderdeel- of atlaatnaam
+  // breekt anders onclick-attributen als onclick="kiesAtleet('O''Brien', ...)")
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+                  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 function formatDate(d) {
   if (!d) return "";
@@ -10408,7 +10411,7 @@ async function printOpstelling() {
         <div class="doc-header">
           <div class="club-naam">AV Sprint Breda — ${esc(catNaam())}</div>
           <div class="wedstrijd-titel">${esc(wedstrijdNaam)}</div>
-          <div class="wedstrijd-meta">${[wedstrijdDatum, wedstrijdLoc].filter(Boolean).join(" · ")}</div>
+          <div class="wedstrijd-meta">${[wedstrijdDatum, esc(wedstrijdLoc)].filter(Boolean).join(" · ")}</div>
           <div class="print-datum">Afgedrukt op ${printDatum}</div>
         </div>` : "";
       isAllereersteTeam = false;
@@ -10486,7 +10489,7 @@ async function printOpstelling() {
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Opstelling — ${wedstrijdNaam}</title>
+<title>Opstelling — ${esc(wedstrijdNaam)}</title>
 <style>
   @page {
     size: A4 landscape;
@@ -10799,7 +10802,7 @@ async function printPloeg(ploeg) {
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>${teamNaam} — ${wedstrijd.naam}</title>
+<title>${teamNaam} — ${esc(wedstrijd.naam)}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; background: white; padding: 20mm 18mm; }
@@ -10829,7 +10832,7 @@ async function printPloeg(ploeg) {
   <div class="doc-header">
     <div class="club-naam">AV Sprint Breda — ${esc(catNaam())}</div>
     <div class="wedstrijd-titel">${esc(wedstrijd.naam)}</div>
-    <div class="wedstrijd-meta">${[wedstrijd.datum ? formatDate(wedstrijd.datum) : "", wedstrijd.locatie || ""].filter(Boolean).join(" · ")}</div>
+    <div class="wedstrijd-meta">${[wedstrijd.datum ? formatDate(wedstrijd.datum) : "", esc(wedstrijd.locatie || "")].filter(Boolean).join(" · ")}</div>
     <div class="print-datum">Afgedrukt op ${printDatum}</div>
   </div>
   <div class="team-header">${gLabel}</div>

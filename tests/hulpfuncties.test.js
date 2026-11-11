@@ -18,7 +18,7 @@ test("esc maakt tekst veilig voor HTML", async () => {
   assert.equal(w.esc(42), "42");
 });
 
-test("esc vangt ook een apostrof af (bekend open punt)", { todo: "een apostrof in een eigen onderdeelnaam breekt nu knoppen op de wedstrijddag" }, async () => {
+test("esc vangt ook een apostrof af (patch 112)", async () => {
   const { w } = await laadApp();
   assert.ok(!w.esc("Kogel 3 kg 'oud'").includes("'"));
 });
