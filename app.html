@@ -4799,7 +4799,7 @@ async function laadXlsx() {
   if (!_xlsxLaden) {
     _xlsxLaden = new Promise((res, rej) => {
       const el = document.createElement("script");
-      el.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      el.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";  // patch 113: 0.18.5 → 0.20.3 (CVE-2023-30533, CVE-2024-22363)
       el.onload = res; el.onerror = rej;
       document.head.appendChild(el);
     });

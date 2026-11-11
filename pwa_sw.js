@@ -10,7 +10,7 @@
 //    iconen en manifest: CACHE-EERST (ze veranderen niet).
 //  - Supabase-gegevens, inloggen en de mail-Worker: NOOIT bewaard, altijd rechtstreeks.
 
-const VERSIE  = "sprint-u16-v3";          // ophogen als de lijst hieronder wijzigt
+const VERSIE  = "sprint-u16-v4";  // patch 113: xlsx 0.18.5 → 0.20.3; ophogen als BASIS of EXTERN wijzigt
 const WACHT_MS = 4000;                    // zo lang wachten op het netwerk voor een pagina
 
 const BASIS = [
@@ -25,11 +25,13 @@ const BASIS = [
 // Van andere websites; los geprobeerd zodat één mislukte download de installatie niet stopt
 const EXTERN = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0",
+  "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",  // patch 113
 ];
 
 // Externe adressen die we bewaren als ze een keer zijn gebruikt (vast versienummer of lettertype)
 function isBewaarbaarExtern(url) {
   return url.hostname === "cdn.jsdelivr.net"
+      || url.hostname === "cdn.sheetjs.com"      // patch 113: xlsx 0.20.3
       || url.hostname === "cdnjs.cloudflare.com"
       || url.hostname === "fonts.googleapis.com"
       || url.hostname === "fonts.gstatic.com";
@@ -104,6 +106,7 @@ self.addEventListener("fetch", e => {
   if (isBewaarbaarExtern(url)) {
     // Alleen bestanden met een vast versienummer of lettertypen; '@2' zonder versie niet
     if (url.hostname === "cdn.jsdelivr.net" && !/@\d+\.\d+\.\d+/.test(url.pathname)) return;
+    if (url.hostname === "cdn.sheetjs.com" && !/xlsx-\d+\.\d+\.\d+/.test(url.pathname)) return; // patch 113: 'latest' niet bewaren
     e.respondWith(bestand(req));
   }
   // Al het andere (Supabase, de mail-Worker, Brevo): niet aanraken

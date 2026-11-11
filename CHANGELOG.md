@@ -6,6 +6,30 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 113] — 2026-11-11
+
+### 🔒 Beveiliging: Excel-bibliotheek bijgewerkt naar 0.20.3
+
+<!--RELEASENOTE
+versie: Patch 113
+titel: 🔒 Excel-bibliotheek bijgewerkt (beveiligingsupdate)
+type: update
+tags: techniek, excel
+beschrijving: De Excel-bibliotheek (SheetJS) is bijgewerkt van 0.18.5 naar 0.20.3. Deze update sluit twee kwetsbaarheden: een Prototype Pollution-fout (CVE-2023-30533, opgelost in 0.19.3) en een ReDoS-fout (CVE-2024-22363, opgelost in 0.20.2). Voor het gebruik van Excel-import en -export verandert er niets.
+-->
+
+Aanleiding: de verbeterpuntenlijst van 10 november 2026. SheetJS 0.18.5 heeft twee bekende kwetsbaarheden: Prototype Pollution (CVE-2023-30533, opgelost in 0.19.3) en ReDoS (CVE-2024-22363, opgelost in 0.20.2). De kwetsbaarheden zijn relevant bij het lezen van onbetrouwbare Excel-bestanden; in Sprint U16 uploaden alleen ingelogde trainers zelf bestanden, maar het is toch beter de bibliotheek actueel te houden.
+
+Nieuwere versies zijn niet op cdnjs beschikbaar (cdnjs heeft 0.18.5 als meest recent). Versie 0.20.3 is beschikbaar op de officiële SheetJS CDN (`cdn.sheetjs.com`).
+
+**`app.html`.** `laadXlsx()` gebruikt nu `cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js`. Dankzij de samenvoegpatch (patch 111) is dit één wijziging op één plek.
+
+**`pwa_sw.js`.** De cacheversie is opgehoogd naar `sprint-u16-v4` (browsers die de app hebben geïnstalleerd, laden de nieuwe service worker bij de eerstvolgende online open); `cdn.sheetjs.com` is toegevoegd aan `isBewaarbaarExtern` en aan `EXTERN` (zodat de bibliotheek alvast wordt bewaard bij installatie); alleen URL's met een vast versienummer (`xlsx-0.20.3`) worden gecached, niet de 'latest'-tag.
+
+**Getest.** `node --check` geldig voor `app.html` en `pwa_sw.js`; alle 25 tests slagen (het apostrof-todo-label is door patch 112 weg). De werkelijke download van `cdn.sheetjs.com` kan pas worden gecontroleerd in een echte browser na de commit; de officiële documentatie bevestigt de URL.
+
+---
+
 ## [november 2026 — patch 112] — 2026-11-11
 
 ### 🔧 Opruimen: drie kleine verbeterpunten
