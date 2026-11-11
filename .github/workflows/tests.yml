@@ -1,0 +1,28 @@
+# Automatische tests van Sprint U16 (patch 110)
+#
+# Draait bij elke commit op main (en met de hand via "Run workflow"). Laadt app.html in een
+# nagebootste browser met een nep-Supabase en controleert de rekenregels: punten, resultaten,
+# leeftijdscategorie, opstelregels, wedstrijddag en de offline-wachtrij. Raakt de echte
+# database nooit. Faalt een test, dan krijg je een rood kruisje bij de commit en een mail van
+# GitHub; de app zelf blijft gewoon online (dit blokkeert niets).
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Benodigdheden installeren (jsdom)
+        run: npm ci --no-audit --no-fund
+      - name: Tests draaien
+        run: npm test

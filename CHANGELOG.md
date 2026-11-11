@@ -6,6 +6,33 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 110] — 2026-11-11
+
+### 🧪 Automatische tests
+
+<!--RELEASENOTE
+versie: Patch 110
+titel: 🧪 Automatische controle van de rekenregels
+type: update
+tags: techniek
+beschrijving: Bij elke wijziging aan de app controleert GitHub nu automatisch of de punten, de leeftijdscategorieën, de opstelregels en de wedstrijddag nog goed rekenen. In de app zelf verandert niets.
+-->
+
+Aanleiding: de verbeterpuntenlijst van 10 november 2026. Er waren geen automatische tests; een regressie (zoals die van patch 63) werd pas door gebruik gevonden.
+
+**Wat erbij komt (`app.html` is ongewijzigd).**
+- `tests/laad-app.js`: laadt `app.html` in jsdom (een nagebootste browser) met een nep-Supabase; geen netwerk, de echte database wordt nooit aangeraakt. Tijdzone vast op Europe/Amsterdam.
+- Vijf testbestanden, 25 tests: punten (`punten.test.js`), resultaten lezen en tonen (`resultaten.test.js`), leeftijdscategorie en doorstroming (`leeftijd.test.js`), opstelregels — tijdconflict van 15 minuten, 3-uursregel U16 en U18/U20, slepen met maximaal 3 onderdelen en één ploeg (`opstelling.test.js`), wedstrijddag — beste resultaat over rondes en pogingen, telregels, offline-wachtrij, verbindingsfouten (`wedstrijddag.test.js`), en hulpfuncties plus het foutloos laden van de app (`hulpfuncties.test.js`).
+- Punten: negen officiële U18-uitslagen (aangeleverd door Milanovitch) als maatstaf — alle negen kloppen; daarnaast 3.225 vastgelegde uitkomsten voor U14, U16 en U18/U20, jongens en meisjes (`tests/punten-vastgelegd.json`, opnieuw te maken met `node tests/maak-vastgelegde-punten.js`, alleen bij een bewuste wijziging); en een controle dat sneller of verder nooit minder punten oplevert (ook rond de drempel van verspringen en hoogspringen).
+- `package.json` / `package-lock.json` (jsdom 26.1.0, alleen voor de tests) en de workflow `.github/workflows/tests.yml` (bij elke commit op `main` en met de hand).
+- Bekend open punt als "todo"-test (telt niet als fout): `esc()` vangt een apostrof niet af.
+
+**Bevinding.** De aangeleverde U16-uitslag was een meerkamp; die gebruikt een andere puntentabel dan de competitie, dus de totalen zijn niet met de app te vergelijken (geen fout in de app). Voor U16 zijn de uitkomsten daarom vastgelegd, niet tegen een officiële uitslag getoetst.
+
+**Getest.** Alle tests slagen op patch 109 (24 geslaagd, 1 todo, ±9 s). Proef: met een ingebouwde fout in de verspringformule (constante 887,99 → 887,90) en met de iPhone-herkenning van patch 109 weggehaald faalden de bijbehorende tests.
+
+---
+
 ## [november 2026 — patch 109] — 2026-11-11
 
 ### 📶 Verbindingsfouten van de iPhone herkennen

@@ -67,3 +67,7 @@ de databasefunctie `ping()` aan, die een tijdstempel bijwerkt in de tabel `keepa
 | `CHANGELOG.md` | Overzicht van alle wijzigingen per patch |
 | `PROJECTNOTITIES.md` | Technische notities en achtergrond |
 | `Sprint_U16_Spelregels.pdf` | Spelregels van de U16-competitie |
+
+## Tests
+
+Automatische tests van de rekenregels (punten, leeftijdscategorie, opstelregels, wedstrijddag) staan in de map `tests/`. Ze draaien bij elke commit vanzelf op GitHub (tabblad *Actions*). Zelf draaien: `npm install` en daarna `npm test`. De tests gebruiken een nep-Supabase en raken de echte database nooit.

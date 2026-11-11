@@ -1,0 +1,11 @@
+{
+  "name": "sprint-u16-tests",
+  "private": true,
+  "description": "Automatische tests voor Sprint U16 (alleen voor ontwikkeling; de app zelf heeft dit niet nodig)",
+  "scripts": {
+    "test": "node --test --test-reporter=spec \"tests/*.test.js\""
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

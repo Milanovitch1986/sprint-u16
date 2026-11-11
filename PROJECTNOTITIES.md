@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 11 november 2026 (patch 109)*
+*AV Sprint Breda · Laatste update: 11 november 2026 (patch 110)*
 
 ---
 
@@ -45,6 +45,14 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 110: Automatische tests (patch 110, nov 2026)
+
+- **Draaien:** `npm install` (eenmalig) en daarna `npm test`. Op GitHub automatisch bij elke commit op `main` (workflow `tests.yml`, tabblad Actions).
+- **Opbouw:** `tests/laad-app.js` laadt `app.html` in jsdom met een nep-Supabase; testbestanden `tests/*.test.js` (Node test runner). Functies van de app via `app.w.<functie>`, globale variabelen (let/const) via `app.zet("…")`, categorie via `kiesCategorie(app, "U16")`.
+- **Punten:** officiële U18-voorbeelden in `punten.test.js` (de maatstaf); `tests/punten-vastgelegd.json` met 3.225 uitkomsten (vangnet). Bij een bewuste wijziging van de punten: `node tests/maak-vastgelegde-punten.js` en het verschil in de commit benoemen. Officiële U16-competitie-uitslagen kunnen nog als maatstaf worden toegevoegd (meerkamp-uitslagen niet: andere tabel).
+- **Werkwijze:** voor elke commit `npm test`; een nieuwe patch krijgt tests voor zijn eigen rekenwerk. Een test die faalt na een commit = melden aan Milanovitch, niet stilletjes aanpassen.
+- **Open "todo":** `esc()` vangt geen apostrof af.
 
 ### Patch 109: Verbindingsfouten van de iPhone herkennen (patch 109, nov 2026)
 
