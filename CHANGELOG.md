@@ -6,6 +6,41 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 108] — 2026-11-11
+
+### 📴 Wedstrijddag zonder internet: starten en werken met bewaarde gegevens
+
+<!--RELEASENOTE
+versie: Patch 108
+titel: 📴 Wedstrijddag ook zonder internet
+type: feature
+tags: wedstrijddag, techniek
+beschrijving: De app bewaart nu een kleine kopie op je telefoon: de atleten (alleen naam en geslacht), hun PR's, de wedstrijden en de wedstrijddagen van vandaag tot en met overmorgen. Zonder internet start de app daarmee, met bovenaan "📴 Offline". Resultaten die je dan invoert worden bewaard en verstuurd zodra er weer verbinding is. Een wedstrijddag die je eenmaal met internet hebt geopend, werkt daarna ook offline. Afronden en andere wijzigingen kunnen alleen met internet. Bij uitloggen wordt de kopie gewist.
+-->
+
+Aanleiding: vervolg op patch 107. Zonder internet opende de app wel, maar (1) na een uur kon Supabase het inlogbewijs niet verversen en stuurde de app je naar de inlogpagina, (2) er waren geen gegevens, omdat alles bij elke start werd opgehaald, en (3) Supabase bleef zonder internet tot ±30 seconden proberen te verversen, waardoor alles bleef hangen.
+
+**Gevonden en opgelost: resultaten konden verloren gaan.** Kwam de verbinding terug terwijl het inlogbewijs nog niet was ververst, dan stuurde Supabase de wachtrij zonder inlog; de database weigerde dat en `synchroniseerWachtrij` gooide het item weg ("item overgeslagen"). Aangetoond met een test op patch 107 (wachtrij 1 → 0, resultaat niet op de server). Nu wacht de wachtrij op een geldig inlogbewijs en bewaart hij items bij een inlog- of rechtenfout (401/403, `42501`, `PGRST301-303`, "jwt") om het later opnieuw te proberen.
+
+**Offline-kopie (IndexedDB `sprintu16-offline`, store `kopie`).** Keuze Milanovitch: alleen het nodige voor de wedstrijddag, zonder geboortedata.
+- `start`: profiel (id, naam, rol), e-mail, categorieën, laatst gekozen categorie.
+- `basis:<categorie>`: atleten (id, naam, geslacht, categorie), PR's (atleet, onderdeel, resultaat, eenheid; de wedstrijddag toont "PR:" en "▲ PR!"), wedstrijden, eigen onderdelen, moment.
+- `wd:<wedstrijd>`: per geslacht programma en opstelling, alle opstellingen (voor de modus), resultaten, moment.
+- Bewaard na elke geslaagde synchronisatie en bij het openen van een wedstrijddag; wedstrijddagen van vandaag t/m overmorgen (max. 5) worden alvast klaargezet; wedstrijddagen die meer dan 3 dagen voorbij zijn worden opgeruimd. Elke invoer op de wedstrijddag werkt de kopie bij (ook offline); bij het lezen komt de wachtrij er nog overheen.
+- Gewist bij uitloggen en als online blijkt dat er geen sessie meer is. `localStorage` `sprint_offline_kopie` onthoudt van welke gebruiker de kopie is.
+
+**Offline starten.** `checkAuth` wacht maximaal 5 s op de sessie. Is er geen sessie door gebrek aan verbinding (of werkt de profielvraag niet door gebrek aan verbinding), dan start `offlineStart()` met de kopie, maar alleen als het opgeslagen inlogbewijs van een inlog met 2FA is en bij dezelfde gebruiker hoort als de kopie. De Admin-tab blijft dan verborgen. `index.html` stuurt offline (eenmalig per tabblad) door naar de app als zo'n kopie er is.
+
+**In offline-modus.** Pil bovenaan "📴 Offline · gegevens van …" (tik voor uitleg). `syncAll` probeert eerst max. 3 s of er weer een sessie is en toont anders de kopie; `laadWedstrijddag` leest direct uit de kopie (online exact dezelfde vragen als voorheen, via `wdVraag`); invoer gaat direct in de wachtrij. Afronden kan alleen online (`openWdAfronden`), omdat het PR's bijwerkt. Bij het event `online` (of de sync-knop): eerst de wachtrij, dan `syncAll`, dan herstel van profiel, Admin-tab en categorieën.
+
+**Getest** met de echte Supabase-bibliotheek (2.119.0) tegen een nagebootste Supabase-server, in Chromium met de service worker van patch 107: online starten en de kopie (geen geboortedatum, geen datum/plaats/notities bij PR's); offline met een verlopen inlogbewijs starten (pil na ±5 s, atleten zichtbaar, Admin verborgen); wedstrijddag offline openen, invoeren, opnieuw laden (offline invoer blijft zichtbaar); niet-bewaarde wedstrijddag geeft een duidelijke melding; afronden offline geweigerd; inlogpagina offline stuurt door naar de app; verbinding terug maar verversen mislukt (wachtrij blijft staan); verbinding terug (wachtrij verstuurd, pil weg, Admin terug); uitloggen wist de kopie. Competitiemodus: online gelijk aan patch 107 en offline gelijk aan online, voor jongens en meisjes. `node --check` geldig; geen JavaScript-fouten.
+
+**Niet getest.** Een echte telefoon (vooral iPhone/Safari en de app op het beginscherm), de echte Supabase, en een slecht maar niet afwezig netwerk (een verzoek dat blijft hangen heeft geen tijdslimiet).
+
+**Bekende beperkingen.** Een wedstrijddag die niet in de kopie zit (niet geopend en niet binnen vandaag t/m overmorgen), werkt offline niet. Wijzigingen buiten de invoer van resultaten (atleten, opstelling, afronden) kunnen alleen online. Duurt het verversen online langer dan 5 s, dan start de app in offline-modus; de sync-knop haalt hem daaruit.
+
+---
+
 ## [november 2026 — patch 107] — 2026-11-11
 
 ### 📲 App installeerbaar en zonder internet te openen

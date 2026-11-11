@@ -2257,10 +2257,21 @@
     body { padding-left: 0 !important; }
     #mob-meer, #mob-meer-backdrop { display: none !important; }
   }
+
+  /* ══ patch 108: offline-pil bovenaan (alleen zichtbaar in offline-modus) ══ */
+  #offline-pil { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+    z-index: 9999; display: none; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px;
+    background: var(--surface2); color: var(--text); border: 1px solid var(--accent); font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: pointer; max-width: calc(100vw - 24px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; }
+  #offline-pil.zichtbaar { display: flex; }
+  #offline-pil:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media print { #offline-pil { display: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 </head>
 <body>
+<button type="button" id="offline-pil" role="status" onclick="toonOfflineUitleg()"></button>
 
 <header>
   <div class="logo" onclick="showTab('home')" style="cursor:pointer;">⚡ Sprint <span id="logo-cat">U16</span></div>
@@ -3317,8 +3328,20 @@ let geselecteerd     = new Set();
 
 // ── Auth guard ────────────────────────────────────────────────
 async function checkAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = "index.html"; return false; }
+  // patch 108: Supabase blijft zonder internet tot ±30 s proberen het inlogbewijs te verversen;
+  // na 5 s wachten we niet langer en kijken we of offline starten kan.
+  const { data: { session }, error: sessieFout } = await Promise.race([
+    sb.auth.getSession(),
+    new Promise(r => setTimeout(() => r({ data: { session: null }, error: { message: "network timeout" } }), 5000))
+  ]);
+  if (!session) {
+    // patch 108: zonder internet kan Supabase een verlopen inlogbewijs niet verversen.
+    // Is er op dit apparaat eerder met 2FA ingelogd, start dan met de bewaarde kopie.
+    const geenNetwerk = !navigator.onLine || (sessieFout && wdIsNetwerkFout(sessieFout));
+    if (geenNetwerk && await offlineStart()) return true;
+    if (!geenNetwerk) await okWisAlles();          // echt niet (meer) ingelogd: kopie weg
+    window.location.href = "index.html"; return false;
+  }
   // patch 105: alleen een sessie waarin de tweede stap (2FA) is gedaan komt de app in.
   // Eerder kwam een account zonder ingestelde 2FA er ook door; de inlogpagina start
   // in dat geval nu de 2FA-instelling. De database eist hetzelfde (regel "vereist_2fa").
@@ -3326,7 +3349,10 @@ async function checkAuth() {
   if (aal?.currentLevel !== "aal2") {
     window.location.href = "index.html"; return false;
   }
-  const { data: profiel } = await sb.from("profielen").select("*").eq("id", session.user.id).single();
+  const { data: profiel, error: profielFout } = await sb.from("profielen").select("*").eq("id", session.user.id).single();
+  // patch 108: inlogbewijs nog geldig maar geen verbinding → met de bewaarde kopie verder
+  if (profielFout && wdIsNetwerkFout(profielFout) && await offlineStart()) return true;
+  try { sessionStorage.removeItem("sprint_offline_doorgestuurd"); } catch (e) {}
   huidigeProfiel = profiel;
   if (profiel?.rol === "admin") {
     document.getElementById("tab-admin").style.display = "";
@@ -3341,6 +3367,7 @@ async function checkAuth() {
 
   // Laad categorieën waar deze trainer toegang toe heeft
   await laadMijnCategorieen();
+  bewaarOfflineStart(session.user.email);   // patch 108
 
   // Patch 49/50: check bij opstarten of er atleten klaarstaan voor doorstroming
   // (banner bovenaan de app; sinds patch 50 voor alle trainers).
@@ -3356,13 +3383,14 @@ async function laadMijnCategorieen() {
   // Admin ziet alle categorieën, trainer alleen zijn eigen
   let query;
   if (huidigeProfiel?.rol === "admin") {
-    const { data } = await sb.from("categorieen").select("*").order("volgorde");
-    beschikbareCategorieen = data || [];
+    const { data, error } = await sb.from("categorieen").select("*").order("volgorde");
+    beschikbareCategorieen = (error && wdIsNetwerkFout(error)) ? await offlineCategorieen() : (data || []);   // patch 108
   } else {
-    const { data } = await sb.from("trainer_categorieen")
+    const { data, error } = await sb.from("trainer_categorieen")
       .select("categorie_id, categorieen(id, naam, volgorde)")
       .eq("trainer_id", uid);
-    beschikbareCategorieen = (data || [])
+    beschikbareCategorieen = (error && wdIsNetwerkFout(error)) ? await offlineCategorieen()   // patch 108
+      : (data || [])
       .map(r => r.categorieen)
       .filter(Boolean)
       .sort((a, b) => a.volgorde - b.volgorde);
@@ -3434,6 +3462,7 @@ async function wisselCategorie(id, naam) {
 }
 
 async function uitloggen() {
+  await okWisAlles();            // patch 108: bewaarde kopie van dit apparaat weg
   await sb.auth.signOut();
   window.location.href = "index.html";
 }
@@ -3456,6 +3485,14 @@ async function syncAll() {
   const btn = document.getElementById("syncBtn");
   btn.classList.add("spinning");
   try {
+    // patch 108: in offline-modus eerst kijken of er weer een geldig inlogbewijs is (max. 3 s).
+    // Zo niet, dan de bewaarde kopie; anders zou elke vraag aan Supabase lang blijven hangen.
+    if (offlineModus && !(await sessieBinnen(3000))) {
+      if (!(await laadOfflineBasis(actieveCategorie?.id))) {
+        toast("Geen verbinding, en voor deze categorie zijn op dit apparaat nog geen gegevens bewaard.", "err", 6000);
+      }
+      return;
+    }
     if (!actieveCategorie) { toast("Geen categorie beschikbaar", "err"); return; }
     const cid = actieveCategorie.id;
     const [aRes, pRes, wRes, oRes] = await Promise.all([
@@ -3478,8 +3515,18 @@ async function syncAll() {
     renderWedstrijden();
     populateAtleetSelects();
     toast("Gegevens bijgewerkt ✓");
+    // patch 108: weer online na offline-modus → terug naar normaal; daarna kopie bijwerken
+    if (offlineModus) { offlineKopieTijd = null; zetOfflineModus(false); herstelNaOffline(); }
+    bewaarOfflineBasis(cid);
   } catch (e) {
-    toast("Fout: " + e.message, "err");
+    // patch 108: geen verbinding → de bewaarde kopie van deze categorie tonen
+    if (wdIsNetwerkFout(e)) {
+      if (!(await laadOfflineBasis(actieveCategorie?.id))) {
+        toast("Geen verbinding, en voor deze categorie zijn op dit apparaat nog geen gegevens bewaard.", "err", 6000);
+      }
+    } else {
+      toast("Fout: " + e.message, "err");
+    }
   } finally {
     btn.classList.remove("spinning");
   }
@@ -8676,24 +8723,28 @@ function sluitWedstrijddag() {
   toonWdOverzicht();
 }
 
-async function laadWedstrijddag() {
+async function laadWedstrijddag(kopie = null) {   // patch 108: kopie = bewaarde gegevens (offline)
   const cid = actieveCategorie?.id;
   if (!cid || !wdWedstrijdId) return;
   document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">Laden…</div>`;
+  // patch 108: in offline-modus meteen de bewaarde kopie (niet eerst lang op Supabase wachten)
+  if (!kopie && offlineModus) {
+    const k = await wdLeesKopie(cid, wdWedstrijdId);
+    if (k) { offlineKopieTijd = k.tijd; werkOfflinePilBij(); return laadWedstrijddag(k); }
+    document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">Geen verbinding, en deze wedstrijddag is nog niet op dit apparaat bewaard. Open hem een keer met internet; daarna werkt hij ook offline.</div>`;
+    return;
+  }
   try {
     // Bepaal de modus: heeft deze wedstrijd een opgeslagen opstelling (welk geslacht dan ook)?
     //  - Wél opstelling  → competitiemodus (teamscore + telregels, zoals patch 47).
     //  - Géén opstelling → individuele modus (gewone wedstrijd, patch 51).
     const [oAlleRes, rRes] = await Promise.all([
-      sb.from("opstelling").select("data")
-        .eq("categorie_id", cid)
-        .eq("wedstrijd_id", wdWedstrijdId),
-      sb.from("resultaten").select("*")
-        .eq("categorie_id", cid)
-        .eq("wedstrijd_id", wdWedstrijdId)
+      wdVraag("opstellingAlle", cid, wdWedstrijdId, null, kopie),
+      wdVraag("resultaten",     cid, wdWedstrijdId, null, kopie)
     ]);
     if (oAlleRes.error) throw oAlleRes.error;
     if (rRes.error) throw rRes.error;
+    if (!kopie) wdKopieBewaren(cid, wdWedstrijdId);   // patch 108: op de achtergrond voor offline
 
     const heeftOpstelling = (oAlleRes.data || []).some(o => o.data && Object.keys(o.data).length > 0);
     wdModus = heeftOpstelling ? "competitie" : "individueel";
@@ -8707,15 +8758,8 @@ async function laadWedstrijddag() {
 
     // ── Competitiemodus: programma + opstelling van het actieve geslacht laden ──
     const [pRes, oRes] = await Promise.all([
-      sb.from("programma").select("*")
-        .eq("categorie_id", cid)
-        .eq("wedstrijd_id", wdWedstrijdId)
-        .eq("geslacht", wdGeslacht)
-        .order("starttijd"),
-      sb.from("opstelling").select("*")
-        .eq("categorie_id", cid)
-        .eq("wedstrijd_id", wdWedstrijdId)
-        .eq("geslacht", wdGeslacht)
+      wdVraag("programma",  cid, wdWedstrijdId, wdGeslacht, kopie),
+      wdVraag("opstelling", cid, wdWedstrijdId, wdGeslacht, kopie)
     ]);
     if (pRes.error) throw pRes.error;
     if (oRes.error) throw oRes.error;
@@ -8750,6 +8794,16 @@ async function laadWedstrijddag() {
     toonWdModusUI();
     renderWedstrijddag();
   } catch(e) {
+    // patch 108: geen verbinding → de bewaarde kopie van deze wedstrijddag gebruiken
+    if (!kopie && wdIsNetwerkFout(e)) {
+      const k = await wdLeesKopie(cid, wdWedstrijdId);
+      if (k) {
+        offlineKopieTijd = k.tijd; zetOfflineModus(true);
+        return laadWedstrijddag(k);
+      }
+      document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--muted);font-size:13px;padding:16px 0;">Geen verbinding, en deze wedstrijddag is nog niet op dit apparaat bewaard. Open hem een keer met internet; daarna werkt hij ook offline.</div>`;
+      return;
+    }
     toast("Fout bij laden wedstrijddag: " + e.message, "err");
     document.getElementById("wd-lijst").innerHTML = `<div style="color:var(--accent2);font-size:13px;padding:16px 0;">Kon de wedstrijddag niet laden. Bestaat de tabel 'resultaten' al in Supabase?</div>`;
   }
@@ -9818,6 +9872,9 @@ async function wdWachtrijToevoegen(item) {
 // Voer een Supabase-schrijfactie uit. Lukt het niet door de verbinding,
 // dan gaat `item` in de wachtrij. Een echte serverfout wordt gemeld.
 async function wdVerstuurOfWacht(doeCall, item) {
+  wdKopieToepassen(item);   // patch 108: bewaarde kopie volgt het scherm (ook offline)
+  // patch 108: in offline-modus direct in de wachtrij (Supabase zou anders lang blijven proberen)
+  if (offlineModus) { await wdWachtrijToevoegen(item); return; }
   try {
     const { error } = await doeCall();
     if (error) {
@@ -9841,6 +9898,11 @@ async function synchroniseerWachtrij() {
   let items;
   try { items = await outboxAlle(); } catch (e) { return; }
   if (!items.length) { wdStopSyncTimer(); wdRenderSyncBadge(); return; }
+
+  // patch 108: eerst een geldig inlogbewijs. Na een tijd offline is het verlopen; is het nog niet
+  // ververst (verbinding net terug), dan zou Supabase het verzoek zonder inlog uitvoeren en
+  // weigeren — en het item werd dan overgeslagen. Nu: later opnieuw proberen.
+  if (!(await sessieBinnen(5000))) { wdRenderSyncBadge(); wdStartSyncTimer(); return; }
 
   wdSyncBezig = true;
   let gedaan = 0;
@@ -9869,6 +9931,7 @@ async function synchroniseerWachtrij() {
       }
       if (netwerkWeg) break;                                  // verbinding weer weg
       if (resultError && wdIsNetwerkFout(resultError)) break; // idem
+      if (resultError && wdIsAuthFout(resultError)) break;    // patch 108: inlog/rechten → bewaren, later opnieuw
       if (resultError) console.warn("Sync serverfout, item overgeslagen:", resultError.message, item);
       await outboxVerwijder(item.id);
       gedaan++;
@@ -10102,6 +10165,11 @@ function renderWdScore() {
 
 // ── Wedstrijd afronden: PR's bijwerken ────────────────────────
 function openWdAfronden() {
+  // patch 108: afronden werkt de PR's bij en heeft actuele gegevens nodig; offline kan dat niet
+  if (offlineModus || !navigator.onLine) {
+    toast("Afronden kan alleen met internet, omdat dan ook de PR's worden bijgewerkt.", "warn", 5000);
+    return;
+  }
   // Verzamel over ALLE geladen resultaten van deze wedstrijd (beide geslachten,
   // alle ploegen) de individuele resultaten die beter zijn dan het huidige PR.
   // Estafette-teamtijden (sleutel "ploeg-…") zijn teamresultaten, geen PR's.
@@ -13513,6 +13581,360 @@ async function slaFinaleImportOp() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+//  OFFLINE-KOPIE  (patch 108)
+// ------------------------------------------------------------------
+//  Een kleine kopie op dit apparaat, zodat de app ook zonder internet
+//  start en de wedstrijddag te gebruiken is. Bewust alleen wat de
+//  wedstrijddag nodig heeft (keuze Milanovitch): van atleten alleen
+//  id, naam, geslacht en categorie — GEEN geboortedatum — en van de
+//  PR's alleen atleet, onderdeel en resultaat (de wedstrijddag toont
+//  "PR:" en "▲ PR!"), plus de wedstrijden, de eigen onderdelen en per
+//  wedstrijddag het programma, de opstelling en de resultaten.
+//  Opslag: IndexedDB "sprintu16-offline", store "kopie" (sleutel → waarde):
+//    "start"        profiel (id, naam, rol), e-mail, categorieën, laatste categorie
+//    "basis:<cid>"  atleten (beperkt), PR's (beperkt), wedstrijden, onderdelen, tijd
+//    "wd:<wid>"     programma/opstelling per geslacht, resultaten, tijd
+//  Gewist bij uitloggen en als online blijkt dat de sessie niet meer geldt.
+// ══════════════════════════════════════════════════════════════════
+
+const OK_DB    = "sprintu16-offline";
+const OK_STORE = "kopie";
+const OK_EIGENAAR = "sprint_offline_kopie";   // localStorage: van wie is de kopie (gebruikers-id)
+let _okDb = null;
+let offlineModus = false;          // true = de app toont bewaarde gegevens
+let offlineKopieTijd = null;       // moment van de getoonde kopie (ms)
+
+function okOpen() {
+  if (_okDb) return Promise.resolve(_okDb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(OK_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(OK_STORE)) db.createObjectStore(OK_STORE);
+    };
+    req.onsuccess = () => {
+      _okDb = req.result;
+      _okDb.onversionchange = () => { _okDb.close(); _okDb = null; };
+      resolve(_okDb);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+function okActie(modus, doe) {
+  return okOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(OK_STORE, modus);
+    const r = doe(tx.objectStore(OK_STORE));
+    let uit;
+    if (r) r.onsuccess = () => { uit = r.result; };
+    tx.oncomplete = () => resolve(uit);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  }));
+}
+async function okLees(k) {
+  try { return await okActie("readonly", st => st.get(k)); }
+  catch (e) { console.warn("Offline-kopie lezen mislukt:", e.message); return undefined; }
+}
+async function okSchrijf(k, v) {
+  try { await okActie("readwrite", st => st.put(v, k)); }
+  catch (e) { console.warn("Offline-kopie bewaren mislukt:", e.message); }
+}
+async function okVerwijder(k) {
+  try { await okActie("readwrite", st => st.delete(k)); } catch (e) {}
+}
+async function okSleutels() {
+  try { return (await okActie("readonly", st => st.getAllKeys())) || []; } catch (e) { return []; }
+}
+async function okWisAlles() {
+  try { localStorage.removeItem(OK_EIGENAAR); } catch (e) {}
+  try { await okActie("readwrite", st => st.clear()); }
+  catch (e) { console.warn("Offline-kopie wissen mislukt:", e.message); }
+}
+
+// Datum als JJJJ-MM-DD in de eigen tijdzone, plus/min een aantal dagen
+function okDatum(plusDagen = 0) {
+  const d = new Date(); d.setDate(d.getDate() + plusDagen);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Is het opgeslagen inlogbewijs van een inlog met 2FA? Geeft het gebruikers-id terug.
+// (Het bewijs kan verlopen zijn; dat is offline juist het geval. Het wordt alleen
+//  gelezen om te zien wie er met 2FA was ingelogd, niet om ermee te verbinden.)
+function opgeslagenSessieMet2FA() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!/^sb-.*-auth-token$/.test(k)) continue;
+      const s = JSON.parse(localStorage.getItem(k) || "null");
+      const tok = s?.access_token || s?.currentSession?.access_token;
+      if (!tok) continue;
+      const deel = tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const p = JSON.parse(atob(deel + "===".slice((deel.length + 3) % 4)));
+      if (p.aal === "aal2" && p.sub) return p.sub;
+    }
+  } catch (e) {}
+  return null;
+}
+
+// ── Offline-pil bovenaan ─────────────────────────────────────────
+function zetOfflineModus(aan) {
+  offlineModus = !!aan;
+  werkOfflinePilBij();
+}
+function werkOfflinePilBij() {
+  const el = document.getElementById("offline-pil");
+  if (!el) return;
+  if (!offlineModus) { el.classList.remove("zichtbaar"); el.textContent = ""; return; }
+  const tijd = offlineKopieTijd
+    ? new Date(offlineKopieTijd).toLocaleString("nl-NL", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
+  el.textContent = "📴 Offline" + (tijd ? " · gegevens van " + tijd : "");
+  el.classList.add("zichtbaar");
+}
+function toonOfflineUitleg() {
+  toast("Geen verbinding. Je ziet de gegevens die op dit apparaat zijn bewaard. Resultaten op de wedstrijddag worden bewaard en verstuurd zodra er weer verbinding is; andere wijzigingen kunnen pas weer met internet.", "warn", 8000);
+}
+
+// ── Starten zonder verbinding ────────────────────────────────────
+async function offlineStart() {
+  const uid = opgeslagenSessieMet2FA();
+  if (!uid) return false;
+  let eigenaar = null;
+  try { eigenaar = localStorage.getItem(OK_EIGENAAR); } catch (e) {}
+  if (eigenaar !== uid) return false;
+  const start = await okLees("start");
+  if (!start || start.profiel?.id !== uid) return false;
+
+  huidigeProfiel = start.profiel;              // alleen id, naam en rol
+  beschikbareCategorieen = start.categorieen || [];
+  actieveCategorie = beschikbareCategorieen.find(c => c.id === start.laatsteCategorie)
+                  || beschikbareCategorieen[0] || null;
+  renderCategorieSwitcher();
+  document.getElementById("profiel-naam").value  = start.profiel.gebruikersnaam || "";
+  document.getElementById("profiel-email").value = start.email || "";
+  try { toonSlepenInstelling(); werkProfielKopBij(); } catch (e) {}
+  zetOfflineModus(true);                       // Admin-tab blijft verborgen tot er weer verbinding is
+  return true;
+}
+async function offlineCategorieen() {
+  const start = await okLees("start");
+  return (start && start.categorieen) || [];
+}
+
+// ── Bewaren (online) ─────────────────────────────────────────────
+function bewaarOfflineStart(email) {
+  if (!huidigeProfiel?.id) return;
+  try { localStorage.setItem(OK_EIGENAAR, huidigeProfiel.id); } catch (e) {}
+  okSchrijf("start", {
+    profiel: { id: huidigeProfiel.id, gebruikersnaam: huidigeProfiel.gebruikersnaam || "", rol: huidigeProfiel.rol },
+    email: email || "",
+    categorieen: (beschikbareCategorieen || []).map(c => ({ id: c.id, naam: c.naam, volgorde: c.volgorde })),
+    laatsteCategorie: actieveCategorie?.id || null
+  });
+}
+async function bewaarOfflineBasis(cid) {
+  if (!cid) return;
+  await okSchrijf("basis:" + cid, {
+    tijd: Date.now(),
+    // Alleen wat de wedstrijddag gebruikt: GEEN geboortedatum (keuze Milanovitch)
+    atleten: (atleten || []).map(a => ({ id: a.id, naam: a.naam, geslacht: a.geslacht, categorie_id: a.categorie_id })),
+    // PR's: alleen wat de wedstrijddag toont (PR en "▲ PR!"), geen datum/plaats/notities
+    prestaties: (prestaties || []).map(r => ({ id: r.id, atleet_id: r.atleet_id, discipline: r.discipline, resultaat: r.resultaat, eenheid: r.eenheid })),
+    wedstrijden: wedstrijden || [],
+    onderdelen: customOnderdelen || []
+  });
+  const st = await okLees("start");
+  if (st) { st.laatsteCategorie = cid; await okSchrijf("start", st); }
+  offlineKlaarzetten(cid);
+}
+
+// Wedstrijddagen van vandaag t/m overmorgen alvast bewaren; oude opruimen
+async function offlineKlaarzetten(cid) {
+  const vandaag = okDatum(0), grens = okDatum(2), oud = okDatum(-3);
+  const klaar = (wedstrijden || [])
+    .filter(w => w.datum && w.datum <= grens && (w.einddatum || w.datum) >= vandaag)
+    .slice(0, 5);
+  for (const w of klaar) await wdKopieBewaren(cid, w.id);
+  for (const k of await okSleutels()) {
+    if (!String(k).startsWith("wd:")) continue;
+    const v = await okLees(k);
+    if (!v || (v.eind && v.eind < oud)) await okVerwijder(k);
+  }
+}
+
+// ── Lezen (offline) ──────────────────────────────────────────────
+async function laadOfflineBasis(cid) {
+  if (!cid) return false;
+  const k = await okLees("basis:" + cid);
+  if (!k) return false;
+  atleten          = k.atleten || [];
+  prestaties       = (k.prestaties || []).map(r => ({ ...r, atleetId: r.atleet_id }));
+  wedstrijden      = k.wedstrijden || [];
+  customOnderdelen = k.onderdelen || [];
+  offlineKopieTijd = k.tijd;
+  zetOfflineModus(true);
+  renderAtleten();
+  renderPrestaties();
+  renderWedstrijden();
+  populateAtleetSelects();
+  toast("Geen verbinding: bewaarde gegevens getoond", "warn");
+  return true;
+}
+
+// ── Wedstrijddag: vragen (online of uit de kopie) ────────────────
+// Online exact dezelfde vragen als vóór patch 108; met een kopie dezelfde vorm { data, error }.
+function wdVraag(soort, cid, wid, geslacht, kopie) {
+  if (kopie) {
+    const g = (kopie.perGeslacht || {})[geslacht] || {};
+    const data = soort === "opstellingAlle" ? kopie.opstellingAlle
+               : soort === "resultaten"     ? kopie.resultaten
+               : soort === "programma"      ? g.programma
+               :                              g.opstelling;
+    return Promise.resolve({ data: data || [], error: null });
+  }
+  if (soort === "opstellingAlle") {
+    return sb.from("opstelling").select("data").eq("categorie_id", cid).eq("wedstrijd_id", wid);
+  }
+  if (soort === "resultaten") {
+    return sb.from("resultaten").select("*").eq("categorie_id", cid).eq("wedstrijd_id", wid);
+  }
+  if (soort === "programma") {
+    return sb.from("programma").select("*").eq("categorie_id", cid).eq("wedstrijd_id", wid)
+      .eq("geslacht", geslacht).order("starttijd");
+  }
+  return sb.from("opstelling").select("*").eq("categorie_id", cid).eq("wedstrijd_id", wid)
+    .eq("geslacht", geslacht);
+}
+
+const _wdKopieLaatst = {};
+async function wdKopieBewaren(cid, wid) {
+  if (!cid || !wid) return;
+  const nu = Date.now();
+  if (_wdKopieLaatst[wid] && nu - _wdKopieLaatst[wid] < 20000) return;   // niet vaker dan eens per 20 s
+  _wdKopieLaatst[wid] = nu;
+  try {
+    const r = await Promise.all([
+      wdVraag("opstellingAlle", cid, wid),
+      wdVraag("resultaten",     cid, wid),
+      wdVraag("programma",      cid, wid, "M"),
+      wdVraag("opstelling",     cid, wid, "M"),
+      wdVraag("programma",      cid, wid, "V"),
+      wdVraag("opstelling",     cid, wid, "V")
+    ]);
+    if (r.some(x => x.error)) return;            // half resultaat: oude kopie laten staan
+    const w = (wedstrijden || []).find(x => String(x.id) === String(wid));
+    await wdKopieKetting(async () => {
+      await okSchrijf("wd:" + wid, {
+        tijd: nu, cid, eind: w ? (w.einddatum || w.datum) : null,
+        opstellingAlle: r[0].data || [],
+        resultaten:     r[1].data || [],
+        perGeslacht: {
+          M: { programma: r[2].data || [], opstelling: r[3].data || [] },
+          V: { programma: r[4].data || [], opstelling: r[5].data || [] }
+        }
+      });
+    });
+  } catch (e) { /* geen verbinding: de oude kopie blijft staan */ }
+}
+
+// Kopie lezen, met de nog niet verstuurde wachtrij erover (zodat offline invoer zichtbaar blijft)
+async function wdLeesKopie(cid, wid) {
+  const k = await okLees("wd:" + wid);
+  if (!k || k.cid !== cid) return null;
+  let rijen = k.resultaten || [];
+  try {
+    const items = await outboxAlle();
+    for (const it of items) {
+      const w = it.payload?.wedstrijd_id ?? it.sleutels?.wedstrijd_id;
+      if (String(w) === String(wid)) rijen = wdPasItemToe(rijen, it);
+    }
+  } catch (e) {}
+  return { ...k, resultaten: rijen };
+}
+
+// Een schrijfactie (bewaar/verwijder) toepassen op een lijst resultaatrijen
+function wdPasItemToe(rijen, item) {
+  const gelijk = (a, b) => String(a ?? "") === String(b ?? "");
+  if (item.type === "bewaar") {
+    const p = item.payload || {};
+    const rest = rijen.filter(r => !(gelijk(r.discipline, p.discipline) && gelijk(r.sleutel, p.sleutel)
+      && gelijk(r.ronde, p.ronde) && Number(r.poging_nr || 1) === Number(p.poging_nr || 1)));
+    return [...rest, { ...p }];
+  }
+  const s = item.sleutels || {};
+  return rijen.filter(r => !(gelijk(r.discipline, s.discipline) && gelijk(r.sleutel, s.sleutel)
+    && (s.ronde === undefined || gelijk(r.ronde, s.ronde))
+    && (s.poging_nr === undefined || Number(r.poging_nr || 1) === Number(s.poging_nr))));
+}
+
+// Elke wijziging aan een wedstrijddag-kopie na elkaar (geen wijziging die een andere overschrijft)
+let _wdKopieRij = Promise.resolve();
+function wdKopieKetting(stap) {
+  _wdKopieRij = _wdKopieRij.then(stap).catch(e => console.warn("Offline-kopie bijwerken mislukt:", e && e.message));
+  return _wdKopieRij;
+}
+function wdKopieToepassen(item) {
+  const wid = item?.payload?.wedstrijd_id ?? item?.sleutels?.wedstrijd_id;
+  if (!wid) return;
+  wdKopieKetting(async () => {
+    const k = await okLees("wd:" + wid);
+    if (!k) return;
+    k.resultaten = wdPasItemToe(k.resultaten || [], item);
+    await okSchrijf("wd:" + wid, k);
+  });
+}
+
+// Inlog- of rechtenfout van Supabase (verlopen bewijs, geen 2FA-sessie): niet weggooien, later opnieuw
+function wdIsAuthFout(e) {
+  const code = String(e?.code || ""), st = Number(e?.status || 0);
+  const m = String(e?.message || "").toLowerCase();
+  return st === 401 || st === 403 || ["PGRST301", "PGRST302", "PGRST303", "42501"].includes(code) || m.includes("jwt");
+}
+
+// Geldige sessie binnen `ms`? (Supabase kan zonder internet lang blijven proberen te verversen)
+async function sessieBinnen(ms) {
+  try {
+    return await Promise.race([
+      sb.auth.getSession().then(r => (r && r.data && r.data.session) || null),
+      new Promise(res => setTimeout(() => res(null), ms))
+    ]);
+  } catch (e) { return null; }
+}
+
+// ── Weer online ──────────────────────────────────────────────────
+async function offlineHerstel() {
+  if (!offlineModus) return;
+  try {
+    const session = await sessieBinnen(8000);
+    if (!session) return;                      // nog niet ververst; de sync-knop of de volgende 'online' probeert opnieuw
+    await synchroniseerWachtrij();
+    await syncAll();                           // zet de offline-modus uit als het lukt
+    const wd = document.getElementById("view-wedstrijddag");
+    if (!offlineModus && wdWedstrijdId && wd && wd.style.display !== "none") laadWedstrijddag();
+  } catch (e) { console.warn("Herstel na offline mislukt:", e.message); }
+}
+// Na offline-modus: profiel en categorieën opnieuw ophalen (Admin-tab weer tonen voor een admin)
+async function herstelNaOffline() {
+  try {
+    const session = await sessieBinnen(8000);
+    if (!session) return;
+    const { data: profiel, error } = await sb.from("profielen").select("*").eq("id", session.user.id).single();
+    if (error || !profiel) return;
+    huidigeProfiel = profiel;
+    if (profiel.rol === "admin") {
+      document.getElementById("tab-admin").style.display = "";
+      const mobAdmin = document.getElementById("mob-tab-admin");
+      if (mobAdmin) mobAdmin.style.display = "";
+    }
+    await laadMijnCategorieen();
+    bewaarOfflineStart(session.user.email);
+  } catch (e) {}
+}
+window.addEventListener("online", () => { offlineHerstel(); });
+
+// ── Einde offline-kopie (patch 108) ──────────────────────────────
 
 async function init() {
   document.getElementById("atleten-grid").innerHTML =

@@ -285,6 +285,25 @@ function bezig(id, ja, label) {
 }
 
 // Check bestaande sessie + uitnodigingstoken uit URL
+// patch 108: is er op dit apparaat een bewaarde kopie van een inlog met 2FA (zelfde gebruiker)?
+function offlineKopieAanwezig() {
+  try {
+    const eigenaar = localStorage.getItem("sprint_offline_kopie");
+    if (!eigenaar) return false;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!/^sb-.*-auth-token$/.test(k)) continue;
+      const s = JSON.parse(localStorage.getItem(k) || "null");
+      const tok = s?.access_token || s?.currentSession?.access_token;
+      if (!tok) continue;
+      const deel = tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const p = JSON.parse(atob(deel + "===".slice((deel.length + 3) % 4)));
+      if (p.aal === "aal2" && p.sub === eigenaar) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
 (async () => {
   // Vul uitnodigingstoken in als het in de URL staat
   const params = new URLSearchParams(window.location.search);
@@ -295,7 +314,19 @@ function bezig(id, ja, label) {
     document.getElementById("reg-token").style.borderColor = "var(--success)";
   }
 
-  const { data: { session } } = await sb.auth.getSession();
+  // patch 108: zonder internet blijft Supabase lang proberen te verversen; na 5 s niet langer wachten
+  const { data: { session }, error: sessieFout } = await Promise.race([
+    sb.auth.getSession(),
+    new Promise(r => setTimeout(() => r({ data: { session: null }, error: { message: "network timeout" } }), 5000))
+  ]);
+  // patch 108: zonder internet kan een verlopen inlogbewijs niet worden ververst. Heeft dit
+  // apparaat een bewaarde kopie van een eerdere inlog met 2FA, dan opent de app daarmee.
+  // (Eenmalig per tabblad, zodat app en inlogpagina elkaar niet blijven doorsturen.)
+  if (!session && (!navigator.onLine || /fetch|network|timeout/i.test(sessieFout?.message || ""))
+      && offlineKopieAanwezig() && !sessionStorage.getItem("sprint_offline_doorgestuurd")) {
+    sessionStorage.setItem("sprint_offline_doorgestuurd", "1");
+    window.location.href = "app.html"; return;
+  }
   if (!session) return;
   const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aal?.currentLevel === "aal2") { window.location.href = "app.html"; return; }

@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 11 november 2026 (patch 107)*
+*AV Sprint Breda · Laatste update: 11 november 2026 (patch 108)*
 
 ---
 
@@ -45,6 +45,15 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 108: Wedstrijddag zonder internet (patch 108, nov 2026)
+
+- **Offline-kopie:** IndexedDB `sprintu16-offline` (store `kopie`): `start`, `basis:<categorie>`, `wd:<wedstrijd>`. Alleen het nodige voor de wedstrijddag: atleten zonder geboortedatum, PR's zonder datum/plaats/notities. Gewist bij uitloggen. Functies staan in het blok "OFFLINE-KOPIE (patch 108)" vlak voor `init()`.
+- **Offline starten:** `checkAuth` (max. 5 s op de sessie) → `offlineStart()`; alleen met een opgeslagen inlogbewijs met `aal2` van dezelfde gebruiker als de kopie (`localStorage` `sprint_offline_kopie`).
+- **In offline-modus** (`offlineModus`): geen vragen aan Supabase (die zouden ±30 s hangen); `syncAll` en `laadWedstrijddag` lezen de kopie, invoer gaat direct in de wachtrij, afronden is geblokkeerd. Herstel bij `online` via `offlineHerstel()`.
+- **Wachtrij:** `synchroniseerWachtrij` verstuurt pas met een geldig inlogbewijs (`sessieBinnen`) en gooit bij een inlog/rechtenfout (`wdIsAuthFout`) niets meer weg. Een item dat structureel geweigerd wordt (bijv. geen toegang meer tot de categorie) blijft daardoor in de wachtrij staan.
+- **Bij nieuwe gegevens op de wedstrijddag:** ook toevoegen aan `wdVraag` en `wdKopieBewaren`, en aan de velden in `bewaarOfflineBasis`, anders ontbreken ze offline.
+- **Terugdraaien:** Revert op de commit van patch 108 of tag `ui-AH`. De kopie op de apparaten blijft dan staan tot uitloggen (wordt niet meer gebruikt).
 
 ### Patch 107: Installeerbaar en offline te openen (patch 107, nov 2026)
 
