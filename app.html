@@ -3473,6 +3473,11 @@ async function getUid() {
 
 // ── Toast ─────────────────────────────────────────────────────
 function toast(msg, type = "ok", duur = 3000) {
+  // patch 109: een technische verbindingsfout ("TypeError: Load failed") als begrijpelijke melding
+  if (type === "err" && isVerbindingsTekst(msg)) {
+    msg = "Geen verbinding. Dit kan alleen met internet; probeer het opnieuw zodra je weer bereik hebt.";
+    duur = Math.max(duur, 5000);
+  }
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.className = "show " + type;
@@ -9857,7 +9862,16 @@ function wdIsNetwerkFout(e) {
   if (!navigator.onLine) return true;
   if (e instanceof TypeError) return true;
   const m = String((e && e.message) || e || "").toLowerCase();
-  return m.includes("fetch") || m.includes("network") || m.includes("timeout");
+  return m.includes("fetch") || m.includes("network") || m.includes("timeout")
+      || isVerbindingsTekst(m);   // patch 109: ook de meldingen van Safari (iPhone) herkennen
+}
+
+// patch 109: teksten waarmee browsers een verbroken verbinding melden.
+// Safari (iPhone/iPad, ook Brave en Chrome daar): "Load failed", "The Internet connection appears
+// to be offline", "The network connection was lost"; Chrome: "Failed to fetch"; Firefox: "NetworkError".
+function isVerbindingsTekst(tekst) {
+  return /load failed|failed to fetch|networkerror|network request failed|internet connection appears to be offline|network connection was lost/i
+    .test(String(tekst || ""));
 }
 
 // Eén item in de wachtrij zetten en de status bijwerken.

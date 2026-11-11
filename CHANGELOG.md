@@ -6,6 +6,31 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [november 2026 — patch 109] — 2026-11-11
+
+### 📶 Verbindingsfouten van de iPhone herkennen
+
+<!--RELEASENOTE
+versie: Patch 109
+titel: 📶 Wedstrijddag op de iPhone: resultaten bij slecht bereik veilig in de wachtrij
+type: bugfix
+tags: wedstrijddag, techniek
+beschrijving: Op een iPhone werd een verbroken verbinding niet altijd herkend. Bij slecht bereik ging een ingevoerd resultaat dan niet in de wachtrij, maar kreeg je "Serverfout bij opslaan". Dat is opgelost. Daarnaast zie je bij iets dat alleen met internet kan (zoals een wedstrijd aanmaken) nu "Geen verbinding" in plaats van een technische melding als "TypeError: Load failed".
+-->
+
+Aanleiding: melding van Milanovitch (11 november 2026): in vliegtuigmodus een open wedstrijd aanmaken gaf "Fout bij aanmaken: TypeError: Load failed". Dat aanmaken offline niet kan, is zo ontworpen (patch 108); de melding was onduidelijk. Bij het uitzoeken bleek een ouder probleem (sinds patch 62): `wdIsNetwerkFout` herkende een verbindingsfout aan "fetch", "network" en "timeout", maar Safari (en daarmee elke browser op een iPhone) meldt "Load failed" of "The Internet connection appears to be offline". In vliegtuigmodus ging het toch goed (`navigator.onLine` is dan `false`), maar bij slecht bereik waarbij de telefoon zich online acht, ging een resultaat niet in de wachtrij en stond het alleen op het scherm ("Serverfout bij opslaan").
+
+**Wijzigingen (alleen `app.html`).**
+- Nieuwe functie `isVerbindingsTekst(tekst)`: herkent de verbindingsmeldingen van Safari, Chrome en Firefox.
+- `wdIsNetwerkFout` gebruikt die functie ook; daarmee herkennen ook de offline-terugvallen uit patch 108 deze meldingen.
+- `toast`: een foutmelding (`err`) met zo'n tekst wordt "Geen verbinding. Dit kan alleen met internet; probeer het opnieuw zodra je weer bereik hebt." (minstens 5 s zichtbaar). Andere meldingen blijven ongewijzigd.
+
+**Getest** in Chromium (oud tegenover nieuw, met `navigator.onLine` = `true`, zoals bij slecht bereik) met zes foutteksten: "Load failed" en "The Internet connection appears to be offline" gingen eerst niet in de wachtrij en nu wel; de meldingen van Chrome en Firefox werkten al en blijven werken; een echte serverfout (RLS) wordt nog steeds als serverfout gemeld en gaat niet in de wachtrij; gewone meldingen blijven gelijk. `node --check` geldig.
+
+**Niet getest.** Een echte iPhone met slecht bereik.
+
+---
+
 ## [november 2026 — patch 108] — 2026-11-11
 
 ### 📴 Wedstrijddag zonder internet: starten en werken met bewaarde gegevens

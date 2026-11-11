@@ -1,5 +1,5 @@
 # Sprint U16 — Projectnotities
-*AV Sprint Breda · Laatste update: 11 november 2026 (patch 108)*
+*AV Sprint Breda · Laatste update: 11 november 2026 (patch 109)*
 
 ---
 
@@ -45,6 +45,12 @@ Row Level Security zorgt dat trainers alleen data zien van hun eigen categorieë
 ---
 
 ## ⚠️ Bekende technische beslissingen
+
+### Patch 109: Verbindingsfouten van de iPhone herkennen (patch 109, nov 2026)
+
+- **Wat:** `isVerbindingsTekst()` herkent verbindingsmeldingen van Safari ("Load failed", "The Internet connection appears to be offline", "The network connection was lost"), Chrome ("Failed to fetch") en Firefox ("NetworkError"). Gebruikt in `wdIsNetwerkFout` en in `toast` (foutmelding wordt "Geen verbinding…").
+- **Valkuil:** test verbindingsgedrag niet alleen in vliegtuigmodus; dan is `navigator.onLine` `false` en wordt elke fout als verbindingsfout gezien. Slecht bereik (telefoon denkt online te zijn) is het lastige geval.
+- **Terugdraaien:** Revert op de commit van patch 109 of tag `ui-AI`.
 
 ### Patch 108: Wedstrijddag zonder internet (patch 108, nov 2026)
 
